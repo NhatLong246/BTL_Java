@@ -68,7 +68,7 @@ public class Appointment {
     public void updateStatus(AppointmentStatus newStatus) {
         this.status = newStatus;
     }
-
+//test
     // Hiển thị thông tin lịch hẹn
     public void displayInfo() {
         System.out.println("Mã lịch hẹn: " + appointmentId);
