@@ -6,7 +6,7 @@ import enums.Specialization;
 import java.time.LocalDate;
 import java.util.regex.Pattern;
 
-public class Doctor extends Person{
+public class Doctor extends Person {
     private static int id = 1;
     private String doctorId;
     private Specialization specialization;  // Chuyên khoa
@@ -18,14 +18,13 @@ public class Doctor extends Person{
 
     public Doctor() {}
 
-    public Doctor(String fullName, LocalDate dateOfBirth, String address, Gender gender, String phoneNumber, String doctorId, Specialization specialization, String email, String createdAt) {
+    public Doctor(String fullName, LocalDate dateOfBirth, String address, Gender gender, String phoneNumber, Specialization specialization, String email, String createdAt) {
         super(fullName, dateOfBirth, address, gender, phoneNumber);
         this.doctorId = generateDoctorId();
         this.specialization = specialization;
         setEmail(email);
         this.createdAt = createdAt;
     }
-
 
     private String generateDoctorId() {
         return String.format("DOC-%03d", id++);
@@ -47,9 +46,16 @@ public class Doctor extends Person{
         this.specialization = specialization;
     }
 
-
     public String getEmail() {
         return email;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
     }
 
     public void setEmail(String email) {
