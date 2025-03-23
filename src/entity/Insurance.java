@@ -19,21 +19,7 @@ public class Insurance {
     public Insurance() {}
 
 
-    public boolean isValidInsurance() {
-        if (insuranceId == null || !insuranceId.matches("[A-Z]{2}[1-5]-\\d{2}-\\d{13}")) {
-            System.out.println("Mã bảo hiểm không hợp lệ! Định dạng phải là [Đối tượng][Mức hưởng]-[Mã tỉnh]-[Số định danh cá nhân]");
-            return false;
-        }
-        if (startDate == null || expirationDate == null || !startDate.isBefore(expirationDate)) {
-            System.out.println("Ngày hết hạn phải lớn hơn ngày bắt đầu!");
-            return false;
-        }
-        if (expirationDate.isBefore(LocalDate.now())) {
-            System.out.println("Không có");
-            return false;
-        }
-        return true;
-    }
+
 
     public String inputInsuranceId() {
         Scanner scanner = new Scanner(System.in);
