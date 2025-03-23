@@ -16,7 +16,7 @@ public class MedicalHistory { //Tiền sử bệnh
 
     public MedicalHistory() {}
 
-    public MedicalHistory(String historyId, String patient, String diagnosis, String treatment, String recordDate) {
+    public MedicalHistory(String patient, String diagnosis, String treatment, String recordDate) {
         this.historyId = generateHistoryId();
         this.patient = patient;
         this.diagnosis = diagnosis;

@@ -4,6 +4,7 @@ import enums.AppointmentStatus;
 
 import java.time.LocalDateTime;
 
+// Lịch hẹn
 public class Appointment {
     private static int id = 1;   // ID tự động tăng
     private String appointmentId;       // ID lịch hẹn (VD: "AP-001")

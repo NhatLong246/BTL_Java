@@ -24,7 +24,7 @@ public class MedicalRecords {
     // Constructor
     public MedicalRecords() {}
 
-    public MedicalRecords(String recordId, Patient patient, Doctor doctor, String diagnosis, String treatmentPlan, LocalDateTime recordDate, LocalDateTime createdAt) {
+    public MedicalRecords(Patient patient, Doctor doctor, String diagnosis, String treatmentPlan, LocalDateTime recordDate, LocalDateTime createdAt) {
         this.recordId = generateRecordId();
         this.patient = patient;
         this.doctor = doctor;
