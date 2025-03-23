@@ -7,6 +7,7 @@ import java.time.LocalDate;
 public class Patient extends Person{
 	private String patientID;
 	private LocalDate createdAt; // Ngày tạo (ngày nhập viện)
+	private Insurance insurance; // Bảo hiểm của bệnh nhân (nếu có)
 
 	private static int autoId = 1; //Biến đếm ID tự tăng của bệnh nhân
 
