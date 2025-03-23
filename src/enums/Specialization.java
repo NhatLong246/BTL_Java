@@ -1,4 +1,4 @@
-package entity;
+package enums;
 
 public enum Specialization {
     GENERAL_MEDICINE("Nội khoa"),

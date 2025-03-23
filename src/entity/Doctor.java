@@ -1,5 +1,8 @@
 package entity;
 
+import enums.Gender;
+import enums.Specialization;
+
 import java.time.LocalDate;
 import java.util.regex.Pattern;
 
@@ -7,21 +10,22 @@ public class Doctor extends Person{
     private static int id = 1;
     private String doctorId;
     private Specialization specialization;  // Chuyên khoa
-    private int yearsOfExperience;  // Số năm kinh nghiệm
     private String email;
+    private String createdAt; // Ngày tạo (tuyển dụng)
 
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$");
 
     public Doctor() {}
 
-    public Doctor(String name, LocalDate birthDate, String address, Gender gender, String phoneNumber, String email, int yearsOfExperience, Specialization specialization, String doctorId) {
-        super(name, birthDate, address, gender, phoneNumber);
-        setEmail(email);
-        setYearsOfExperience(yearsOfExperience);
-        this.specialization = specialization;
+    public Doctor(String fullName, LocalDate dateOfBirth, String address, Gender gender, String phoneNumber, String doctorId, Specialization specialization, String email, String createdAt) {
+        super(fullName, dateOfBirth, address, gender, phoneNumber);
         this.doctorId = generateDoctorId();
+        this.specialization = specialization;
+        setEmail(email);
+        this.createdAt = createdAt;
     }
+
 
     private String generateDoctorId() {
         return String.format("DOC-%03d", id++);
@@ -43,16 +47,6 @@ public class Doctor extends Person{
         this.specialization = specialization;
     }
 
-    public int getYearsOfExperience() {
-        return yearsOfExperience;
-    }
-
-    public void setYearsOfExperience(int yearsOfExperience) {
-        if (yearsOfExperience < 0) {
-            throw new IllegalArgumentException("Số năm kinh nghiệm không thể âm!");
-        }
-        this.yearsOfExperience = yearsOfExperience;
-    }
 
     public String getEmail() {
         return email;
