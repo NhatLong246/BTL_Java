@@ -104,6 +104,43 @@ public class ScannerUtils {
         }
     }
 
+    // Kiểm tra định dạng mã bảo hiểm
+    public static void validateInsuranceId(String insuranceId) throws IllegalArgumentException {
+        if (!insuranceId.matches("[A-Z]{2}-[1-3]-\\d{2}-\\d{10}")) {
+            throw new IllegalArgumentException("Mã bảo hiểm không hợp lệ! Định dạng phải là XX-X-XX-XXXXXXXXXX");
+        }
+    }
+
+    // Kiểm tra ngày hết hạn phải sau ngày bắt đầu
+    public static void validateDates(LocalDate startDate, LocalDate expirationDate) throws IllegalArgumentException {
+        if (startDate.isAfter(expirationDate)) {
+            throw new IllegalArgumentException("Ngày hết hạn phải lớn hơn ngày bắt đầu!");
+        }
+    }
+
+    // Kiểm tra ngày sinh không thể là tương lai
+    public static void validateDateOfBirth(LocalDate dateOfBirth) throws IllegalArgumentException {
+        if (dateOfBirth.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Ngày sinh không thể là tương lai!");
+        }
+    }
+
+    // Kiểm tra giới tính (chỉ chấp nhận Male, Female, Other)
+    public static void validateGender(String gender) throws IllegalArgumentException {
+        if (!gender.equalsIgnoreCase("Male") && 
+            !gender.equalsIgnoreCase("Female") && 
+            !gender.equalsIgnoreCase("Other")) {
+            throw new IllegalArgumentException("Giới tính không hợp lệ! Chỉ chấp nhận: Male, Female hoặc Other.");
+        }
+    }
+
+    // Kiểm tra chuỗi không được để trống (dùng cho địa chỉ và nơi đăng ký)
+    public static void validateNonEmptyString(String value, String fieldName) throws IllegalArgumentException {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(fieldName + " không được để trống!");
+        }
+    }
+
 
 }
 
