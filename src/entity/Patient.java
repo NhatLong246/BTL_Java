@@ -1,45 +1,42 @@
 package entity;
 
+import enums.Gender;
+
 import java.time.LocalDate;
 
 public class Patient extends Person{
-	
-	private static int autoID =1;
 	private String patientID;
-	private String medicalHistory;
-	public String getID() {
+	private LocalDate createdAt; // Ngày tạo (ngày nhập viện)
+	private Insurance insurance; // Bảo hiểm của bệnh nhân (nếu có)
+
+	private static int autoId = 1; //Biến đếm ID tự tăng của bệnh nhân
+
+	//Tạo mã bệnh nhân tự động (PAT-001, PAT-002, ...)
+	private String generatePatientID() {
+		return String.format("PAT-%03d", autoId++);
+	}
+
+	public Patient() {}
+
+	public Patient(String fullName, LocalDate dateOfBirth, String address, Gender gender, String phoneNumber, LocalDate createdAt) {
+		super(fullName, dateOfBirth, address, gender, phoneNumber);
+		this.patientID = generatePatientID();
+		this.createdAt = createdAt;
+	}
+
+	public String getPatientID() {
 		return patientID;
 	}
-	public void setID(String iD) {
-		this.patientID = iD;
+
+	public void setPatientID(String patientID) {
+		this.patientID = patientID;
 	}
-	public String getMedicalHistory() {
-		return medicalHistory;
+
+	public LocalDate getCreatedAt() {
+		return createdAt;
 	}
-	public void setMedicalHistory(String medicalHistory) {
-		this.medicalHistory = medicalHistory;
+
+	public void setCreatedAt(LocalDate createdAt) {
+		this.createdAt = createdAt;
 	}
-	
-	private String generatepatientID() {
-        return String.format("PAT-%03d", autoID++);
-    }
-	
-	public Patient(String medicalHistory) {
-		super();
-		patientID=generatepatientID();
-		this.medicalHistory = medicalHistory;
-	}
-	@Override
-	public String toString() {
-		return "Patient [ID=" + patientID  
-				+ ", name=" + name 
-				+ ", birthDate=" + birthDate 
-				+ ", address=" + address 
-				+ ", gender=" + gender 
-				+ ", phoneNumber=" + phoneNumber 
-				+ ", medicalHistory=" + medicalHistory+"]";
-	}
-	
-	
-	
 }

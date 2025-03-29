@@ -1,7 +1,10 @@
 package entity;
 
+import enums.AppointmentStatus;
+
 import java.time.LocalDateTime;
 
+// Lịch hẹn
 public class Appointment {
     private static int id = 1;   // ID tự động tăng
     private String appointmentId;       // ID lịch hẹn (VD: "AP-001")
@@ -69,13 +72,4 @@ public class Appointment {
         this.status = newStatus;
     }
 
-    // Hiển thị thông tin lịch hẹn
-    public void displayInfo() {
-        System.out.println("Mã lịch hẹn: " + appointmentId);
-        System.out.println("Bệnh nhân: " + patient.getName());
-        System.out.println("Bác sĩ: " + doctor.getName());
-        System.out.println("Thời gian hẹn: " + appointmentTime);
-        System.out.println("Trạng thái: " + status.getVietnamese());
-        System.out.println("------------------------------------");
-    }
 }
