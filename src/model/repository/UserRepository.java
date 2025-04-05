@@ -1,4 +1,4 @@
-package database;
+package model.repository;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -6,16 +6,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 
+import database.DatabaseConnection;
 import model.entity.Patient;
 import model.enums.Gender;
 
-public class UserDAO {
+public class UserRepository {
 
 	// Đăng ký người dùng (Gộp cả registerUser & SignUpUI)
 	public static boolean registerUser(String username, String email, String password, String position) {
 		String sql = "INSERT INTO users (username, email, password, role) VALUES (?, ?, SHA2(?, 256), ?)";
 		try (Connection conn = DatabaseConnection.getConnection();
-				PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
 			stmt.setString(1, username);
 			stmt.setString(2, email);
