@@ -2,7 +2,7 @@ package view.UI;
 
 import javax.swing.*;
 
-import UI.LoginUI;
+import view.UI.LoginUI;
 import model.repository.UserRepository;
 
 import java.awt.*;

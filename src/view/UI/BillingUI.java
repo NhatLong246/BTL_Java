@@ -1,6 +1,7 @@
 package view.UI;
 
 import model.entity.Patient;
+import model.enums.Gender;
 
 import javax.swing.*;
 
@@ -431,8 +432,10 @@ public class BillingUI extends JFrame {
     
     
     public static void main(String[] args) {
-        // Example patient for testing
-        Patient testPatient = new Patient("John Doe", LocalDate.of(1990, 5, 15), "123 Main St", enums.Gender.MALE, "0912345678", LocalDate.now());
+        // Test the BillingUI with a sample Patient object
+        Patient testPatient = new Patient("user123", "patient123", "John Doe", LocalDate.of(1990, 5, 15), "123 Main St", Gender.MALE, "0912345678", LocalDate.now());
         SwingUtilities.invokeLater(() -> new BillingUI(testPatient).setVisible(true));
     }
 }
+
+//Patient testPatient = new Patient("John Doe", LocalDate.of(1990, 5, 15), "123 Main St", Gender.MALE, "0912345678", LocalDate.now());

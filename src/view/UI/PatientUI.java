@@ -609,15 +609,14 @@ public class PatientUI extends JFrame {
         }
     }
 
-    /*public static void main(String[] args) {
+    public static void main(String[] args) {
         try {
-            Patient patient = new Patient("Trần Thị B", LocalDate.of(1990, 5, 15), "456 Đường XYZ, Hà Nội",
-                                         Gender.FEMALE, "0976543210", LocalDate.now());
+            Patient patient = new Patient("Trần Thị B", LocalDate.of(1990, 5, 15), "456 Đường XYZ, Hà Nội", Gender.FEMALE, "0976543210", LocalDate.now());
             patient.setPatientID("P001");
             SwingUtilities.invokeLater(() -> new PatientUI(patient).setVisible(true));
         } catch (IllegalArgumentException e) {
             System.err.println("Error creating patient: " + e.getMessage());
             JOptionPane.showMessageDialog(null, "Error: " + e.getMessage(), "Invalid Input", JOptionPane.ERROR_MESSAGE);
         }
-    }*/
+    }
 }

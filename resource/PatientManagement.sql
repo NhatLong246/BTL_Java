@@ -37,7 +37,8 @@ CREATE TABLE Patients (
     DateOfBirth DATE NOT NULL,
     Gender ENUM('Nam', 'Nữ') NOT NULL,
     Address TEXT,
-    FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID) 
+	CreatedAt DATE, -- Ngày nhập viện
+    FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -47,15 +48,15 @@ CREATE TABLE Appointments (
     PatientID VARCHAR(50) NOT NULL,
     DoctorID VARCHAR(50),
     AppointmentDate DATETIME NOT NULL,
-    Status ENUM('Chờ', 'Hoàn thành', 'Hủy') DEFAULT 'Chờ',
+    Status ENUM('Chờ xác nhận', 'Hoàn thành', 'Hủy') DEFAULT 'Chờ xác nhận',
     Notes TEXT,
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) 
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID) 
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
         ON DELETE SET NULL ON UPDATE CASCADE
 );
 
--- Bảng Dịch Vụ 
+-- Bảng Dịch Vụ
 CREATE TABLE Services (
     ServiceID VARCHAR(50) PRIMARY KEY,
     ServiceName VARCHAR(255) NOT NULL,
@@ -86,15 +87,15 @@ CREATE TABLE BillingDetails (
 -- Bảng Hồ Sơ Y Tế
 CREATE TABLE MedicalRecords (
     RecordID VARCHAR(50) PRIMARY KEY,
-    PatientID VARCHAR(50), 
+    PatientID VARCHAR(50),
     DoctorID VARCHAR(50),
     Diagnosis TEXT NOT NULL,
     TreatmentPlan TEXT NOT NULL,
     RecordDate DATE NOT NULL,
     IsHistory BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) 
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE SET NULL ON UPDATE CASCADE,
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID) 
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
         ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -107,7 +108,7 @@ CREATE TABLE VitalSigns (
     HeartRate INT CHECK (HeartRate > 0),
     OxygenSaturation DECIMAL(5,2) CHECK (OxygenSaturation BETWEEN 0 AND 100),
     RecordedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) 
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -117,9 +118,9 @@ CREATE TABLE Prescriptions (
     PatientID VARCHAR(50),
     DoctorID VARCHAR(50),
     PrescriptionDate DATE NOT NULL,
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) 
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID) 
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
         ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -140,9 +141,9 @@ CREATE TABLE PrescriptionDetails (
     Dosage VARCHAR(50),
     Instructions TEXT,
     PRIMARY KEY (PrescriptionID, MedicationID),
-    FOREIGN KEY (PrescriptionID) REFERENCES Prescriptions(PrescriptionID) 
+    FOREIGN KEY (PrescriptionID) REFERENCES Prescriptions(PrescriptionID)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (MedicationID) REFERENCES Medications(MedicationID) 
+    FOREIGN KEY (MedicationID) REFERENCES Medications(MedicationID)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -164,7 +165,7 @@ CREATE TABLE Insurance (
 -- Bảng HospitalRooms (Danh sách phòng bệnh viện)
 CREATE TABLE HospitalRooms (
     RoomID VARCHAR(20) PRIMARY KEY,
-    RoomType ENUM('Tiêu chuẩn', 'VIP', 'ICU', 'Cấp cứu') NOT NULL, 
+    RoomType ENUM('Tiêu chuẩn', 'VIP', 'ICU', 'Cấp cứu') NOT NULL,
     TotalBeds INT CHECK (TotalBeds > 0),  -- Tổng số giường trong phòng
     AvailableBeds INT CHECK (AvailableBeds >= 0),  -- Số giường còn trống
     FloorNumber INT CHECK (FloorNumber > 0),
@@ -174,18 +175,16 @@ CREATE TABLE HospitalRooms (
 -- Bảng Nhập Viện
 CREATE TABLE Admissions (
     AdmissionID VARCHAR(50) PRIMARY KEY,
-    PatientID VARCHAR(50) NOT NULL,
+    PatientID VARCHAR(50),
     DoctorID VARCHAR(50),
     RoomID VARCHAR(50),
     AdmissionDate DATE NOT NULL,
     DischargeDate DATE,
     Notes TEXT,
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) 
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID) 
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE SET NULL ON UPDATE CASCADE,
-    FOREIGN KEY (RoomID) REFERENCES HospitalRooms(RoomID) 
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (RoomID) REFERENCES HospitalRooms(RoomID)
         ON DELETE SET NULL ON UPDATE CASCADE
 );
-
-

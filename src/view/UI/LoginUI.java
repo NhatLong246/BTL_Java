@@ -5,8 +5,8 @@ import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.io.File;
-import UI.ForgotPasswordUI;
-import UI.RequestResetUI;
+import view.UI.ForgotPasswordUI;
+import view.UI.RequestResetUI;
 import model.repository.UserRepository;
 
 public class LoginUI extends JFrame {
