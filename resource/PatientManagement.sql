@@ -1,5 +1,4 @@
-Drop database if exists PatientManagement;
-CREATE DATABASE PatientManagement;
+CREATE DATABASE IF NOT EXISTS PatientManagement;
 USE PatientManagement;
 
 -- Bảng Tài Khoản Người Dùng
@@ -68,7 +67,7 @@ CREATE TABLE Billing (
     BillID VARCHAR(50) PRIMARY KEY,
     PatientID VARCHAR(50) NOT NULL,
     TotalAmount DECIMAL(10,2) NOT NULL CHECK (TotalAmount >= 0),
-    PaymentMethod ENUM('Tiền mặt', 'Chuyển khoản') COLLATE utf8mb4_unicode_ci,
+    PaymentMethod ENUM('Tiền mặt', 'Chuyển khoản'),
     Status ENUM('Chưa thanh toán', 'Đã thanh toán') DEFAULT 'Chưa thanh toán',
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) ON DELETE CASCADE ON UPDATE CASCADE
@@ -146,27 +145,6 @@ CREATE TABLE PrescriptionDetails (
     FOREIGN KEY (MedicationID) REFERENCES Medications(MedicationID) 
         ON DELETE CASCADE ON UPDATE CASCADE
 );
--- Bảng Xét Nghiệm
-CREATE TABLE LabTests (
-    LabTestID VARCHAR(50) PRIMARY KEY,
-    Name VARCHAR(255) NOT NULL,
-    Description TEXT,
-    Cost DECIMAL(10,2)
-);
-
--- Bảng Kết Quả Xét Nghiệm
-CREATE TABLE LabResults (
-    ResultID VARCHAR(50),
-    LabTestID VARCHAR(50),
-    PatientID VARCHAR(50),
-    DoctorID VARCHAR(50),
-    Result TEXT,
-    TestDate DATE NOT NULL,
-    PRIMARY KEY (ResultID, LabTestID), 
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) ON DELETE CASCADE,
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID) ON DELETE SET NULL,
-    FOREIGN KEY (LabTestID) REFERENCES LabTests(LabTestID) ON DELETE CASCADE
-);
 
 -- Bảng Insurance (Thông tin bảo hiểm y tế)
 CREATE TABLE Insurance (
@@ -186,11 +164,11 @@ CREATE TABLE Insurance (
 -- Bảng HospitalRooms (Danh sách phòng bệnh viện)
 CREATE TABLE HospitalRooms (
     RoomID VARCHAR(20) PRIMARY KEY,
-    RoomNumber VARCHAR(50) UNIQUE NOT NULL,
-    Type VARCHAR(100),
-    Capacity INT,
-    FloorNumber INT,
-    Status TEXT
+    RoomType ENUM('Tiêu chuẩn', 'VIP', 'ICU', 'Cấp cứu') NOT NULL, 
+    TotalBeds INT CHECK (TotalBeds > 0),  -- Tổng số giường trong phòng
+    AvailableBeds INT CHECK (AvailableBeds >= 0),  -- Số giường còn trống
+    FloorNumber INT CHECK (FloorNumber > 0),
+    Status ENUM('Trống', 'Đang sử dụng', 'Đầy', 'Bảo trì') DEFAULT 'Trống'
 );
 
 -- Bảng Nhập Viện
@@ -209,85 +187,5 @@ CREATE TABLE Admissions (
     FOREIGN KEY (RoomID) REFERENCES HospitalRooms(RoomID) 
         ON DELETE SET NULL ON UPDATE CASCADE
 );
-
-
--- Thêm dữ liệu vào bảng UserAccounts
-INSERT INTO UserAccounts (UserID, FullName, Role, Email, PhoneNumber, PasswordHash) VALUES
-('U001', 'Nguyễn Văn A', 'Bác sĩ', 'nguyenvana@example.com', '0987654321', 'hashed_password_1'),
-('U002', 'Trần Thị B', 'Bệnh nhân', 'tranthib@example.com', '0976543210', 'hashed_password_2'),
-('U003', 'Lê Văn C', 'Quản lí', 'levanc@example.com', '0965432109', 'hashed_password_3');
-
--- Thêm dữ liệu vào bảng Specialties
-INSERT INTO Specialties (SpecialtyID, SpecialtyName) VALUES
-('S001', 'Tim mạch'),
-('S002', 'Nội tiết'),
-('S003', 'Nhi khoa');
-
--- Thêm dữ liệu vào bảng Doctors
-INSERT INTO Doctors (DoctorID, UserID, SpecialtyID, Address) VALUES
-('D001', 'U001', 'S001', '123 Đường ABC, TP.HCM');
-
--- Thêm dữ liệu vào bảng Patients
-INSERT INTO Patients (PatientID, UserID, DateOfBirth, Gender, Address) VALUES
-('P001', 'U002', '1990-05-15', 'Nam', '456 Đường XYZ, Hà Nội');
-
--- Thêm dữ liệu vào bảng Appointments
-INSERT INTO Appointments (AppointmentID, PatientID, DoctorID, AppointmentDate, Status, Notes) VALUES
-('A001', 'P001', 'D001', '2025-04-10 10:00:00', 'Chờ', 'Khám tổng quát');
-
--- Thêm dữ liệu vào bảng Services
-INSERT INTO Services (ServiceID, ServiceName, Cost) VALUES
-('SV001', 'Khám sức khỏe tổng quát', 500000),
-('SV002', 'Siêu âm tim', 700000);
-
--- Thêm dữ liệu vào bảng Billing
-INSERT INTO Billing (BillID, PatientID, TotalAmount, PaymentMethod, Status) VALUES
-('B001', 'P001', 500000, 'Tiền mặt', 'Chưa thanh toán'),
-('B002', 'P001', 100000, 'Tiền mặt', 'Chưa thanh toán');
-
--- Thêm dữ liệu vào bảng BillingDetails
-INSERT INTO BillingDetails (BillID, ServiceID, Amount) VALUES
-('B001', 'SV001', 500000);
-
--- Thêm dữ liệu vào bảng MedicalRecords
-INSERT INTO MedicalRecords (RecordID, PatientID, DoctorID, Diagnosis, TreatmentPlan, RecordDate) VALUES
-('MR001', 'P001', 'D001', 'Huyết áp cao', 'Theo dõi và điều trị bằng thuốc', '2025-04-10');
-
--- Thêm dữ liệu vào bảng VitalSigns
-INSERT INTO VitalSigns (VitalSignID, PatientID, Temperature, BloodPressure, HeartRate, OxygenSaturation) VALUES
-('VS001', 'P001', 36.8, '120/80', 75, 98.0);
-
--- Thêm dữ liệu vào bảng Prescriptions
-INSERT INTO Prescriptions (PrescriptionID, PatientID, DoctorID, PrescriptionDate) VALUES
-('PR001', 'P001', 'D001', '2025-04-10');
-
--- Thêm dữ liệu vào bảng Medications
-INSERT INTO Medications (MedicationID, MedicineName, Description, Manufacturer, DosageForm, SideEffects) VALUES
-('M001', 'Paracetamol', 'Giảm đau hạ sốt', 'Dược phẩm Việt Nam', 'Viên nén', 'Buồn nôn, chóng mặt');
-
--- Thêm dữ liệu vào bảng PrescriptionDetails
-INSERT INTO PrescriptionDetails (PrescriptionID, MedicationID, Dosage, Instructions) VALUES
-('PR001', 'M001', '500mg', 'Uống sau khi ăn');
-
--- Thêm dữ liệu vào bảng LabTests
-INSERT INTO LabTests (LabTestID, Name, Description, Cost) VALUES
-('LT001', 'Xét nghiệm máu', 'Kiểm tra chỉ số máu', 300000);
-
--- Thêm dữ liệu vào bảng LabResults
-INSERT INTO LabResults (ResultID, LabTestID, PatientID, DoctorID, Result, TestDate) VALUES
-('LR001', 'LT001', 'P001', 'D001', 'Bình thường', '2025-04-10');
-
--- Thêm dữ liệu vào bảng Insurance
-INSERT INTO Insurance (InsuranceID, PatientID, Provider, PolicyNumber, StartDate, ExpirationDate, CoverageDetails, Status) VALUES
-('I001', 'P001', 'Bảo hiểm ABC', 'BH123456', '2024-01-01', '2026-01-01', 'Bảo hiểm y tế cơ bản', 'Hoạt Động');
-
--- Thêm dữ liệu vào bảng HospitalRooms
-INSERT INTO HospitalRooms (RoomID, RoomNumber, Type, Capacity, FloorNumber, Status) VALUES
-('R001', '101', 'Phòng đơn', 1, 1, 'Trống');
-
--- Thêm dữ liệu vào bảng Admissions
-INSERT INTO Admissions (AdmissionID, PatientID, DoctorID, RoomID, AdmissionDate, Notes) VALUES
-('AD001', 'P001', 'D001', 'R001', '2025-04-10', 'Nhập viện để theo dõi huyết áp cao');
-
 
 

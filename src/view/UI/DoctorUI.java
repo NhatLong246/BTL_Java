@@ -1,4 +1,4 @@
-package UI;
+package view.UI;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;

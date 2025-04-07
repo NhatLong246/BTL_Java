@@ -1,12 +1,4 @@
-package database;
-
-import entity.Appointment;
-import entity.Billing;
-import entity.Doctor;
-import entity.Patient;
-import enums.AppointmentStatus;
-import enums.Gender;
-import enums.PaymentStatus;
+package model.repository;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,8 +11,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class UserDAO {
-    // Phương thức đăng ký người dùng mới
+import database.DatabaseConnection;
+
+import entity.Doctor;
+import enums.PaymentStatus;
+import model.entity.Billing;
+import model.entity.Patient;
+import model.enums.Gender;
+
+public class UserRepository {
+
+	// Phương thức đăng ký người dùng mới
     public static String registerUser(String email, String password) {
         if (isEmailTaken(email)) {
             return "Email already taken";

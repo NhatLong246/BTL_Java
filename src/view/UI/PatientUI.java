@@ -1,9 +1,10 @@
-package UI;
+package view.UI;
+
+import model.entity.Patient;
+import model.enums.Gender;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import entity.Patient;
-import enums.Gender;
 import java.awt.*;
 import java.sql.*;
 import java.time.LocalDate;
@@ -608,7 +609,7 @@ public class PatientUI extends JFrame {
         }
     }
 
-    public static void main(String[] args) {
+    /*public static void main(String[] args) {
         try {
             Patient patient = new Patient("Trần Thị B", LocalDate.of(1990, 5, 15), "456 Đường XYZ, Hà Nội",
                                          Gender.FEMALE, "0976543210", LocalDate.now());
@@ -618,5 +619,5 @@ public class PatientUI extends JFrame {
             System.err.println("Error creating patient: " + e.getMessage());
             JOptionPane.showMessageDialog(null, "Error: " + e.getMessage(), "Invalid Input", JOptionPane.ERROR_MESSAGE);
         }
-    }
+    }*/
 }

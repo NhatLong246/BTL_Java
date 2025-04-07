@@ -1,13 +1,11 @@
-package UI;
+package view.UI;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.io.File;
-import UI.ForgotPasswordUI;
-import UI.RequestResetUI;
-import database.UserDAO;
+import model.repository.UserRepository;
 
 public class LoginUI extends JFrame {
     private JButton signUpButtonNav;
@@ -121,14 +119,14 @@ public class LoginUI extends JFrame {
         passText.setBounds(250, 300, 400, 50);
         passText.setFont(new Font("Arial", Font.PLAIN, 20));
         passText.setForeground(Color.GRAY);
-        passText.setText("PASSWORD"); // Đặt placeholder ban đầu
+        passText.setText("PASSWORD");
         passText.addFocusListener(new FocusListener() {
             @Override
             public void focusGained(FocusEvent e) {
                 if (new String(passText.getPassword()).equals("PASSWORD")) {
                     passText.setText("");
                     passText.setForeground(Color.BLACK);
-                    passText.setEchoChar('●'); // Ẩn mật khẩu khi bắt đầu nhập
+                    passText.setEchoChar('●');
                 }
             }
 
@@ -137,12 +135,12 @@ public class LoginUI extends JFrame {
                 if (passText.getPassword().length == 0) {
                     passText.setText("PASSWORD");
                     passText.setForeground(Color.GRAY);
-                    passText.setEchoChar((char) 0); // Hiển thị lại placeholder rõ ràng
+                    passText.setEchoChar((char) 0);
                 }
             }
         });
 
-        // Thêm JCheckBox "Show Password" ở bên trái
+        // Show Password CheckBox
         showPasswordCheckBox = new JCheckBox("Show Password");
         showPasswordCheckBox.setBounds(250, 350, 150, 30);
         showPasswordCheckBox.setForeground(Color.WHITE);
@@ -151,63 +149,87 @@ public class LoginUI extends JFrame {
 
         showPasswordCheckBox.addActionListener(e -> {
             if (showPasswordCheckBox.isSelected()) {
-                // Hiện mật khẩu
                 passText.setEchoChar((char) 0);
             } else {
-                // Ẩn mật khẩu
                 if (passText.getPassword().length > 0 && !new String(passText.getPassword()).equals("PASSWORD")) {
                     passText.setEchoChar('●');
                 }
             }
         });
 
-        // Thêm JLabel để hiển thị thông báo lỗi
+        // Error Label
         errorLabel = new JLabel("");
         errorLabel.setBounds(250, 380, 400, 30);
         errorLabel.setForeground(Color.RED);
         errorLabel.setFont(new Font("Arial", Font.PLAIN, 16));
         errorLabel.setVisible(false);
 
-        // Quên mật khẩu (Căn phải)
+        // Forgot Password
         JLabel forgotPasswordLabel = new JLabel("Forgot Password?", SwingConstants.RIGHT);
-        forgotPasswordLabel.setBounds(450, 380, 200, 30);
+        forgotPasswordLabel.setBounds(250, 380, 400, 30); // Căn phải trong khu vực 400px (từ x = 250 đến x = 650)
         forgotPasswordLabel.setFont(new Font("Arial", Font.PLAIN, 18));
         forgotPasswordLabel.setForeground(Color.WHITE);
         forgotPasswordLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         forgotPasswordLabel.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                forgotPasswordLabel.setText("<html><u>Forgot Password?</u></html>");
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                forgotPasswordLabel.setText("Forgot Password?");
-            }
-
-            @Override
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 new RequestResetUI().setVisible(true);
             }
         });
 
+        // Panel chứa nút LOGIN và dòng chữ "Chưa có Tài khoản. Tạo tài khoản"
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
+        buttonPanel.setOpaque(false);
+        buttonPanel.setBounds(0, 440, panelWidth, 100);
+
         // LOGIN Button
         JButton loginButton = new JButton(" LOGIN");
-        loginButton.setBounds(250, 440, 400, 60);
         loginButton.setFont(new Font("Arial", Font.BOLD, 22));
+        loginButton.setPreferredSize(new Dimension(200, 60));
+        loginButton.setMaximumSize(new Dimension(200, 60));
         loginButton.setBackground(Color.WHITE);
         loginButton.setForeground(Color.BLACK);
-        loginButton.setIcon(resizeIcon("src/resource/img/user-profile.png", loginButton, 0.5));
+        loginButton.setIcon(resizeIcon("src/resource/img/user-profile.png", 30));
+        loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // SIGN UP Button
-        JButton signUpButton = new JButton(" SIGN UP");
-        signUpButton.setBounds(250, 520, 400, 60);
-        signUpButton.setFont(new Font("Arial", Font.BOLD, 22));
-        signUpButton.setBackground(Color.WHITE);
-        signUpButton.setForeground(Color.BLACK);
-        signUpButton.setIcon(resizeIcon("src/resource/img/add.png", signUpButton, 0.5));
+        // Panel chứa dòng chữ "Chưa có Tài khoản. Tạo tài khoản"
+        JPanel signUpPanel = new JPanel();
+        signUpPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        signUpPanel.setOpaque(false);
+        signUpPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Phần "Chưa có Tài khoản."
+        JLabel noAccountLabel = new JLabel("Chưa có Tài khoản.");
+        noAccountLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        noAccountLabel.setForeground(Color.WHITE);
+
+        // Phần "Tạo tài khoản" (liên kết)
+        JLabel createAccountLabel = new JLabel("Tạo tài khoản");
+        createAccountLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        createAccountLabel.setForeground(Color.WHITE);
+        createAccountLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        createAccountLabel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.WHITE));
+
+        createAccountLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                dispose();
+                new SignUpUI().setVisible(true);
+            }
+        });
+
+        // Thêm hai JLabel vào signUpPanel
+        signUpPanel.add(noAccountLabel);
+        signUpPanel.add(createAccountLabel);
+
+        // Thêm các thành phần vào buttonPanel
+        buttonPanel.add(loginButton);
+        buttonPanel.add(Box.createVerticalStrut(10));
+        buttonPanel.add(signUpPanel);
+
+        // Action listener cho nút LOGIN
         loginButton.addActionListener(e -> {
             String username = userText.getText();
             String password = new String(passText.getPassword());
@@ -219,21 +241,21 @@ public class LoginUI extends JFrame {
                 return;
             }
 
-            if (UserDAO.loginUser(username, password)) {
+            if (UserRepository.loginUser(username, password)) {
                 errorLabel.setVisible(false);
                 JOptionPane.showMessageDialog(null, "Login Successful!");
                 
-                String role = UserDAO.getUserRole(username);
+                String role = UserRepository.getUserRole(username);
                 
                 switch (role) {
                     case "admin":
-//                        new AdminUI().setVisible(true);
+                        // new AdminUI().setVisible(true);
                         break;
                     case "doctor":
                         new DoctorUI().setVisible(true);
                         break;
                     case "patient":
-//                        new PatientUI().setVisible(true);
+                        // new PatientUI().setVisible(true);
                         break;
                     default:
                         errorLabel.setText("Unknown role!");
@@ -245,11 +267,6 @@ public class LoginUI extends JFrame {
                 errorLabel.setText("Username or password is not correct");
                 errorLabel.setVisible(true);
             }
-        });
-
-        signUpButton.addActionListener(e -> {
-            dispose();
-            new SignUpUI().setVisible(true);
         });
 
         signUpButtonNav.addActionListener(e -> {
@@ -278,8 +295,7 @@ public class LoginUI extends JFrame {
         panel.add(showPasswordCheckBox);
         panel.add(errorLabel);
         panel.add(forgotPasswordLabel);
-        panel.add(loginButton);
-        panel.add(signUpButton);
+        panel.add(buttonPanel);
 
         // Thêm vào frame
         setContentPane(background);
@@ -287,10 +303,13 @@ public class LoginUI extends JFrame {
         setVisible(true);
     }
 
-    private ImageIcon resizeIcon(String path, JButton button, double scaleFactor) {
-        int iconSize = (int) (button.getHeight() * scaleFactor);
+    private ImageIcon resizeIcon(String path, int size) {
         ImageIcon originalIcon = new ImageIcon(path);
-        Image resizedImage = originalIcon.getImage().getScaledInstance(iconSize, iconSize, Image.SCALE_SMOOTH);
+        if (originalIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
+            System.out.println("Failed to load image: " + path);
+            return null;
+        }
+        Image resizedImage = originalIcon.getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH);
         return new ImageIcon(resizedImage);
     }
 

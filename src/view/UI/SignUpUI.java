@@ -1,7 +1,7 @@
-package UI;
+package view.UI;
 
 import javax.swing.*;
-import database.UserDAO;
+import model.repository.UserRepository;
 import java.awt.*;
 import java.io.File;
 
@@ -139,7 +139,7 @@ public class SignUpUI extends JFrame {
             }
 
             // Đăng ký với role mặc định là "patient"
-            String result = UserDAO.registerUser(username, email, password, "patient");
+            String result = UserRepository.registerUser(username, email, password, "patient");
             if (result.startsWith("Success")) {
                 int userId = Integer.parseInt(result.split(":")[1]);
 //                JOptionPane.showMessageDialog(null, "Proceeding to patient details.", "Success", JOptionPane.INFORMATION_MESSAGE);
