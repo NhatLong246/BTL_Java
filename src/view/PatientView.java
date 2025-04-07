@@ -1,28 +1,25 @@
-package view.UI;
+package view;
 
+import controller.PatientController;
 import model.entity.Patient;
 import model.enums.Gender;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.sql.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
-public class PatientUI extends JFrame {
+public class PatientView extends JFrame {
     private JPanel contentPanel;
     private Patient patient;
     private JButton btnHome, btnViewInfo, btnViewAppointments, btnViewMedicalHistory, btnPayFees, btnPaymentHistory;
     private JButton currentSelectedButton;
+    private PatientController controller;
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/PatientManagement?useSSL=false&serverTimezone=UTC";
-    private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "2005";
-
-    public PatientUI(Patient patient) {
+    public PatientView(Patient patient) {
         this.patient = patient;
+        this.controller = new PatientController(this, patient);
         setTitle("Patient Dashboard");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -79,40 +76,17 @@ public class PatientUI extends JFrame {
 
         contentPanel = new JPanel(new BorderLayout());
         contentPanel.setBackground(new Color(245, 245, 245));
-        resetToHome();
+        controller.showHome();
 
         add(leftPanel, BorderLayout.WEST);
         add(contentPanel, BorderLayout.CENTER);
 
-        btnHome.addActionListener(e -> {
-            setSelectedButton(btnHome);
-            resetToHome();
-        });
-
-        btnViewInfo.addActionListener(e -> {
-            setSelectedButton(btnViewInfo);
-            showPatientInfo();
-        });
-
-        btnViewAppointments.addActionListener(e -> {
-            setSelectedButton(btnViewAppointments);
-            showAppointments();
-        });
-
-        btnPayFees.addActionListener(e -> {
-            setSelectedButton(btnPayFees);
-            showPayFeesForm();
-        });
-
-        btnViewMedicalHistory.addActionListener(e -> {
-            setSelectedButton(btnViewMedicalHistory);
-            showMedicalHistory();
-        });
-
-        btnPaymentHistory.addActionListener(e -> {
-            setSelectedButton(btnPaymentHistory);
-            showPaymentHistory();
-        });
+        btnHome.addActionListener(e -> controller.showHome());
+        btnViewInfo.addActionListener(e -> controller.showPatientInfo());
+        btnViewAppointments.addActionListener(e -> controller.showAppointments());
+        btnViewMedicalHistory.addActionListener(e -> controller.showMedicalHistory());
+        btnPayFees.addActionListener(e -> controller.showPayFees());
+        btnPaymentHistory.addActionListener(e -> controller.showPaymentHistory());
     }
 
     private JButton createButton(String text) {
@@ -140,7 +114,7 @@ public class PatientUI extends JFrame {
         return button;
     }
 
-    private void setSelectedButton(JButton selectedButton) {
+    public void setSelectedButton(JButton selectedButton) {
         if (currentSelectedButton != null) {
             currentSelectedButton.setBackground(new Color(52, 152, 219));
             currentSelectedButton.setPreferredSize(new Dimension(250, 60));
@@ -152,7 +126,8 @@ public class PatientUI extends JFrame {
         currentSelectedButton.revalidate();
     }
 
-    private void resetToHome() {
+    // Các phương thức hiển thị giao diện
+    public void showHome() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
         JLabel lblWelcome = new JLabel("Welcome to Patient Dashboard, " + patient.getFullName(), SwingConstants.CENTER);
@@ -163,7 +138,7 @@ public class PatientUI extends JFrame {
         contentPanel.repaint();
     }
 
-    private void showPatientInfo() {
+    public void showPatientInfo() {
         contentPanel.removeAll();
         contentPanel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -258,61 +233,7 @@ public class PatientUI extends JFrame {
         contentPanel.repaint();
     }
 
-    private void showMedicalHistory() {
-        contentPanel.removeAll();
-        contentPanel.setLayout(new BorderLayout());
-
-        JLabel titleLabel = new JLabel("Medical History", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
-        titleLabel.setForeground(new Color(44, 62, 80));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
-        contentPanel.add(titleLabel, BorderLayout.NORTH);
-
-        String[] columnNames = {"Date", "Diagnosis", "Treatment", "Doctor"};
-        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
-        JTable medicalHistoryTable = new JTable(tableModel);
-        List<String[]> medicalHistory = getMedicalHistoryFromDatabase(patient.getPatientID());
-        if (medicalHistory.isEmpty()) {
-            tableModel.addRow(new Object[]{"No records found", "", "", ""});
-        } else {
-            for (String[] record : medicalHistory) {
-                tableModel.addRow(record);
-            }
-        }
-
-        JScrollPane scrollPane = new JScrollPane(medicalHistoryTable);
-        contentPanel.add(scrollPane, BorderLayout.CENTER);
-
-        contentPanel.revalidate();
-        contentPanel.repaint();
-    }
-
-    private List<String[]> getMedicalHistoryFromDatabase(String patientID) {
-        List<String[]> medicalHistory = new ArrayList<>();
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String query = "SELECT mr.RecordDate, mr.Diagnosis, mr.TreatmentPlan, ua.FullName " +
-                           "FROM MedicalRecords mr " +
-                           "LEFT JOIN Doctors d ON mr.DoctorID = d.DoctorID " +
-                           "LEFT JOIN UserAccounts ua ON d.UserID = ua.UserID " +
-                           "WHERE mr.PatientID = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                medicalHistory.add(new String[]{
-                    rs.getString("RecordDate"),
-                    rs.getString("Diagnosis"),
-                    rs.getString("TreatmentPlan"),
-                    rs.getString("FullName") != null ? rs.getString("FullName") : "N/A"
-                });
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return medicalHistory;
-    }
-
-    private void showAppointments() {
+    public void showAppointments(List<String[]> appointments) {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
 
@@ -320,7 +241,6 @@ public class PatientUI extends JFrame {
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
         JTable table = new JTable(tableModel);
 
-        List<String[]> appointments = getAppointmentsFromDatabase(patient.getPatientID());
         if (appointments.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No appointments found!", "Info", JOptionPane.INFORMATION_MESSAGE);
         } else {
@@ -336,31 +256,36 @@ public class PatientUI extends JFrame {
         contentPanel.repaint();
     }
 
-    private List<String[]> getAppointmentsFromDatabase(String patientID) {
-        List<String[]> appointments = new ArrayList<>();
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String query = "SELECT ua.FullName, a.AppointmentDate, a.Status " +
-                           "FROM Appointments a " +
-                           "LEFT JOIN Doctors d ON a.DoctorID = d.DoctorID " +
-                           "LEFT JOIN UserAccounts ua ON d.UserID = ua.UserID " +
-                           "WHERE a.PatientID = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                appointments.add(new String[]{
-                    rs.getString("FullName") != null ? rs.getString("FullName") : "N/A",
-                    rs.getString("AppointmentDate"),
-                    rs.getString("Status")
-                });
+    public void showMedicalHistory(List<String[]> medicalHistory) {
+        contentPanel.removeAll();
+        contentPanel.setLayout(new BorderLayout());
+
+        JLabel titleLabel = new JLabel("Medical History", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        titleLabel.setForeground(new Color(44, 62, 80));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        contentPanel.add(titleLabel, BorderLayout.NORTH);
+
+        String[] columnNames = {"Date", "Diagnosis", "Treatment", "Doctor"};
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
+        JTable medicalHistoryTable = new JTable(tableModel);
+
+        if (medicalHistory.isEmpty()) {
+            tableModel.addRow(new Object[]{"No records found", "", "", ""});
+        } else {
+            for (String[] record : medicalHistory) {
+                tableModel.addRow(record);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        return appointments;
+
+        JScrollPane scrollPane = new JScrollPane(medicalHistoryTable);
+        contentPanel.add(scrollPane, BorderLayout.CENTER);
+
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
-    private void showPayFeesForm() {
+    public void showPayFees() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
 
@@ -372,11 +297,11 @@ public class PatientUI extends JFrame {
             }
         };
         JTable table = new JTable(tableModel);
-        table.setFont(new Font("Arial", Font.PLAIN, 20)); // Cỡ chữ 20 cho bảng
+        table.setFont(new Font("Arial", Font.PLAIN, 20));
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 20));
-        table.setRowHeight(30); // Tăng chiều cao hàng cho phù hợp cỡ chữ
+        table.setRowHeight(30);
 
-        List<Object[]> bills = getBillsFromDatabase(patient.getPatientID());
+        List<Object[]> bills = controller.getBills();
         if (bills.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No outstanding bills found!", "Info", JOptionPane.INFORMATION_MESSAGE);
         } else {
@@ -386,7 +311,7 @@ public class PatientUI extends JFrame {
         }
 
         table.getColumn("Action").setCellRenderer(new ButtonRenderer());
-        table.getColumn("Action").setCellEditor(new ButtonEditor(new JCheckBox(), table, this));
+        table.getColumn("Action").setCellEditor(new ButtonEditor(new JCheckBox(), table));
 
         JScrollPane scrollPane = new JScrollPane(table);
         contentPanel.add(scrollPane, BorderLayout.CENTER);
@@ -395,24 +320,31 @@ public class PatientUI extends JFrame {
         contentPanel.repaint();
     }
 
-    private List<Object[]> getBillsFromDatabase(String patientID) {
-        List<Object[]> bills = new ArrayList<>();
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String query = "SELECT BillID, TotalAmount, Status FROM Billing WHERE PatientID = ? AND Status = 'Chưa thanh toán'";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                bills.add(new Object[]{
-                    rs.getString("BillID"),
-                    rs.getDouble("TotalAmount"),
-                    rs.getString("Status")
-                });
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public void showPaymentHistory(Object[][] paymentHistory) {
+        contentPanel.removeAll();
+        contentPanel.setLayout(new BorderLayout());
+
+        JLabel historyLabel = new JLabel("Payment History", SwingConstants.CENTER);
+        historyLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        contentPanel.add(historyLabel, BorderLayout.NORTH);
+
+        String[] columns = {"Bill ID", "Date", "Amount", "Method", "Status"};
+        JTable table = new JTable(paymentHistory, columns);
+
+        if (paymentHistory.length == 0) {
+            JOptionPane.showMessageDialog(this, "No payment history found!", "Info", JOptionPane.INFORMATION_MESSAGE);
         }
-        return bills;
+
+        table.setFont(new Font("Arial", Font.PLAIN, 14));
+        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+        table.setRowHeight(25);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        contentPanel.add(scrollPane, BorderLayout.CENTER);
+
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void showPaymentForm(String billID, double amount) {
@@ -451,15 +383,15 @@ public class PatientUI extends JFrame {
 
         btnSubmit.addActionListener(e -> {
             String method = (String) cbPaymentMethod.getSelectedItem();
-            if (payBill(billID, method)) {
+            if (controller.payBill(billID, method)) {
                 JOptionPane.showMessageDialog(this, "Payment processed successfully!");
-                showPayFeesForm(); // Quay lại danh sách hóa đơn chưa thanh toán
+                showPayFees();
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to process payment!", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        btnCancel.addActionListener(e -> showPayFeesForm());
+        btnCancel.addActionListener(e -> showPayFees());
 
         buttonPanel.add(btnSubmit);
         buttonPanel.add(btnCancel);
@@ -472,71 +404,6 @@ public class PatientUI extends JFrame {
         contentPanel.add(formPanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
-    }
-
-    private boolean payBill(String billID, String paymentMethod) {
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String query = "UPDATE Billing SET Status = 'Đã thanh toán', PaymentMethod = ? WHERE BillID = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, paymentMethod);
-            stmt.setString(2, billID);
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    private void showPaymentHistory() {
-        contentPanel.removeAll();
-        contentPanel.setLayout(new BorderLayout());
-
-        JLabel historyLabel = new JLabel("Payment History", SwingConstants.CENTER);
-        historyLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        contentPanel.add(historyLabel, BorderLayout.NORTH);
-
-        String[] columns = {"Bill ID", "Date", "Amount", "Method", "Status"};
-        Object[][] data = getPaymentHistory(patient.getPatientID());
-        JTable table = new JTable(data, columns);
-        table.setFont(new Font("Arial", Font.PLAIN, 14));
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-        table.setRowHeight(25);
-        table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-
-        JScrollPane scrollPane = new JScrollPane(table);
-        contentPanel.add(scrollPane, BorderLayout.CENTER);
-
-        contentPanel.revalidate();
-        contentPanel.repaint();
-    }
-
-    private Object[][] getPaymentHistory(String patientId) {
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String query = "SELECT BillID, CreatedAt, TotalAmount, PaymentMethod, Status FROM Billing WHERE PatientID = ? AND Status = 'Đã thanh toán'";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientId);
-            ResultSet rs = stmt.executeQuery();
-
-            rs.last();
-            int rowCount = rs.getRow();
-            rs.beforeFirst();
-
-            Object[][] data = new Object[rowCount][5];
-            int rowIndex = 0;
-            while (rs.next()) {
-                data[rowIndex][0] = rs.getString("BillID");
-                data[rowIndex][1] = rs.getTimestamp("CreatedAt");
-                data[rowIndex][2] = rs.getDouble("TotalAmount");
-                data[rowIndex][3] = rs.getString("PaymentMethod");
-                data[rowIndex][4] = rs.getString("Status");
-                rowIndex++;
-            }
-            return data;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return new Object[0][0];
     }
 
     private void addFormField(JPanel formPanel, GridBagConstraints gbc, String label, JComponent field, int row) {
@@ -572,12 +439,10 @@ public class PatientUI extends JFrame {
         private String label;
         private boolean isPushed;
         private JTable table;
-        private PatientUI patientUI;
 
-        public ButtonEditor(JCheckBox checkBox, JTable table, PatientUI patientUI) {
+        public ButtonEditor(JCheckBox checkBox, JTable table) {
             super(checkBox);
             this.table = table;
-            this.patientUI = patientUI;
             button = new JButton();
             button.setOpaque(true);
             button.addActionListener(e -> fireEditingStopped());
@@ -596,7 +461,7 @@ public class PatientUI extends JFrame {
             if (isPushed) {
                 String billID = table.getValueAt(table.getSelectedRow(), 0).toString();
                 double amount = (Double) table.getValueAt(table.getSelectedRow(), 1);
-                patientUI.showPaymentForm(billID, amount); // Chuyển sang form thanh toán
+                showPaymentForm(billID, amount);
             }
             isPushed = false;
             return label;
@@ -609,18 +474,44 @@ public class PatientUI extends JFrame {
         }
     }
 
+    public JPanel getContentPanel() {
+        return contentPanel;
+    }
+
+    public JButton getBtnHome() {
+        return btnHome;
+    }
+
+    public JButton getBtnViewInfo() {
+        return btnViewInfo;
+    }
+
+    public JButton getBtnViewAppointments() {
+        return btnViewAppointments;
+    }
+
+    public JButton getBtnViewMedicalHistory() {
+        return btnViewMedicalHistory;
+    }
+
+    public JButton getBtnPayFees() {
+        return btnPayFees;
+    }
+
+    public JButton getBtnPaymentHistory() {
+        return btnPaymentHistory;
+    }
+
     public static void main(String[] args) {
-        // giao diện nimbus
         try {
             UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
         } catch (Exception e) {
             e.printStackTrace();
         }
         try {
-//            Patient patient = new Patient("Trần Thị B", LocalDate.of(1990, 5, 15), "456 Đường XYZ, Hà Nội", Gender.FEMALE, "0976543210", LocalDate.now());
-            Patient patient = new Patient("USER001", "PAT-001", "Trần Thị B", LocalDate.of(1990, 5, 15), "456 Đường XYZ, Hà Nội", Gender.FEMALE, "0976543210", LocalDate.now());
-            patient.setPatientID("P001");
-            SwingUtilities.invokeLater(() -> new PatientUI(patient).setVisible(true));
+            Patient patient = new Patient("USER001", "PAT-001", "Trần Thị B", LocalDate.of(1990, 5, 15),
+                    "456 Đường XYZ, Hà Nội", Gender.FEMALE, "0976543210", LocalDate.now());
+            SwingUtilities.invokeLater(() -> new PatientView(patient).setVisible(true));
         } catch (IllegalArgumentException e) {
             System.err.println("Error creating patient: " + e.getMessage());
             JOptionPane.showMessageDialog(null, "Error: " + e.getMessage(), "Invalid Input", JOptionPane.ERROR_MESSAGE);
