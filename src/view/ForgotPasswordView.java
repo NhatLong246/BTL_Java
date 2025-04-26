@@ -1,9 +1,9 @@
 package view; 
 
-import view.UI.ForgotPasswordUI;
-
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 
 public class ForgotPasswordView extends JPanel {
     public JTextField tokenText;
@@ -41,6 +41,23 @@ public class ForgotPasswordView extends JPanel {
         tokenText.setFont(new Font("Arial", Font.PLAIN, 20));
         tokenText.setForeground(Color.GRAY);
         add(tokenText);
+        tokenText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (tokenText.getText().equals("ENTER TOKEN")) {
+                    tokenText.setText("");
+                    tokenText.setForeground(Color.BLACK);
+                }
+            }
+            
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (tokenText.getText().isEmpty()) {
+                    tokenText.setText("ENTER TOKEN");
+                    tokenText.setForeground(Color.GRAY);
+                }
+            }
+        });
 
         // Password input
         JLabel newPassLabel = new JLabel("New Password:");
@@ -55,6 +72,25 @@ public class ForgotPasswordView extends JPanel {
         newPassText.setForeground(Color.GRAY);
         newPassText.setEchoChar((char) 0);
         add(newPassText);
+        newPassText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (new String(newPassText.getPassword()).equals("NEW PASSWORD")) {
+                    newPassText.setText("");
+                    newPassText.setForeground(Color.BLACK);
+                    newPassText.setEchoChar('●');
+                }
+            }
+            
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (newPassText.getPassword().length == 0) {
+                    newPassText.setText("NEW PASSWORD");
+                    newPassText.setForeground(Color.GRAY);
+                    newPassText.setEchoChar((char) 0);
+                }
+            }
+        });
 
         // Submit
         submitButton = new JButton(" SUBMIT");
@@ -79,6 +115,35 @@ public class ForgotPasswordView extends JPanel {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        SwingUtilities.invokeLater(() -> new ForgotPasswordUI().setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Reset Password");
+            frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            
+            // Thiết lập nền
+            try {
+                String imagePath = "resources/img/file_background.png";
+                ImageIcon bgIcon = new ImageIcon(imagePath);
+                if (bgIcon.getIconWidth() > 0) {
+                    Image scaledImage = bgIcon.getImage().getScaledInstance(
+                            Toolkit.getDefaultToolkit().getScreenSize().width,
+                            Toolkit.getDefaultToolkit().getScreenSize().height,
+                            Image.SCALE_SMOOTH);
+                    JLabel background = new JLabel(new ImageIcon(scaledImage));
+                    background.setBounds(0, 0, 
+                                       Toolkit.getDefaultToolkit().getScreenSize().width, 
+                                       Toolkit.getDefaultToolkit().getScreenSize().height);
+                    frame.setContentPane(background);
+                } else {
+                    frame.getContentPane().setBackground(new Color(41, 128, 185));
+                }
+            } catch (Exception e) {
+                frame.getContentPane().setBackground(new Color(41, 128, 185));
+            }
+            
+            frame.setLayout(null);
+            frame.add(new ForgotPasswordView());
+            frame.setVisible(true);
+        });
     }
 }

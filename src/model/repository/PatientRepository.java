@@ -1,6 +1,8 @@
 package model.repository;
 
+import database.DatabaseConnection;
 import model.entity.Patient;
+import model.enums.Gender;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -10,6 +12,30 @@ public class PatientRepository {
     private static final String DB_URL = "jdbc:mysql://localhost:3306/PatientManagement?useSSL=false&serverTimezone=UTC";
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "2005";
+
+    public Patient getPatientByID(String patientID) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT * FROM Patients WHERE PatientID = ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, patientID);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return new Patient(
+                        rs.getString("PatientID"), // Giả định UserID trùng PatientID
+                        rs.getString("PatientID"),
+                        rs.getString("FullName"),
+                        rs.getDate("DateOfBirth") != null ? rs.getDate("DateOfBirth").toLocalDate() : null,
+                        rs.getString("Address"),
+                        Gender.valueOf(rs.getString("Gender").toUpperCase()),
+                        rs.getString("PhoneNumber"),
+                        rs.getDate("CreatedAt") != null ? rs.getDate("CreatedAt").toLocalDate() : null
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     public List<String[]> getMedicalHistory(String patientID) {
         List<String[]> medicalHistory = new ArrayList<>();

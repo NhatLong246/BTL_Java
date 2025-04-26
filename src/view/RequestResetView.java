@@ -1,9 +1,9 @@
 package view;
 
-import view.UI.RequestResetUI;
-
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 
 public class RequestResetView extends JPanel {
     public JTextField inputText;
@@ -36,6 +36,25 @@ public class RequestResetView extends JPanel {
         inputText.setForeground(Color.GRAY);
         add(inputText);
 
+        // Thêm FocusListener cho inputText
+        inputText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (inputText.getText().equals("ENTER USERNAME OR EMAIL")) {
+                    inputText.setText("");
+                    inputText.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (inputText.getText().isEmpty()) {
+                    inputText.setText("ENTER USERNAME OR EMAIL");
+                    inputText.setForeground(Color.GRAY);
+                }
+            }
+        });
+
         submitButton = new JButton("SUBMIT");
         submitButton.setBounds(250, 300, 400, 60);
         submitButton.setFont(new Font("Arial", Font.BOLD, 22));
@@ -50,6 +69,6 @@ public class RequestResetView extends JPanel {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        SwingUtilities.invokeLater(() -> new RequestResetUI().setVisible(true));
+        SwingUtilities.invokeLater(() -> new RequestResetView().setVisible(true));
     }
 }

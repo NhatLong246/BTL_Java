@@ -1,4 +1,3 @@
-/*
 package view;
 
 import controller.ResetTokenController;
@@ -52,6 +51,5 @@ public class ResetTokenDisplayView extends JPanel {
         SwingUtilities.invokeLater(() -> new ResetTokenController("123e4567-e89b-12d3-a456-426614174000"));
     }
 }
-*/
 
 

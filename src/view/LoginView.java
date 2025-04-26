@@ -24,22 +24,50 @@ public class LoginView extends JFrame {
         setLayout(null);
 
         // Load background image
-        String imagePath = "img/file_background.png";
-        if (!new File(imagePath).exists()) {
-            System.out.println("Image not found: " + imagePath);
+        String imagePath = "src/resources/img/file_background.png";
+        File imageFile = new File(imagePath);
+        if (!imageFile.exists()) {
+            System.err.println("ERROR: Image not found: " + imageFile.getAbsolutePath());
+            // Thử tìm vị trí hiện tại để debug
+            System.out.println("Current directory: " + new File(".").getAbsolutePath());
+            // Thử đường dẫn thứ hai
+            imagePath = "resources/img/file_background.png";
+            imageFile = new File(imagePath);
+            if (!imageFile.exists()) {
+                System.err.println("ERROR: Second path also failed: " + imageFile.getAbsolutePath());
+                // Sử dụng một màu nền đơn giản thay vì hình ảnh
+                getContentPane().setBackground(new Color(41, 128, 185));
+                return; // Không tiếp tục xử lý hình ảnh
+            }
         }
 
-        ImageIcon originalIcon = new ImageIcon(imagePath);
-        Image scaledImage = originalIcon.getImage().getScaledInstance(
-                Toolkit.getDefaultToolkit().getScreenSize().width,
-                Toolkit.getDefaultToolkit().getScreenSize().height,
-                Image.SCALE_SMOOTH
-        );
-        ImageIcon bgImage = new ImageIcon(scaledImage);
-
-        JLabel background = new JLabel(bgImage);
-        background.setBounds(0, 0, Toolkit.getDefaultToolkit().getScreenSize().width, 
-                                    Toolkit.getDefaultToolkit().getScreenSize().height);
+        // Tải hình ảnh nếu tìm thấy
+        try {
+            ImageIcon originalIcon = new ImageIcon(imagePath);
+            if (originalIcon.getIconWidth() <= 0) {
+                System.err.println("ERROR: Failed to load image or invalid image");
+                getContentPane().setBackground(new Color(41, 128, 185));
+                return;
+            }
+            
+            Image scaledImage = originalIcon.getImage().getScaledInstance(
+                    Toolkit.getDefaultToolkit().getScreenSize().width,
+                    Toolkit.getDefaultToolkit().getScreenSize().height,
+                    Image.SCALE_SMOOTH
+            );
+            ImageIcon bgImage = new ImageIcon(scaledImage);
+            
+            JLabel background = new JLabel(bgImage);
+            background.setBounds(0, 0, 
+                                Toolkit.getDefaultToolkit().getScreenSize().width, 
+                                Toolkit.getDefaultToolkit().getScreenSize().height);
+            
+            setContentPane(background);
+        } catch (Exception e) {
+            System.err.println("ERROR loading background image: " + e.getMessage());
+            e.printStackTrace();
+            getContentPane().setBackground(new Color(41, 128, 185));
+        }
 
         // Panel đăng nhập
         int panelWidth = 900;
@@ -148,6 +176,10 @@ public class LoginView extends JFrame {
         showPasswordCheckBox.setForeground(Color.WHITE);
         showPasswordCheckBox.setFont(new Font("Arial", Font.PLAIN, 16));
         showPasswordCheckBox.setOpaque(false);
+        showPasswordCheckBox.setContentAreaFilled(false);
+        showPasswordCheckBox.setBorderPainted(false);
+        showPasswordCheckBox.setFocusPainted(false);
+        showPasswordCheckBox.setBackground(new Color(0, 0, 0, 0)); // Thêm nền trong suốt
         showPasswordCheckBox.addActionListener(e -> {
             if (showPasswordCheckBox.isSelected()) {
                 passText.setEchoChar((char) 0);
@@ -158,6 +190,39 @@ public class LoginView extends JFrame {
             }
         });
 
+        // Tạo một custom JLabel cho Forgot Password để tránh hiệu ứng bôi đen
+        class TransparentLabel extends JLabel {
+            public TransparentLabel(String text, int alignment) {
+                super(text, alignment);
+                setOpaque(false);
+            }
+            
+            @Override
+            protected void paintComponent(Graphics g) {
+                // Đảm bảo không vẽ nền
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.0f));
+                super.paintComponent(g2d);
+                g2d.dispose();
+                
+                // Chỉ vẽ văn bản
+                g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(getForeground());
+                FontMetrics fm = g2d.getFontMetrics();
+                String text = getText().replaceAll("<html>|</html>|<u>|</u>", ""); // Loại bỏ thẻ HTML khi vẽ
+                int x = getWidth() - fm.stringWidth(text) - 5; // Căn lề phải
+                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+                g2d.drawString(text, x, y);
+                
+                // Vẽ gạch chân nếu cần
+                if (getText().contains("<u>")) {
+                    g2d.drawLine(x, y + 2, x + fm.stringWidth(text), y + 2);
+                }
+                g2d.dispose();
+            }
+        }
+
         // Error Label
         errorLabel = new JLabel("");
         errorLabel.setBounds(250, 380, 400, 30);
@@ -166,20 +231,26 @@ public class LoginView extends JFrame {
         errorLabel.setVisible(false);
 
         // Forgot Password
-        JLabel forgotPasswordLabel = new JLabel("Forgot Password?", SwingConstants.RIGHT);
+        TransparentLabel forgotPasswordLabel = new TransparentLabel("Forgot Password?", SwingConstants.RIGHT);
         forgotPasswordLabel.setBounds(450, 380, 200, 30);
         forgotPasswordLabel.setFont(new Font("Arial", Font.PLAIN, 18));
         forgotPasswordLabel.setForeground(Color.WHITE);
         forgotPasswordLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
         forgotPasswordLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            private boolean isHovered = false;
+            
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
+                isHovered = true;
                 forgotPasswordLabel.setText("<html><u>Forgot Password?</u></html>");
+                forgotPasswordLabel.repaint();
             }
 
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
+                isHovered = false;
                 forgotPasswordLabel.setText("Forgot Password?");
+                forgotPasswordLabel.repaint();
             }
 
             @Override
@@ -194,8 +265,59 @@ public class LoginView extends JFrame {
         loginButton.setFont(new Font("Arial", Font.BOLD, 22));
         loginButton.setBackground(Color.WHITE);
         loginButton.setForeground(Color.BLACK);
-        loginButton.setIcon(resizeIcon("src/resource/img/user-profile.png", loginButton, 0.5));
-        loginButton.addActionListener(e -> controller.login(userText.getText(), new String(passText.getPassword())));
+        // Đường dẫn khác với đường dẫn hình nền
+        loginButton.setIcon(resizeIcon("src/resources/img/user-profile.png", loginButton, 0.5));
+        loginButton.addActionListener(e -> {
+            // Kiểm tra đầu vào
+            String username = userText.getText();
+            String password = new String(passText.getPassword());
+            
+            if ("USERNAME".equals(username) || "PASSWORD".equals(password)) {
+                showError("Vui lòng nhập tên đăng nhập và mật khẩu!");
+                return;
+            }
+            
+            // Tắt nút đăng nhập và hiển thị thông báo đang xử lý
+            loginButton.setEnabled(false);
+            showError("Đang xử lý...");
+            errorLabel.setForeground(Color.BLUE);
+            
+            // Sử dụng SwingWorker để thực hiện đăng nhập không đồng bộ
+            SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
+                @Override
+                protected Boolean doInBackground() {
+                    return controller.login(username, password);
+                }
+                
+                @Override
+                protected void done() {
+                    try {
+                        // Lấy kết quả từ phương thức get()
+                        boolean loginSuccess = get();
+                        
+                        // Kích hoạt lại nút đăng nhập
+                        loginButton.setEnabled(true);
+                        
+                        if (loginSuccess) {
+                            // Đăng nhập thành công - có thể ẩn thông báo lỗi hoặc chuyển màn hình
+                            hideError();
+                            // controller.navigateToMainView() hoặc chuyển màn hình khác tùy vai trò người dùng
+                        } else {
+                            // Đăng nhập thất bại - hiển thị thông báo lỗi
+                            errorLabel.setForeground(Color.RED);
+                            showError("Tên đăng nhập hoặc mật khẩu không đúng!");
+                        }
+                    } catch (Exception e) {
+                        // Xử lý ngoại lệ
+                        loginButton.setEnabled(true);
+                        errorLabel.setForeground(Color.RED);
+                        showError("Lỗi đăng nhập: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+            };
+            worker.execute();
+        });
 
         // SIGN UP Button
         JButton signUpButton = new JButton(" SIGN UP");
@@ -203,7 +325,7 @@ public class LoginView extends JFrame {
         signUpButton.setFont(new Font("Arial", Font.BOLD, 22));
         signUpButton.setBackground(Color.WHITE);
         signUpButton.setForeground(Color.BLACK);
-        signUpButton.setIcon(resizeIcon("src/resource/img/add.png", signUpButton, 0.5));
+        signUpButton.setIcon(resizeIcon("src/resources/img/add.png", signUpButton, 0.5));
         signUpButton.addActionListener(e -> controller.navigateToSignUp());
 
         // Sign Up Navigation Button
@@ -236,7 +358,6 @@ public class LoginView extends JFrame {
         panel.add(signUpButton);
 
         // Thêm vào frame
-        setContentPane(background);
         add(panel);
         setVisible(true);
     }

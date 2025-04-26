@@ -88,6 +88,10 @@ public class Patient extends Person{
 	public void setInsurance(Insurance insurance) {
 		this.insurance = insurance;
 	}
+
+	public LocalDate getRegistrationDate() {
+		return createdAt;  // giả định rằng createdAt là ngày đăng ký
+	}
 }
 
 

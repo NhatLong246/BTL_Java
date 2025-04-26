@@ -4,6 +4,7 @@ USE PatientManagement;
 -- Bảng Tài Khoản Người Dùng
 CREATE TABLE UserAccounts (
     UserID VARCHAR(50) PRIMARY KEY,
+    UserName VARCHAR(50) UNIQUE NOT NULL, -- thêm sau
     FullName VARCHAR(100) NOT NULL,
     Role ENUM('Bác sĩ', 'Bệnh nhân', 'Quản lí') NOT NULL,
     Email VARCHAR(100) UNIQUE NOT NULL,
@@ -11,6 +12,27 @@ CREATE TABLE UserAccounts (
     PasswordHash VARCHAR(255) NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Bước 1: Thêm cột UserName
+ALTER TABLE UserAccounts
+ADD COLUMN UserName VARCHAR(50) UNIQUE NULL AFTER UserID;
+
+UPDATE UserAccounts
+SET UserName = 'nguyenvana'
+WHERE UserID = 'USR-001';
+
+UPDATE UserAccounts
+SET UserName = 'tranthib'
+WHERE UserID = 'USR-002';
+
+UPDATE UserAccounts
+SET UserName = 'levanc'
+WHERE UserID = 'USR-003';
+
+-- Bước 3: Đặt lại UserName NOT NULL
+ALTER TABLE UserAccounts
+MODIFY COLUMN UserName VARCHAR(50) UNIQUE NOT NULL;
+
 
 -- Bảng Chuyên Khoa
 CREATE TABLE Specialties (

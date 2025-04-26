@@ -1,7 +1,5 @@
 package view;
 
-import view.UI.ResetTokenDisplayUI;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
@@ -25,7 +23,16 @@ public class ResetTokenView extends JFrame {
         setLayout(null);
 
         // Load background image
-        String imagePath = "img/file_background.png";
+        String imagePath = "resources/img/file_background.png";
+        File imageFile = new File(imagePath);
+        if (!imageFile.exists()) {
+            imagePath = "src/resources/img/file_background.png";
+            imageFile = new File(imagePath);
+            if (!imageFile.exists()) {
+                System.out.println("Image not found at: " + new File(imagePath).getAbsolutePath());
+                getContentPane().setBackground(new Color(41, 128, 185));
+            }
+        }
         if (!new File(imagePath).exists()) {
             System.out.println("Image not found: " + imagePath);
         }
@@ -99,6 +106,10 @@ public class ResetTokenView extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        SwingUtilities.invokeLater(() -> new ResetTokenDisplayUI("123e4567-e89b-12d3-a456-426614174000"));
+        SwingUtilities.invokeLater(() -> {
+            ResetTokenView view = new ResetTokenView();
+            view.setResetToken("123e4567-e89b-12d3-a456-426614174000");
+            view.setVisible(true);
+        });
     }
 }

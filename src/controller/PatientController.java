@@ -4,6 +4,7 @@ import model.entity.Patient;
 import model.repository.PatientRepository;
 import view.PatientView;
 
+import java.sql.SQLException;
 import java.util.List;
 
 public class PatientController {
@@ -11,7 +12,7 @@ public class PatientController {
     private final Patient patient;
     private final PatientRepository repository;
 
-    public PatientController(PatientView view, Patient patient) {
+    public PatientController(PatientView view, Patient patient) throws SQLException {
         this.view = view;
         this.patient = patient;
         this.repository = new PatientRepository();

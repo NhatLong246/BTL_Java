@@ -1,37 +1,77 @@
-package view.UI;
+package view;
 
+import controller.SignUpController;
 import javax.swing.*;
-import model.repository.UserRepository;
 import java.awt.*;
 import java.io.File;
+import java.net.URL;
 
-public class SignUpUI extends JFrame {
+public class SignUpView extends JFrame {
     private JButton signUpButtonNav;
     private JButton signInButtonNav;
+    private JTextField usernameText;
+    private JTextField emailText;
+    private JPasswordField passText;
+    private SignUpController controller;
 
-    public SignUpUI() {
+    public SignUpView() {
+        this.controller = new SignUpController(this);
         setTitle("Sign Up");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(null);
 
         // Load background image
-        String imagePath = "src/resource/img/file_background.png";
-        if (!new File(imagePath).exists()) {
-            System.out.println("Image not found: " + imagePath);
+        try {
+            // Kiểm tra file trực tiếp
+            String imagePath = "resources/img/file_background.png";
+            File imageFile = new File(imagePath);
+            
+            ImageIcon originalIcon = null;
+            
+            if (imageFile.exists()) {
+                System.out.println("Tìm thấy ảnh tại: " + imageFile.getAbsolutePath());
+                originalIcon = new ImageIcon(imagePath);
+            } else {
+                // Thử dùng ClassLoader
+                URL imageUrl = getClass().getClassLoader().getResource("img/file_background.png");
+                if (imageUrl != null) {
+                    System.out.println("Tìm thấy ảnh qua ClassLoader: " + imageUrl);
+                    originalIcon = new ImageIcon(imageUrl);
+                } else {
+                    // Thử đường dẫn tuyệt đối
+                    String absolutePath = "d:/codejava/BTL_QuanLyBenhNhan/resources/img/file_background.png";
+                    if (new File(absolutePath).exists()) {
+                        System.out.println("Tìm thấy ảnh tại đường dẫn tuyệt đối");
+                        originalIcon = new ImageIcon(absolutePath);
+                    }
+                }
+            }
+            
+            if (originalIcon == null || originalIcon.getIconWidth() <= 0) {
+                System.err.println("Failed to load image");
+                getContentPane().setBackground(new Color(41, 128, 185));
+            } else {
+                Image scaledImage = originalIcon.getImage().getScaledInstance(
+                        Toolkit.getDefaultToolkit().getScreenSize().width,
+                        Toolkit.getDefaultToolkit().getScreenSize().height,
+                        Image.SCALE_SMOOTH
+                );
+                ImageIcon bgImage = new ImageIcon(scaledImage);
+                
+                JLabel background = new JLabel(bgImage);
+                background.setBounds(0, 0, 
+                                  Toolkit.getDefaultToolkit().getScreenSize().width, 
+                                  Toolkit.getDefaultToolkit().getScreenSize().height);
+                
+                setContentPane(background);
+                setLayout(null);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading background image: " + e.getMessage());
+            e.printStackTrace();
+            getContentPane().setBackground(new Color(41, 128, 185));
         }
-
-        ImageIcon originalIcon = new ImageIcon(imagePath);
-        Image scaledImage = originalIcon.getImage().getScaledInstance(
-                Toolkit.getDefaultToolkit().getScreenSize().width,
-                Toolkit.getDefaultToolkit().getScreenSize().height,
-                Image.SCALE_SMOOTH
-        );
-        ImageIcon bgImage = new ImageIcon(scaledImage);
-
-        JLabel background = new JLabel(bgImage);
-        background.setBounds(0, 0, Toolkit.getDefaultToolkit().getScreenSize().width, 
-                                    Toolkit.getDefaultToolkit().getScreenSize().height);
 
         // Panel đăng ký
         int panelWidth = 900;
@@ -42,7 +82,6 @@ public class SignUpUI extends JFrame {
         panel.setSize(panelWidth, panelHeight);
         panel.setBackground(new Color(0, 0, 0, 150));
 
-        // Căn giữa panel
         panel.setBounds((Toolkit.getDefaultToolkit().getScreenSize().width - panelWidth) / 2,
                         (Toolkit.getDefaultToolkit().getScreenSize().height - panelHeight) / 2,
                         panelWidth, panelHeight);
@@ -57,21 +96,17 @@ public class SignUpUI extends JFrame {
         signInButtonNav = new JButton("Login");
         signUpButtonNav = new JButton("Sign Up");
 
-        // Kích thước mặc định (inactive)
         int defaultWidth = 200;
         int defaultHeight = 50;
-        // Kích thước khi active
         int activeWidth = 240;
         int activeHeight = 60;
 
-        // Tính toán vị trí để căn giữa 2 nút trong panel
         int totalButtonWidth = defaultWidth + activeWidth;
         int startX = (panelWidth - totalButtonWidth) / 2;
         int signInX = startX;
         int signUpX = startX + defaultWidth;
         int buttonY = 80;
 
-        // Đặt trạng thái ban đầu: Sign Up là active
         signUpButtonNav.setBounds(signUpX, buttonY, activeWidth, activeHeight);
         signUpButtonNav.setBackground(Color.WHITE);
         signUpButtonNav.setForeground(Color.BLACK);
@@ -88,7 +123,7 @@ public class SignUpUI extends JFrame {
         usernameLabel.setForeground(Color.WHITE);
         usernameLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JTextField usernameText = new JTextField();
+        usernameText = new JTextField();
         usernameText.setBounds(250, 200, 400, 50);
         usernameText.setFont(new Font("Arial", Font.PLAIN, 20));
 
@@ -98,7 +133,7 @@ public class SignUpUI extends JFrame {
         emailLabel.setForeground(Color.WHITE);
         emailLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JTextField emailText = new JTextField();
+        emailText = new JTextField();
         emailText.setBounds(250, 300, 400, 50);
         emailText.setFont(new Font("Arial", Font.PLAIN, 20));
 
@@ -108,7 +143,7 @@ public class SignUpUI extends JFrame {
         passLabel.setForeground(Color.WHITE);
         passLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JPasswordField passText = new JPasswordField();
+        passText = new JPasswordField();
         passText.setBounds(250, 400, 400, 50);
         passText.setFont(new Font("Arial", Font.PLAIN, 20));
 
@@ -120,37 +155,10 @@ public class SignUpUI extends JFrame {
         nextButton.setFont(new Font("Arial", Font.BOLD, 22));
         nextButton.setBackground(Color.WHITE);
         nextButton.setForeground(Color.BLACK);
-        nextButton.setIcon(resizeIcon("src/resource/img/add.png", nextButton, 0.5));
+        nextButton.setIcon(resizeIcon("src/resources/img/add.png", nextButton, 0.5));
+        nextButton.addActionListener(e -> controller.signUp(usernameText.getText(), emailText.getText(), new String(passText.getPassword())));
 
-        nextButton.addActionListener(e -> {
-            String username = usernameText.getText();
-            String email = emailText.getText();
-            String password = new String(passText.getPassword());
-
-            if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Please fill all fields!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Kiểm tra định dạng email
-            if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-                JOptionPane.showMessageDialog(null, "Invalid email format!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Đăng ký với role mặc định là "patient"
-            String result = UserRepository.registerUser(username, email, password, "patient");
-            if (result.startsWith("Success")) {
-                int userId = Integer.parseInt(result.split(":")[1]);
-//                JOptionPane.showMessageDialog(null, "Proceeding to patient details.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                dispose();
-                new PatientInfoUI(userId).setVisible(true); // Truyền userId
-            } else {
-                JOptionPane.showMessageDialog(null, "Sign up failed! " + result, "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        // Xử lý sự kiện khi nhấn nút Sign In
+        // Sign In Navigation Button
         signInButtonNav.addActionListener(e -> {
             int totalButtonWidthActive = activeWidth + defaultWidth;
             int startXActive = (panelWidth - totalButtonWidthActive) / 2;
@@ -165,8 +173,7 @@ public class SignUpUI extends JFrame {
             signUpButtonNav.setForeground(Color.WHITE);
             signUpButtonNav.setFont(new Font("Arial", Font.BOLD, 20));
 
-            dispose();
-            new LoginUI().setVisible(true);
+            controller.navigateToLogin();
         });
 
         // Thêm thành phần vào panel
@@ -182,7 +189,6 @@ public class SignUpUI extends JFrame {
         panel.add(nextButton);
 
         // Thêm vào frame
-        setContentPane(background);
         add(panel);
         setVisible(true);
     }
@@ -194,7 +200,20 @@ public class SignUpUI extends JFrame {
         return new ImageIcon(resizedImage);
     }
 
+    public void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    public void showSuccess(String message) {
+        JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new SignUpUI().setVisible(true));
+        try {
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        SwingUtilities.invokeLater(() -> new SignUpView().setVisible(true));
     }
 }
