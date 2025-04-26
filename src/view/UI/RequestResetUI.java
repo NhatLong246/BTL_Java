@@ -1,12 +1,9 @@
 package view.UI;
 
 import javax.swing.*;
-
-import view.UI.ResetTokenDisplayUI;
-import model.repository.UserRepository;
-
 import java.awt.*;
 import java.io.File;
+import model.repository.UserRepository;
 
 public class RequestResetUI extends JFrame {
     public RequestResetUI() {
@@ -80,7 +77,7 @@ public class RequestResetUI extends JFrame {
         });
 
         // SUBMIT Button
-        JButton submitButton = new JButton(" SUBMIT");
+        JButton submitButton = new JButton("SUBMIT");
         submitButton.setBounds(250, 300, 400, 60);
         submitButton.setFont(new Font("Arial", Font.BOLD, 22));
         submitButton.setBackground(Color.WHITE);

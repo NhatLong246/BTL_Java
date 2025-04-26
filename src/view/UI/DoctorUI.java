@@ -2,10 +2,10 @@ package view.UI;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import enums.Gender;
+import model.enums.Gender;
 import utils.ScannerUtils;
-import entity.Patient;
-import UI.PatientManager;
+import model.entity.Patient;
+import view.UI.PatientManager;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -300,7 +300,7 @@ public class DoctorUI extends JFrame {
     }
 
     // Thêm bệnh nhân
-    private void addPatient() {
+    /*private void addPatient() {
         String name = txtName.getText();
         String birthDateStr = txtBirthDate.getText();
         String address = txtAddress.getText();
@@ -333,6 +333,49 @@ public class DoctorUI extends JFrame {
                 // Nếu lưu vào cơ sở dữ liệu thất bại, xóa bệnh nhân khỏi danh sách trong bộ nhớ
                 patientManager.removePatientByID(newPatient.getPatientID());
                 JOptionPane.showMessageDialog(this, "Failed to save patient to database!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (DateTimeParseException e) {
+            JOptionPane.showMessageDialog(this, "Invalid date format (YYYY-MM-DD)!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }*/
+
+    private void addPatient() {
+        String name = txtName.getText();
+        String birthDateStr = txtBirthDate.getText();
+        String address = txtAddress.getText();
+        String phone = txtPhone.getText();
+        String medicalHistory = txtDisease.getText();
+
+        if (name.isEmpty() || birthDateStr.isEmpty() || address.isEmpty() || phone.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in all required fields!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            LocalDate birthDate = LocalDate.parse(birthDateStr);
+            Gender gender = (Gender) cbGender.getSelectedItem();
+            LocalDate createdAt = LocalDate.now();
+
+            // Establish a database connection
+            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/hospitaldb?autoReconnect=true&useSSL=false", "root", "2005")) {
+                Patient newPatient = new Patient(name, name, birthDate, address, gender, phone, conn);
+
+                // Add to in-memory list first
+                patientManager.addPatient(newPatient);
+
+                // Save to database
+                boolean savedToDatabase = addPatientToDatabase(name, birthDateStr, gender.toString(), phone, address, medicalHistory);
+
+                if (savedToDatabase) {
+                    JOptionPane.showMessageDialog(this, "Patient added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    resetToHome();
+                } else {
+                    patientManager.removePatientByID(newPatient.getPatientID());
+                    JOptionPane.showMessageDialog(this, "Failed to save patient to database!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Database connection error!", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } catch (DateTimeParseException e) {
             JOptionPane.showMessageDialog(this, "Invalid date format (YYYY-MM-DD)!", "Error", JOptionPane.ERROR_MESSAGE);

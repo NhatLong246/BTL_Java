@@ -5,6 +5,8 @@ import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.io.File;
+import view.UI.ForgotPasswordUI;
+import view.UI.RequestResetUI;
 import model.repository.UserRepository;
 
 public class LoginUI extends JFrame {
@@ -21,7 +23,7 @@ public class LoginUI extends JFrame {
         setLayout(null);
 
         // Load background image
-        String imagePath = "img/file_background.png";
+        String imagePath = "resource/img/file_background.png";
         if (!new File(imagePath).exists()) {
             System.out.println("Image not found: " + imagePath);
         }
@@ -59,7 +61,7 @@ public class LoginUI extends JFrame {
         titleLabel.setBounds(0, 20, panelWidth, 50);
 
         // Navigation buttons
-        signInButtonNav = new JButton("Sign In");
+        signInButtonNav = new JButton("Login");
         signUpButtonNav = new JButton("Sign Up");
 
         int defaultWidth = 200;
@@ -185,7 +187,7 @@ public class LoginUI extends JFrame {
         buttonPanel.setBounds(0, 440, panelWidth, 100);
 
         // LOGIN Button
-        JButton loginButton = new JButton(" LOGIN");
+        JButton loginButton = new JButton("LOGIN");
         loginButton.setFont(new Font("Arial", Font.BOLD, 22));
         loginButton.setPreferredSize(new Dimension(200, 60));
         loginButton.setMaximumSize(new Dimension(200, 60));

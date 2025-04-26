@@ -9,8 +9,8 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class Patient extends Person{
-	private String patientId;
-	private String userId;    // Liên kết với tài khoản người dùng
+	private String patientID;
+	private String userID;    // Liên kết với tài khoản người dùng
 	private LocalDate createdAt; // Ngày tạo (ngày nhập viện)
 	private Insurance insurance; // Bảo hiểm của bệnh nhân (nếu có)
 
@@ -44,33 +44,33 @@ public class Patient extends Person{
 	// Constructor cho bệnh nhân mới (Tạo mới ID) -- Dùng cho việc thêm mới bệnh nhân
 	public Patient(String userId, String fullName, LocalDate dateOfBirth, String address, Gender gender, String phoneNumber, Connection conn) {
 		super(fullName, dateOfBirth, address, gender, phoneNumber);
-		this.userId = userId;
-		this.patientId = generateNewPatientID(conn); // Tạo ID khi thêm mới
+		this.userID = userId;
+		this.patientID = generateNewPatientID(conn); // Tạo ID khi thêm mới
 		this.createdAt = LocalDate.now(); // Ngày nhập viện là ngày hiện tại
 	}
 
 	// Constructor cho bệnh nhân từ database (ID đã có, không tạo mới) -- Dùng cho việc sửa thông tin bệnh nhân
 	public Patient(String userId, String patientId, String fullName, LocalDate dateOfBirth, String address, Gender gender, String phoneNumber, LocalDate createdAt) {
 		super(fullName, dateOfBirth, address, gender, phoneNumber);
-		this.userId = userId;
-		this.patientId = patientId; // Giữ nguyên ID từ database
+		this.userID = userId;
+		this.patientID = patientId; // Giữ nguyên ID từ database
 		this.createdAt = createdAt;
 	}
 
 	public String getPatientID() {
-		return patientId;
+		return patientID;
 	}
 
 	public void setPatientID(String patientID) {
-		this.patientId = patientID;
+		this.patientID = patientID;
 	}
 
 	public String getUserID() {
-		return userId;
+		return userID;
 	}
 
 	public void setUserID(String userID) {
-		this.userId = userID;
+		this.userID = userID;
 	}
 
 	public LocalDate getCreatedAt() {

@@ -1,22 +1,26 @@
-package UI;
+package view;
 
 import javax.swing.*;
-import database.UserDAO;
 import java.awt.*;
 import java.io.File;
 
-public class SignUpUI extends JFrame {
+public class SignUpView extends JFrame {
+    private JLabel titleLabel;
     private JButton signUpButtonNav;
     private JButton signInButtonNav;
+    private JTextField usernameText;
+    private JTextField emailText;
+    private JPasswordField passText;
+    private JButton nextButton;
 
-    public SignUpUI() {
+    public SignUpView() {
         setTitle("Sign Up");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(null);
 
         // Load background image
-        String imagePath = "src/resource/img/file_background.png";
+        String imagePath = "resource/img/file_background.png";
         if (!new File(imagePath).exists()) {
             System.out.println("Image not found: " + imagePath);
         }
@@ -30,8 +34,8 @@ public class SignUpUI extends JFrame {
         ImageIcon bgImage = new ImageIcon(scaledImage);
 
         JLabel background = new JLabel(bgImage);
-        background.setBounds(0, 0, Toolkit.getDefaultToolkit().getScreenSize().width, 
-                                    Toolkit.getDefaultToolkit().getScreenSize().height);
+        background.setBounds(0, 0, Toolkit.getDefaultToolkit().getScreenSize().width,
+                Toolkit.getDefaultToolkit().getScreenSize().height);
 
         // Panel đăng ký
         int panelWidth = 900;
@@ -44,11 +48,11 @@ public class SignUpUI extends JFrame {
 
         // Căn giữa panel
         panel.setBounds((Toolkit.getDefaultToolkit().getScreenSize().width - panelWidth) / 2,
-                        (Toolkit.getDefaultToolkit().getScreenSize().height - panelHeight) / 2,
-                        panelWidth, panelHeight);
+                (Toolkit.getDefaultToolkit().getScreenSize().height - panelHeight) / 2,
+                panelWidth, panelHeight);
 
         // Tiêu đề
-        JLabel titleLabel = new JLabel("SIGN UP", SwingConstants.CENTER);
+        titleLabel = new JLabel("SIGN UP", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 40));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setBounds(0, 20, panelWidth, 50);
@@ -88,9 +92,15 @@ public class SignUpUI extends JFrame {
         usernameLabel.setForeground(Color.WHITE);
         usernameLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JTextField usernameText = new JTextField();
+        usernameText = new JTextField("USERNAME");
         usernameText.setBounds(250, 200, 400, 50);
         usernameText.setFont(new Font("Arial", Font.PLAIN, 20));
+        usernameText.setForeground(Color.GRAY);
+        // Bo viền trắng và thêm padding
+        usernameText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
 
         // Email
         JLabel emailLabel = new JLabel("Email:");
@@ -98,9 +108,15 @@ public class SignUpUI extends JFrame {
         emailLabel.setForeground(Color.WHITE);
         emailLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JTextField emailText = new JTextField();
+        emailText = new JTextField("EMAIL");
         emailText.setBounds(250, 300, 400, 50);
         emailText.setFont(new Font("Arial", Font.PLAIN, 20));
+        emailText.setForeground(Color.GRAY);
+        // Bo viền trắng và thêm padding
+        emailText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
 
         // Password
         JLabel passLabel = new JLabel("Password:");
@@ -108,66 +124,26 @@ public class SignUpUI extends JFrame {
         passLabel.setForeground(Color.WHITE);
         passLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JPasswordField passText = new JPasswordField();
+        passText = new JPasswordField("PASSWORD");
         passText.setBounds(250, 400, 400, 50);
         passText.setFont(new Font("Arial", Font.PLAIN, 20));
+        passText.setForeground(Color.GRAY);
+        passText.setEchoChar((char) 0); // Hiển thị placeholder ban đầu
+        // Bo viền trắng và thêm padding
+        passText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
 
         // NEXT Button
-        JButton nextButton = new JButton(" NEXT");
+        nextButton = new JButton(" NEXT");
         int buttonWidth = 200;
         int buttonHeight = 60;
         nextButton.setBounds((panelWidth - buttonWidth) / 2, 480, buttonWidth, buttonHeight);
         nextButton.setFont(new Font("Arial", Font.BOLD, 22));
         nextButton.setBackground(Color.WHITE);
         nextButton.setForeground(Color.BLACK);
-        nextButton.setIcon(resizeIcon("src/resource/img/add.png", nextButton, 0.5));
-
-        nextButton.addActionListener(e -> {
-            String username = usernameText.getText();
-            String email = emailText.getText();
-            String password = new String(passText.getPassword());
-
-            if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Please fill all fields!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Kiểm tra định dạng email
-            if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-                JOptionPane.showMessageDialog(null, "Invalid email format!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // Đăng ký với role mặc định là "patient"
-            String result = UserDAO.registerUser(username, email, password, "patient");
-            if (result.startsWith("Success")) {
-                int userId = Integer.parseInt(result.split(":")[1]);
-//                JOptionPane.showMessageDialog(null, "Proceeding to patient details.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                dispose();
-                new PatientInfoUI(userId).setVisible(true); // Truyền userId
-            } else {
-                JOptionPane.showMessageDialog(null, "Sign up failed! " + result, "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        // Xử lý sự kiện khi nhấn nút Sign In
-        signInButtonNav.addActionListener(e -> {
-            int totalButtonWidthActive = activeWidth + defaultWidth;
-            int startXActive = (panelWidth - totalButtonWidthActive) / 2;
-
-            signInButtonNav.setBounds(startXActive, buttonY, activeWidth, activeHeight);
-            signInButtonNav.setBackground(Color.WHITE);
-            signInButtonNav.setForeground(Color.BLACK);
-            signInButtonNav.setFont(new Font("Arial", Font.BOLD, 24));
-
-            signUpButtonNav.setBounds(startXActive + activeWidth, buttonY, defaultWidth, defaultHeight);
-            signUpButtonNav.setBackground(Color.GRAY);
-            signUpButtonNav.setForeground(Color.WHITE);
-            signUpButtonNav.setFont(new Font("Arial", Font.BOLD, 20));
-
-            dispose();
-            new LoginUI().setVisible(true);
-        });
+        nextButton.setIcon(resizeIcon("resource/img/next_icon.png", nextButton, 0.5));
 
         // Thêm thành phần vào panel
         panel.add(titleLabel);
@@ -184,17 +160,41 @@ public class SignUpUI extends JFrame {
         // Thêm vào frame
         setContentPane(background);
         add(panel);
-        setVisible(true);
+    }
+
+    // Getters cho các thành phần giao diện
+    public JButton getSignInButtonNav() {
+        return signInButtonNav;
+    }
+
+    public JButton getSignUpButtonNav() {
+        return signUpButtonNav;
+    }
+
+    public JTextField getUsernameText() {
+        return usernameText;
+    }
+
+    public JTextField getEmailText() {
+        return emailText;
+    }
+
+    public JPasswordField getPassText() {
+        return passText;
+    }
+
+    public JButton getNextButton() {
+        return nextButton;
     }
 
     private ImageIcon resizeIcon(String path, JButton button, double scaleFactor) {
         int iconSize = (int) (button.getHeight() * scaleFactor);
         ImageIcon originalIcon = new ImageIcon(path);
+        if (originalIcon.getIconWidth() == -1 || originalIcon.getIconHeight() == -1) {
+            System.out.println("Failed to load image: " + path);
+            return null;
+        }
         Image resizedImage = originalIcon.getImage().getScaledInstance(iconSize, iconSize, Image.SCALE_SMOOTH);
         return new ImageIcon(resizedImage);
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new SignUpUI().setVisible(true));
     }
 }

@@ -48,12 +48,12 @@ public class PatientUI extends JFrame {
         gbc.weighty = 0.1;
         leftPanel.add(menuTitle, gbc);
 
-        btnHome = createButton("Home");
-        btnViewInfo = createButton("View Info");
-        btnViewAppointments = createButton("View Appointments");
-        btnViewMedicalHistory = createButton("View Medical History");
-        btnPayFees = createButton("Pay Fees");
-        btnPaymentHistory = createButton("Payment History");
+        btnHome = createButton("Home", "home_icon.png");
+        btnViewInfo = createButton("View Info", "info_icon.png");
+        btnViewAppointments = createButton("View Appointments", "calendar_icon.png");
+        btnViewMedicalHistory = createButton("View Medical History", "medical_history_icon.png");
+        btnPayFees = createButton("Pay Fees", "pay_fees_icon.png");
+        btnPaymentHistory = createButton("Payment History", "payment_history_icon.png");
 
         setSelectedButton(btnHome);
 
@@ -99,14 +99,14 @@ public class PatientUI extends JFrame {
             showAppointments();
         });
 
-        btnPayFees.addActionListener(e -> {
-            setSelectedButton(btnPayFees);
-            showPayFeesForm();
-        });
-
         btnViewMedicalHistory.addActionListener(e -> {
             setSelectedButton(btnViewMedicalHistory);
             showMedicalHistory();
+        });
+
+        btnPayFees.addActionListener(e -> {
+            setSelectedButton(btnPayFees);
+            showPayFeesForm();
         });
 
         btnPaymentHistory.addActionListener(e -> {
@@ -115,7 +115,7 @@ public class PatientUI extends JFrame {
         });
     }
 
-    private JButton createButton(String text) {
+    private JButton createButton(String text, String iconName) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.BOLD, 16));
         button.setForeground(Color.WHITE);
@@ -124,6 +124,17 @@ public class PatientUI extends JFrame {
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Thêm icon cho nút
+        if (iconName != null) {
+            ImageIcon icon = resizeIcon("resource/img/" + iconName, button, 0.5);
+            if (icon != null) {
+                button.setIcon(icon);
+                button.setHorizontalAlignment(SwingConstants.LEFT); // Căn trái để icon và text hiển thị đẹp
+                button.setIconTextGap(10); // Khoảng cách giữa icon và text
+            }
+        }
+
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 if (button != currentSelectedButton) {
@@ -138,6 +149,17 @@ public class PatientUI extends JFrame {
             }
         });
         return button;
+    }
+
+    private ImageIcon resizeIcon(String path, JButton button, double scaleFactor) {
+        int iconSize = (int) (button.getHeight() * scaleFactor);
+        ImageIcon originalIcon = new ImageIcon(path);
+        if (originalIcon.getIconWidth() == -1 || originalIcon.getIconHeight() == -1) {
+            System.out.println("Failed to load image: " + path);
+            return null;
+        }
+        Image resizedImage = originalIcon.getImage().getScaledInstance(iconSize, iconSize, Image.SCALE_SMOOTH);
+        return new ImageIcon(resizedImage);
     }
 
     private void setSelectedButton(JButton selectedButton) {
@@ -372,9 +394,9 @@ public class PatientUI extends JFrame {
             }
         };
         JTable table = new JTable(tableModel);
-        table.setFont(new Font("Arial", Font.PLAIN, 20)); // Cỡ chữ 20 cho bảng
+        table.setFont(new Font("Arial", Font.PLAIN, 20));
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 20));
-        table.setRowHeight(30); // Tăng chiều cao hàng cho phù hợp cỡ chữ
+        table.setRowHeight(30);
 
         List<Object[]> bills = getBillsFromDatabase(patient.getPatientID());
         if (bills.isEmpty()) {
@@ -453,7 +475,7 @@ public class PatientUI extends JFrame {
             String method = (String) cbPaymentMethod.getSelectedItem();
             if (payBill(billID, method)) {
                 JOptionPane.showMessageDialog(this, "Payment processed successfully!");
-                showPayFeesForm(); // Quay lại danh sách hóa đơn chưa thanh toán
+                showPayFeesForm();
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to process payment!", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -596,7 +618,7 @@ public class PatientUI extends JFrame {
             if (isPushed) {
                 String billID = table.getValueAt(table.getSelectedRow(), 0).toString();
                 double amount = (Double) table.getValueAt(table.getSelectedRow(), 1);
-                patientUI.showPaymentForm(billID, amount); // Chuyển sang form thanh toán
+                patientUI.showPaymentForm(billID, amount);
             }
             isPushed = false;
             return label;
@@ -609,15 +631,19 @@ public class PatientUI extends JFrame {
         }
     }
 
-    /*public static void main(String[] args) {
+    public static void main(String[] args) {
         try {
-            Patient patient = new Patient("Trần Thị B", LocalDate.of(1990, 5, 15), "456 Đường XYZ, Hà Nội",
-                                         Gender.FEMALE, "0976543210", LocalDate.now());
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            Patient patient = new Patient("USER001", "PAT-001", "Trần Thị B", LocalDate.of(1990, 5, 15), "456 Đường XYZ, Hà Nội", Gender.FEMALE, "0976543210", LocalDate.now());
             patient.setPatientID("P001");
             SwingUtilities.invokeLater(() -> new PatientUI(patient).setVisible(true));
         } catch (IllegalArgumentException e) {
             System.err.println("Error creating patient: " + e.getMessage());
             JOptionPane.showMessageDialog(null, "Error: " + e.getMessage(), "Invalid Input", JOptionPane.ERROR_MESSAGE);
         }
-    }*/
+    }
 }

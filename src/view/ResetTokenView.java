@@ -1,18 +1,27 @@
-package UI;
+package view;
+
+import view.UI.ResetTokenDisplayUI;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 
-public class ResetTokenDisplayUI extends JFrame {
-    public ResetTokenDisplayUI(String resetToken) {
+public class ResetTokenView extends JFrame {
+    private JTextField tokenField;
+    private JButton copyButton;
+    private JButton proceedButton;
+    private JPanel panel;
+    
+    public ResetTokenView() {
+        initializeUI();
+    }
+    
+    private void initializeUI() {
         setTitle("Reset Token - Patient Management System");
         setSize(500, 300);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLocationRelativeTo(null); // Căn giữa màn hình
+        setLocationRelativeTo(null); // Center on screen
         setLayout(null);
 
         // Load background image
@@ -28,70 +37,68 @@ public class ResetTokenDisplayUI extends JFrame {
         JLabel background = new JLabel(bgImage);
         background.setBounds(0, 0, 500, 300);
 
-        // Panel hiển thị reset token
-        JPanel panel = new JPanel();
+        // Panel to display reset token
+        panel = new JPanel();
         panel.setLayout(null);
         panel.setSize(400, 200);
         panel.setBackground(new Color(0, 0, 0, 150));
         panel.setBounds(50, 50, 400, 200);
 
-        // Tiêu đề
+        // Title
         JLabel titleLabel = new JLabel("Your Reset Token", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setBounds(0, 20, 400, 30);
 
-        // Trường hiển thị reset token (không cho phép chỉnh sửa)
-        JTextField tokenField = new JTextField(resetToken);
+        // Token display field (non-editable)
+        tokenField = new JTextField();
         tokenField.setBounds(50, 70, 300, 40);
         tokenField.setFont(new Font("Arial", Font.PLAIN, 16));
-        tokenField.setEditable(false); // Không cho phép chỉnh sửa
+        tokenField.setEditable(false);
 
-        // Nút Copy
-        JButton copyButton = new JButton("Copy");
+        // Copy button
+        copyButton = new JButton("Copy");
         copyButton.setBounds(50, 130, 120, 40);
         copyButton.setFont(new Font("Arial", Font.BOLD, 16));
         copyButton.setBackground(Color.WHITE);
         copyButton.setForeground(Color.BLACK);
 
-        copyButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // Sao chép reset token vào clipboard
-                StringSelection stringSelection = new StringSelection(resetToken);
-                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(stringSelection, null);
-                JOptionPane.showMessageDialog(null, "Reset token copied to clipboard!", "Success", JOptionPane.INFORMATION_MESSAGE);
-            }
-        });
-
-        // Nút Proceed
-        JButton proceedButton = new JButton("Proceed");
+        // Proceed button
+        proceedButton = new JButton("Proceed");
         proceedButton.setBounds(230, 130, 120, 40);
         proceedButton.setFont(new Font("Arial", Font.BOLD, 16));
         proceedButton.setBackground(Color.WHITE);
         proceedButton.setForeground(Color.BLACK);
 
-        proceedButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose(); // Đóng cửa sổ hiện tại
-                new ForgotPasswordUI().setVisible(true); // Mở ForgotPasswordUI
-            }
-        });
-
-        // Thêm thành phần vào panel
+        // Add components to panel
         panel.add(titleLabel);
         panel.add(tokenField);
         panel.add(copyButton);
         panel.add(proceedButton);
 
-        // Thêm vào frame
+        // Add to frame
         setContentPane(background);
         add(panel);
-        setVisible(true);
+    }
+    
+    public void setResetToken(String token) {
+        tokenField.setText(token);
+    }
+    
+    public void addCopyButtonListener(ActionListener listener) {
+        copyButton.addActionListener(listener);
+    }
+    
+    public void addProceedButtonListener(ActionListener listener) {
+        proceedButton.addActionListener(listener);
     }
 
     public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         SwingUtilities.invokeLater(() -> new ResetTokenDisplayUI("123e4567-e89b-12d3-a456-426614174000"));
     }
 }

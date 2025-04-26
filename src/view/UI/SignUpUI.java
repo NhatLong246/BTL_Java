@@ -3,6 +3,8 @@ package view.UI;
 import javax.swing.*;
 import model.repository.UserRepository;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.io.File;
 
 public class SignUpUI extends JFrame {
@@ -88,9 +90,27 @@ public class SignUpUI extends JFrame {
         usernameLabel.setForeground(Color.WHITE);
         usernameLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JTextField usernameText = new JTextField();
+        JTextField usernameText = new JTextField("USERNAME");
         usernameText.setBounds(250, 200, 400, 50);
         usernameText.setFont(new Font("Arial", Font.PLAIN, 20));
+        usernameText.setForeground(Color.GRAY);
+        usernameText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (usernameText.getText().equals("USERNAME")) {
+                    usernameText.setText("");
+                    usernameText.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (usernameText.getText().isEmpty()) {
+                    usernameText.setText("USERNAME");
+                    usernameText.setForeground(Color.GRAY);
+                }
+            }
+        });
 
         // Email
         JLabel emailLabel = new JLabel("Email:");
@@ -98,9 +118,27 @@ public class SignUpUI extends JFrame {
         emailLabel.setForeground(Color.WHITE);
         emailLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JTextField emailText = new JTextField();
+        JTextField emailText = new JTextField("EMAIL");
         emailText.setBounds(250, 300, 400, 50);
         emailText.setFont(new Font("Arial", Font.PLAIN, 20));
+        emailText.setForeground(Color.GRAY);
+        emailText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (emailText.getText().equals("EMAIL")) {
+                    emailText.setText("");
+                    emailText.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (emailText.getText().isEmpty()) {
+                    emailText.setText("EMAIL");
+                    emailText.setForeground(Color.GRAY);
+                }
+            }
+        });
 
         // Password
         JLabel passLabel = new JLabel("Password:");
@@ -108,9 +146,30 @@ public class SignUpUI extends JFrame {
         passLabel.setForeground(Color.WHITE);
         passLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JPasswordField passText = new JPasswordField();
+        JPasswordField passText = new JPasswordField("PASSWORD");
         passText.setBounds(250, 400, 400, 50);
         passText.setFont(new Font("Arial", Font.PLAIN, 20));
+        passText.setForeground(Color.GRAY);
+        passText.setEchoChar((char) 0); // Hiển thị placeholder ban đầu
+        passText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (new String(passText.getPassword()).equals("PASSWORD")) {
+                    passText.setText("");
+                    passText.setForeground(Color.BLACK);
+                    passText.setEchoChar('●'); // Hiển thị ký tự mật khẩu khi người dùng nhập
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (passText.getPassword().length == 0) {
+                    passText.setText("PASSWORD");
+                    passText.setForeground(Color.GRAY);
+                    passText.setEchoChar((char) 0); // Hiển thị placeholder
+                }
+            }
+        });
 
         // NEXT Button
         JButton nextButton = new JButton(" NEXT");
@@ -120,14 +179,17 @@ public class SignUpUI extends JFrame {
         nextButton.setFont(new Font("Arial", Font.BOLD, 22));
         nextButton.setBackground(Color.WHITE);
         nextButton.setForeground(Color.BLACK);
-        nextButton.setIcon(resizeIcon("src/resource/img/add.png", nextButton, 0.5));
+        nextButton.setIcon(resizeIcon("resource/img/next-icon.png", nextButton, 0.5)); // Thêm icon "Next"
 
         nextButton.addActionListener(e -> {
             String username = usernameText.getText();
             String email = emailText.getText();
             String password = new String(passText.getPassword());
 
-            if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
+            // Kiểm tra placeholder
+            if (username.isEmpty() || username.equals("USERNAME") || 
+                email.isEmpty() || email.equals("EMAIL") || 
+                password.isEmpty() || password.equals("PASSWORD")) {
                 JOptionPane.showMessageDialog(null, "Please fill all fields!", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
@@ -142,7 +204,6 @@ public class SignUpUI extends JFrame {
             String result = UserRepository.registerUser(username, email, password, "patient");
             if (result.startsWith("Success")) {
                 int userId = Integer.parseInt(result.split(":")[1]);
-//                JOptionPane.showMessageDialog(null, "Proceeding to patient details.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 dispose();
                 new PatientInfoUI(userId).setVisible(true); // Truyền userId
             } else {
@@ -190,6 +251,10 @@ public class SignUpUI extends JFrame {
     private ImageIcon resizeIcon(String path, JButton button, double scaleFactor) {
         int iconSize = (int) (button.getHeight() * scaleFactor);
         ImageIcon originalIcon = new ImageIcon(path);
+        if (originalIcon.getIconWidth() == -1 || originalIcon.getIconHeight() == -1) {
+            System.out.println("Failed to load image: " + path);
+            return null;
+        }
         Image resizedImage = originalIcon.getImage().getScaledInstance(iconSize, iconSize, Image.SCALE_SMOOTH);
         return new ImageIcon(resizedImage);
     }

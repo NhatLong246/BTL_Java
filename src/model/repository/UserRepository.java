@@ -1,87 +1,66 @@
 package model.repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import database.DatabaseConnection;
-
-import entity.Doctor;
-import enums.PaymentStatus;
-import model.entity.Billing;
 import model.entity.Patient;
 import model.enums.Gender;
 
 public class UserRepository {
 
-	// Phương thức đăng ký người dùng mới
-    public static String registerUser(String email, String password) {
-        if (isEmailTaken(email)) {
-            return "Email already taken";
-        }
+    // Đăng ký người dùng và trả về kết quả dạng "Success:<userId>" hoặc "Error:<message>"
+    public static String registerUser(String username, String email, String password, String position) {
+        String userId = UUID.randomUUID().toString(); // Tạo UserID ngẫu nhiên
+        String sql = "INSERT INTO UserAccounts (UserID, FullName, Role, Email, PasswordHash) VALUES (?, ?, ?, ?, SHA2(?, 256))";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "INSERT INTO users (username, password, role) VALUES (?, SHA2(?, 256), 'patient')";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, email); // Sử dụng email làm username
-            stmt.setString(2, password);
-            stmt.executeUpdate();
-            return "Success";
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return "Database error: " + e.getMessage();
-        }
-    }
+            stmt.setString(1, userId);
+            stmt.setString(2, username); // FullName được sử dụng làm username
+            stmt.setString(3, position.equalsIgnoreCase("Quản lí") ? "Quản lí" : 
+                             position.equalsIgnoreCase("Bác sĩ") ? "Bác sĩ" : "Bệnh nhân"); // Xác định Role
+            stmt.setString(4, email);
+            stmt.setString(5, password); // Mật khẩu mã hóa SHA2
 
-    // Kiểm tra email đã tồn tại
-    public static boolean isEmailTaken(String email) {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT COUNT(*) FROM users WHERE username = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, email);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected > 0) {
+                return "Success:" + userId; // Trả về userId sau khi insert thành công
             }
-            return false;
+            return "Error: Failed to insert user";
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
-            return false;
+            return "Error: " + e.getMessage();
         }
     }
 
-    // Phương thức đăng nhập
-    public static boolean loginUser(String email, String password) {
+    // Phương thức đăng nhập và trả về giá trị boolean
+    public static boolean loginUser(String username, String password) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT role FROM users WHERE username = ? AND password = SHA2(?, 256)";
+            // Truy vấn để kiểm tra username (FullName) và password
+            String query = "SELECT UserID FROM UserAccounts WHERE FullName = ? AND PasswordHash = SHA2(?, 256)";
             PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, email);
+            stmt.setString(1, username);
             stmt.setString(2, password);
             ResultSet rs = stmt.executeQuery();
 
-            return rs.next(); // Trả về true nếu tìm thấy user, false nếu không
+            return rs.next(); // Đăng nhập thành công nếu có kết quả
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
-            return false;
+            return false; // Lỗi kết nối cơ sở dữ liệu
         }
     }
 
-    // Lấy chức vụ
-    public static String getUserRole(String username) {
+    // Phương thức lấy UserID từ username (FullName)
+    public static String getPatientID(String username) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT role FROM users WHERE username = ?";
+            String query = "SELECT UserID FROM UserAccounts WHERE FullName = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, username);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return rs.getString("role");
+                return rs.getString("UserID");
             }
             return null;
         } catch (SQLException | ClassNotFoundException e) {
@@ -89,302 +68,131 @@ public class UserRepository {
             return null;
         }
     }
-    
-    // reset password
-    public static String resetPassword(String input) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
 
-        try {
-            conn = DatabaseConnection.getConnection();
-            System.out.println("Database connection successful");
-
-            String checkQuery = "SELECT id, email FROM users WHERE username = ? OR email = ?";
-            stmt = conn.prepareStatement(checkQuery);
-            stmt.setString(1, input);
-            stmt.setString(2, input);
-            rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                String userId = rs.getString("id");
-                String userEmail = rs.getString("email");
-                System.out.println("User found: id=" + userId + ", email=" + userEmail);
-
-                String resetToken = UUID.randomUUID().toString();
-                Timestamp expiryDate = new Timestamp(System.currentTimeMillis() + 3600 * 1000);
-
-                String insertQuery = "INSERT INTO reset_tokens (user_id, token, expiry_date) VALUES (?, ?, ?) " +
-                                    "ON DUPLICATE KEY UPDATE token = ?, expiry_date = ?";
-                stmt = conn.prepareStatement(insertQuery);
-                stmt.setString(1, userId);
-                stmt.setString(2, resetToken);
-                stmt.setTimestamp(3, expiryDate);
-                stmt.setString(4, resetToken);
-                stmt.setTimestamp(5, expiryDate);
-                stmt.executeUpdate();
-
-                return resetToken; // Trả về reset token
-            } else {
-                System.out.println("No user found for input: " + input);
-                return null;
-            }
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return null;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (stmt != null) stmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    // Phương thức confirmResetPassword (đã có)
-    public static boolean confirmResetPassword(String token, String newPassword) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-
-        try {
-            conn = DatabaseConnection.getConnection();
-
-            // Kiểm tra token có tồn tại và chưa hết hạn
-            String checkTokenQuery = "SELECT user_id FROM reset_tokens WHERE token = ? AND expiry_date > NOW()";
-            stmt = conn.prepareStatement(checkTokenQuery);
-            stmt.setString(1, token);
-            rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                String userId = rs.getString("user_id");
-
-                // Cập nhật mật khẩu mới cho người dùng (mã hóa bằng SHA2)
-                String updatePasswordQuery = "UPDATE users SET password = SHA2(?, 256) WHERE id = ?";
-                stmt = conn.prepareStatement(updatePasswordQuery);
-                stmt.setString(1, newPassword);
-                stmt.setString(2, userId);
-                stmt.executeUpdate();
-
-                // Xóa token sau khi sử dụng
-                String deleteTokenQuery = "DELETE FROM reset_tokens WHERE token = ?";
-                stmt = conn.prepareStatement(deleteTokenQuery);
-                stmt.setString(1, token);
-                stmt.executeUpdate();
-
-                return true; // Reset mật khẩu thành công
-            } else {
-                return false; // Token không hợp lệ hoặc đã hết hạn
-            }
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return false;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (stmt != null) stmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    
-    public static String registerUser(String username, String email, String password, String role) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet generatedKeys = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            // Chèn vào bảng users và lấy id vừa tạo
-            stmt = conn.prepareStatement("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
-            stmt.setString(1, username);
-            stmt.setString(2, email);
-            stmt.setString(3, password); // Nên mã hóa password trong thực tế
-            stmt.setString(4, role);
-            stmt.executeUpdate();
-
-            // Lấy id vừa tạo
-            generatedKeys = stmt.getGeneratedKeys();
-            if (generatedKeys.next()) {
-                int userId = generatedKeys.getInt(1);
-                return "Success:" + userId; // Trả về "Success" kèm theo userId
-            } else {
-                return "Error: Failed to retrieve user ID";
-            }
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
-        } finally {
-            try {
-                if (generatedKeys != null) generatedKeys.close();
-                if (stmt != null) stmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public static String addPatient(int userId, String name, String birthdate, String gender, String address) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            stmt = conn.prepareStatement("INSERT INTO patients (id, name, birthdate, address, gender) VALUES (?, ?, ?, ?, ?)");
-            stmt.setInt(1, userId);
-            stmt.setString(2, name);
-            stmt.setString(3, birthdate);
-            stmt.setString(4, address);
-            stmt.setString(5, gender);
-            stmt.executeUpdate();
-            return "Success";
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
-        } finally {
-            try {
-                if (stmt != null) stmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    // Phương thức lấy patientID từ email
-    public static String getPatientID(String email) {
+    // Phương thức lấy thông tin bệnh nhân từ UserID
+    public static Patient getPatientById(String userId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT id FROM users WHERE username = ?";
+            String query = "SELECT * FROM Patients WHERE UserID = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, email);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return String.valueOf(rs.getInt("id"));
-            }
-            return null;
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    // Phương thức lấy thông tin bệnh nhân từ patientID
-    public static Patient getPatientById(String patientID) {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT * FROM patients WHERE id = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
+            stmt.setString(1, userId);
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
                 Patient patient = new Patient();
-                patient.setPatientID(rs.getString("id"));
-                patient.setFullName(rs.getString("name"));
-                patient.setDateOfBirth(LocalDate.parse(rs.getString("birthdate")));
-                patient.setAddress(rs.getString("address"));
-                patient.setGender(Gender.valueOf(rs.getString("gender")));
-                patient.setCreatedAt(LocalDate.parse(rs.getString("created_at")));
+                patient.setPatientID(rs.getString("PatientID"));
+                patient.setFullName(rs.getString("UserID")); // Có thể cần lấy FullName từ UserAccounts
+                patient.setDateOfBirth(LocalDate.parse(rs.getString("DateOfBirth")));
+                patient.setAddress(rs.getString("Address"));
+                patient.setGender(Gender.valueOf(rs.getString("Gender")));
+                patient.setCreatedAt(LocalDate.parse(rs.getString("CreatedAt")));
                 return patient;
             }
-            return null;
+            return null; // Không tìm thấy bệnh nhân
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    // Phương thức lấy thông tin bác sĩ từ doctorID
-    public static Doctor getDoctorById(String doctorID) {
+    // Kiểm tra email hợp lệ
+    public static boolean checkUserEmail(String username, String email) {
+        String sql = "SELECT * FROM UserAccounts WHERE FullName = ? AND Email = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, username);
+            stmt.setString(2, email);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next(); // Nếu có dữ liệu trả về, tức là username và email hợp lệ
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Phương thức lấy vai trò của người dùng từ cơ sở dữ liệu
+    public static String getUserRole(String username) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT * FROM users WHERE id = ? AND role = 'doctor'";
+            String query = "SELECT Role FROM UserAccounts WHERE FullName = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, doctorID);
+            stmt.setString(1, username);
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                Doctor doctor = new Doctor();
-                doctor.setDoctorId(rs.getString("id"));
-                return doctor;
+                return rs.getString("Role");
             }
-            return null;
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
-            return null;
         }
+        return null; // Nếu không tìm thấy người dùng hoặc có lỗi
     }
 
-    // Phương thức đặt lịch hẹn
-    public static boolean bookAppointment(String patientID, String doctor, LocalDate appointmentDate) {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "INSERT INTO appointments (patient_id, doctor_name, appointment_date, status) VALUES (?, ?, ?, ?)";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
-            stmt.setString(2, doctor);
-            stmt.setString(3, appointmentDate.toString());
-            stmt.setString(4, "Scheduled");
-            stmt.executeUpdate();
-            return true;
+    // Method to confirm password reset using the token
+    public static boolean confirmResetPassword(String token, String newPassword) {
+        String sql = "UPDATE UserAccounts SET PasswordHash = SHA2(?, 256), reset_token = NULL, reset_token_expiry = NULL WHERE reset_token = ? AND reset_token_expiry > NOW()";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, newPassword);
+            stmt.setString(2, token);
+
+            int rowsUpdated = stmt.executeUpdate();
+            return rowsUpdated > 0; // Nếu có ít nhất một dòng được cập nhật thì thành công
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             return false;
         }
     }
 
-    // Phương thức lấy danh sách lịch hẹn
-    public static List<String[]> getAppointmentsFromDatabase(String patientID) {
-        List<String[]> appointments = new ArrayList<>();
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT doctor_name, appointment_date, status FROM appointments WHERE patient_id = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                appointments.add(new String[] { rs.getString("doctor_name"), rs.getString("appointment_date"),
-                        rs.getString("status") });
+    // Thêm thông tin bệnh nhân vào bảng Patients
+    public static String addPatient(String userId, String name, String birthdate, String gender, String address) {
+        String patientId = UUID.randomUUID().toString(); // Tạo PatientID ngẫu nhiên
+        String sql = "INSERT INTO Patients (PatientID, UserID, DateOfBirth, Gender, Address, CreatedAt) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, patientId);
+            stmt.setString(2, userId);
+            stmt.setString(3, birthdate);
+            stmt.setString(4, gender);
+            stmt.setString(5, address);
+            stmt.setString(6, LocalDate.now().toString()); // Ngày nhập viện (CreatedAt)
+
+            int rowsInserted = stmt.executeUpdate();
+            return rowsInserted > 0 ? "Success" : "Failed to insert patient information";
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
+        }
+    }
+
+    // Yêu cầu reset mật khẩu
+    public static String resetPassword(String usernameOrEmail) {
+        // Tạo token ngẫu nhiên
+        String token = UUID.randomUUID().toString();
+
+        // Câu lệnh SQL để cập nhật token reset mật khẩu và thời gian hết hạn
+        String sql = "UPDATE UserAccounts SET reset_token = ?, reset_token_expiry = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE FullName = ? OR Email = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            // Thiết lập giá trị cho câu lệnh SQL
+            stmt.setString(1, token); // Token mới
+            stmt.setString(2, usernameOrEmail); // FullName hoặc Email
+            stmt.setString(3, usernameOrEmail); // FullName hoặc Email
+
+            // Thực thi câu lệnh cập nhật
+            int rowsUpdated = stmt.executeUpdate();
+
+            // Kiểm tra xem có bản ghi nào bị ảnh hưởng không
+            if (rowsUpdated > 0) {
+                return token; // Trả về token nếu cập nhật thành công
+            } else {
+                return null; // Không tìm thấy user với username/email
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
-        }
-        return appointments;
-    }
-
-    // Phương thức lấy danh sách hóa đơn chưa thanh toán
-    public static List<Billing> getUnpaidBillings(String patientID) {
-        List<Billing> billings = new ArrayList<>();
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT * FROM bills WHERE patient_id = ? AND status = 'Unpaid'";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Patient patient = getPatientById(rs.getString("patient_id"));
-                Billing billing = new Billing(patient, rs.getDouble("amount"), null,
-                        PaymentStatus.valueOf(rs.getString("status").toUpperCase()),
-                        LocalDate.parse(rs.getString("created_at")));
-                billing.setBillingId(rs.getString("id"));
-                billings.add(billing);
-            }
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return billings;
-    }
-
-    // Phương thức thanh toán hóa đơn
-    public static boolean payBilling(String billingID) {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "UPDATE bills SET status = 'Paid' WHERE id = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, billingID);
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return false;
+            return null; // Trả về null nếu có lỗi
         }
     }
 }
