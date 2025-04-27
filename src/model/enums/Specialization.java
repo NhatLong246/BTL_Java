@@ -1,26 +1,44 @@
 package model.enums;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public enum Specialization {
-    GENERAL_MEDICINE("Nội khoa"),
-    PEDIATRICS("Nhi khoa"),
-    CARDIOLOGY("Tim mạch"),
-    ORTHOPEDICS("Chấn thương chỉnh hình"),
-    DERMATOLOGY("Da liễu"),
-    NEUROLOGY("Thần kinh"),
-    ONCOLOGY("Ung bướu"),
-    PSYCHIATRY("Tâm thần"),
-    RADIOLOGY("Chẩn đoán hình ảnh"),
-    SURGERY("Ngoại khoa");
+    CARDIOLOGY("SPC-001", "Tim mạch"),
+    GENERAL("SPC-002", "Nội tổng quát"),
+    PEDIATRICS("SPC-003", "Nhi khoa"),
+    GYNECOLOGY("SPC-004", "Sản phụ khoa"),
+    SURGERY("SPC-005", "Ngoại khoa");
 
-    private final String vietnameseName; // Tên tiếng Việt
+    private final String id;
+    private final String name;
+    private static final Map<String, Specialization> idToSpecialization = new HashMap<>();
 
-    // Constructor
-    Specialization(String vietnameseName) {
-        this.vietnameseName = vietnameseName;
+    static {
+        for (Specialization spec : values()) {
+            idToSpecialization.put(spec.getId(), spec);
+        }
     }
 
-    // Lấy tên tiếng Việt của chuyên khoa
-    public String getVietnameseName() {
-        return vietnameseName;
+    Specialization(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+
+    public static Specialization fromId(String id) {
+        return idToSpecialization.getOrDefault(id, GENERAL);
     }
 }

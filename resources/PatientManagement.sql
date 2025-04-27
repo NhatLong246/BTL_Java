@@ -17,17 +17,6 @@ CREATE TABLE UserAccounts (
 ALTER TABLE UserAccounts
 ADD COLUMN UserName VARCHAR(50) UNIQUE NULL AFTER UserID;
 
-UPDATE UserAccounts
-SET UserName = 'nguyenvana'
-WHERE UserID = 'USR-001';
-
-UPDATE UserAccounts
-SET UserName = 'tranthib'
-WHERE UserID = 'USR-002';
-
-UPDATE UserAccounts
-SET UserName = 'levanc'
-WHERE UserID = 'USR-003';
 
 -- Bước 3: Đặt lại UserName NOT NULL
 ALTER TABLE UserAccounts
@@ -44,13 +33,49 @@ CREATE TABLE Specialties (
 CREATE TABLE Doctors (
     DoctorID VARCHAR(50) PRIMARY KEY,
     UserID VARCHAR(50) UNIQUE NOT NULL,
-    SpecialtyID VARCHAR(50),
+    DateOfBirth DATE NOT NULL,
+    Gender ENUM('Nam', 'Nữ') NOT NULL,
+    FullName NVARCHAR(100) NOT NULL,
+    PhoneNumber VARCHAR(20),
+    Email VARCHAR(100),
     Address TEXT,
+    SpecialtyID VARCHAR(50),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (SpecialtyID) REFERENCES Specialties(SpecialtyID) 
         ON DELETE SET NULL ON UPDATE CASCADE
-); 
+);
+
+ALTER TABLE Doctors
+MODIFY Gender ENUM('Nam', 'Nữ') NOT NULL;
+
+ALTER TABLE Doctors
+ADD FullName NVARCHAR(100) NOT NULL;
+
+ALTER TABLE Doctors
+ADD PhoneNumber VARCHAR(20);
+
+ALTER TABLE Doctors
+ADD Email VARCHAR(100);
+
+ALTER TABLE Doctors
+ADD CreatedAt DATE;
+
+ALTER TABLE Doctors
+ADD DateOfBirth DATE;
+
+-- thêm bảng lịch làm việc cho bác sĩ 
+CREATE TABLE DoctorSchedule (
+    DoctorID VARCHAR(50) NOT NULL,
+    DayOfWeek ENUM('Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật') NOT NULL,
+    ShiftType ENUM('Sáng', 'Chiều', 'Tối') NOT NULL,
+    Status ENUM('Đang làm việc', 'Hết ca làm việc') DEFAULT 'Đang làm việc',
+    PRIMARY KEY (DoctorID, DayOfWeek, ShiftType),
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 
 -- Bảng Bệnh Nhân
 CREATE TABLE Patients (
@@ -59,10 +84,16 @@ CREATE TABLE Patients (
     DateOfBirth DATE NOT NULL,
     Gender ENUM('Nam', 'Nữ') NOT NULL,
     Address TEXT,
+    DateOfBirth DATE,
 	CreatedAt DATE, -- Ngày nhập viện
     FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+ALTER TABLE Patients
+ADD FullName VARCHAR(255) NOT NULL AFTER UserID;
+ALTER TABLE Patients
+ADD PhoneNumber VARCHAR(20) AFTER Gender;
 
 -- Bảng Cuộc Hẹn
 CREATE TABLE Appointments (

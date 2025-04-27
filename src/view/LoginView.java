@@ -286,29 +286,23 @@ public class LoginView extends JFrame {
             SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
                 @Override
                 protected Boolean doInBackground() {
+                    // Chỉ thực hiện đăng nhập, không xử lý giao diện ở đây
                     return controller.login(username, password);
                 }
                 
                 @Override
                 protected void done() {
                     try {
-                        // Lấy kết quả từ phương thức get()
                         boolean loginSuccess = get();
-                        
-                        // Kích hoạt lại nút đăng nhập
                         loginButton.setEnabled(true);
                         
-                        if (loginSuccess) {
-                            // Đăng nhập thành công - có thể ẩn thông báo lỗi hoặc chuyển màn hình
-                            hideError();
-                            // controller.navigateToMainView() hoặc chuyển màn hình khác tùy vai trò người dùng
-                        } else {
-                            // Đăng nhập thất bại - hiển thị thông báo lỗi
+                        // Nếu kết quả trả về false, hiển thị lỗi
+                        // Nếu đăng nhập thành công, LoginController sẽ xử lý việc chuyển màn hình
+                        if (!loginSuccess) {
                             errorLabel.setForeground(Color.RED);
                             showError("Tên đăng nhập hoặc mật khẩu không đúng!");
                         }
                     } catch (Exception e) {
-                        // Xử lý ngoại lệ
                         loginButton.setEnabled(true);
                         errorLabel.setForeground(Color.RED);
                         showError("Lỗi đăng nhập: " + e.getMessage());

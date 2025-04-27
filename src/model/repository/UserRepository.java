@@ -6,7 +6,7 @@ import database.DatabaseConnection;
 public class UserRepository {
 
 	public static String registerUser(String username, String email, String password, String position) {
-		String sql = "INSERT INTO users (username, email, password, role) VALUES (?, ?, SHA2(?, 256), ?)";
+		String sql = "INSERT INTO UserAccounts (username, email, password, role) VALUES (?, ?, SHA2(?, 256), ?)";
 		try (Connection conn = DatabaseConnection.getConnection();
 			 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -36,7 +36,7 @@ public class UserRepository {
      * @param password Mật khẩu
      * @return true nếu đăng nhập thành công, false nếu thất bại
      */
-    public static boolean loginUser(String username, String password) {
+    /*public static boolean loginUser(String username, String password) {
         try (Connection conn = DatabaseConnection.getConnection()) {
             // Sửa lại truy vấn để khớp với cấu trúc bảng trong cơ sở dữ liệu
             String query = "SELECT Role FROM UserAccounts WHERE UserName = ? AND PasswordHash = SHA2(?, 256)";
@@ -46,7 +46,7 @@ public class UserRepository {
             stmt.setString(2, password);
             
             System.out.println("Executing login query for user: " + username);
-            
+        
             ResultSet rs = stmt.executeQuery();
             return rs.next(); // Trả về true nếu tìm thấy kết quả
         } catch (SQLException e) {
@@ -54,7 +54,87 @@ public class UserRepository {
             e.printStackTrace();
             return false;
         }
+    }*/
+
+    public static boolean loginUser(String username, String password) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            // Đảm bảo truy vấn này khớp với cấu trúc bảng trong database
+            String query = "SELECT Role FROM UserAccounts WHERE UserName = ? AND PasswordHash = SHA2(?, 256)";
+            
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, username);
+            stmt.setString(2, password);
+            
+            System.out.println("Executing login query for user: " + username);
+            
+            ResultSet rs = stmt.executeQuery();
+            boolean result = rs.next();
+            
+            if (result) {
+                System.out.println("Login success with role: " + rs.getString("Role"));
+            } else {
+                System.out.println("Login failed for user: " + username);
+            }
+            
+            return result;
+        } catch (SQLException e) {
+            System.err.println("Lỗi đăng nhập: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
+
+    /*public static boolean loginUser(String username, String password) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                System.err.println("Database connection is null");
+                return false;
+            }
+            System.out.println("Database connected successfully");
+            
+            // In ra thông tin cơ sở dữ liệu
+            DatabaseMetaData metaData = conn.getMetaData();
+            System.out.println("Database Product: " + metaData.getDatabaseProductName());
+            System.out.println("Database Version: " + metaData.getDatabaseProductVersion());
+            
+            // Kiểm tra bảng UserAccounts có tồn tại không
+            ResultSet tables = metaData.getTables(null, null, "UserAccounts", null);
+            if (!tables.next()) {
+                System.err.println("Bảng UserAccounts không tồn tại!");
+                return false;
+            }
+            System.out.println("Bảng UserAccounts tồn tại");
+            
+            // Thực hiện truy vấn thử
+            String query = "SELECT Role FROM UserAccounts WHERE UserName = ? AND PasswordHash = SHA2(?, 256)";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, username);
+            stmt.setString(2, password);
+            
+            System.out.println("Executing login query for user: " + username);
+            System.out.println("SQL Query: " + stmt.toString());
+            
+            ResultSet rs = stmt.executeQuery();
+            boolean hasResult = rs.next();
+            System.out.println("Login result: " + (hasResult ? "Success" : "Failed"));
+            
+            return hasResult;
+        } catch (SQLException e) {
+            System.err.println("Lỗi đăng nhập: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }*/
 
     /**
      * Lấy vai trò của người dùng từ tên đăng nhập

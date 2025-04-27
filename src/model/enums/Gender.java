@@ -30,5 +30,17 @@ public enum Gender {
                 throw new IllegalArgumentException("Giới tính không hợp lệ! Vui lòng nhập Nam/Nữ.");
         }
     }
+
+    public static Gender fromDatabase(String dbValue) {
+        if (dbValue == null) return null;
+        
+        if (dbValue.equalsIgnoreCase("Nam") || dbValue.equalsIgnoreCase("MALE")) {
+            return MALE;
+        } else if (dbValue.equalsIgnoreCase("Nữ") || dbValue.equalsIgnoreCase("FEMALE")) {
+            return FEMALE;
+        }
+        
+        return null;  // Không xác định được
+    }
 }
 

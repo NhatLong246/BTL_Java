@@ -14,24 +14,36 @@ public class PatientRepository {
     private static final String DB_PASSWORD = "2005";
 
     public Patient getPatientByID(String patientID) {
+        System.out.println("Đang tìm bệnh nhân với ID: " + patientID);
+        
         try (Connection conn = DatabaseConnection.getConnection()) {
             String query = "SELECT * FROM Patients WHERE PatientID = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, patientID);
+            
+            System.out.println("Executing query: " + query.replace("?", "'" + patientID + "'"));
+            
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return new Patient(
-                        rs.getString("PatientID"), // Giả định UserID trùng PatientID
-                        rs.getString("PatientID"),
-                        rs.getString("FullName"),
-                        rs.getDate("DateOfBirth") != null ? rs.getDate("DateOfBirth").toLocalDate() : null,
-                        rs.getString("Address"),
-                        Gender.valueOf(rs.getString("Gender").toUpperCase()),
-                        rs.getString("PhoneNumber"),
-                        rs.getDate("CreatedAt") != null ? rs.getDate("CreatedAt").toLocalDate() : null
+                // Tạo và trả về đối tượng Patient
+                Patient patient = new Patient(
+                    rs.getString("UserID"),
+                    patientID,
+                    rs.getString("FullName"),
+                    rs.getDate("DateOfBirth") != null ? rs.getDate("DateOfBirth").toLocalDate() : null,
+                    rs.getString("Address"),
+                    Gender.fromDatabase(rs.getString("Gender")),
+                    rs.getString("PhoneNumber"),
+                    rs.getDate("CreatedAt") != null ? rs.getDate("CreatedAt").toLocalDate() : null
                 );
+                
+                System.out.println("Đã tìm thấy bệnh nhân: " + patient.getFullName());
+                return patient;
+            } else {
+                System.out.println("Không tìm thấy bệnh nhân với ID: " + patientID);
             }
         } catch (SQLException e) {
+            System.err.println("Lỗi khi tìm bệnh nhân: " + e.getMessage());
             e.printStackTrace();
         }
         return null;

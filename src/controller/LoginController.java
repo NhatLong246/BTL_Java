@@ -1,8 +1,11 @@
 package controller;
 
+import model.entity.Patient;
+import model.repository.PatientRepository;
 import model.repository.UserRepository;
 import view.DoctorView;
 import view.LoginView;
+import view.PatientView;
 import view.RequestResetView;
 import javax.swing.*;
 import java.sql.Connection;
@@ -64,13 +67,42 @@ public class LoginController {
                 case "Bệnh nhân":
                     String patientID = UserRepository.getPatientIdByUsername(username);
                     if (patientID != null) {
-                        // new PatientView(patientID).setVisible(true);
-                        JOptionPane.showMessageDialog(view, "Đăng nhập với vai trò Bệnh nhân thành công! PatientID: " + patientID);
+                        try {
+                            // Lấy thông tin bệnh nhân từ database
+                            PatientRepository patientRepo = new PatientRepository();
+                            Patient patient = patientRepo.getPatientByID(patientID);
+                            
+                            // Debug thông tin bệnh nhân trước khi tạo View
+                            System.out.println("============ DEBUG PATIENT BEFORE VIEW ============");
+                            System.out.println("PatientID: " + (patient != null ? patient.getPatientID() : "null"));
+                            System.out.println("UserID: " + (patient != null ? patient.getUserID() : "null"));
+                            System.out.println("FullName: " + (patient != null ? patient.getFullName() : "null"));
+                            System.out.println("DateOfBirth: " + (patient != null ? patient.getDateOfBirth() : "null"));
+                            System.out.println("Gender: " + (patient != null ? patient.getGender() : "null"));
+                            System.out.println("Address: " + (patient != null ? patient.getAddress() : "null"));
+                            System.out.println("PhoneNumber: " + (patient != null ? patient.getPhoneNumber() : "null"));
+                            System.out.println("RegistrationDate: " + (patient != null ? patient.getRegistrationDate() : "null"));
+                            System.out.println("=================================================");
+                            
+                            if (patient != null) {
+                                // Tạo và hiển thị giao diện bệnh nhân
+                                PatientView patientView = new PatientView(patient);
+                                patientView.setVisible(true);  // Đảm bảo gọi setVisible(true)
+                                view.dispose();  // Đóng form đăng nhập
+                                return true;
+                            } else {
+                                view.showError("Không tìm thấy thông tin bệnh nhân");
+                                return false;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            view.showError("Lỗi khi tải thông tin bệnh nhân: " + e.getMessage());
+                            return false;
+                        }
                     } else {
                         view.showError("Không tìm thấy thông tin bệnh nhân");
                         return false;
                     }
-                    break;
                 default:
                     view.showError("Vai trò không xác định: " + role);
                     return false;

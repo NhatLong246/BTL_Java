@@ -23,10 +23,24 @@ public class PatientView extends JFrame {
 
     public PatientView(Patient patient) {
         this.patient = patient;
+        
+        // Thêm debug thông tin bệnh nhân
+        System.out.println("============ DEBUG PATIENT INFO ============");
+        System.out.println("PatientID: " + (patient != null ? patient.getPatientID() : "null"));
+        System.out.println("UserID: " + (patient != null ? patient.getUserID() : "null"));
+        System.out.println("FullName: " + (patient != null ? patient.getFullName() : "null"));
+        System.out.println("DateOfBirth: " + (patient != null ? patient.getDateOfBirth() : "null"));
+        System.out.println("Gender: " + (patient != null ? patient.getGender() : "null"));
+        System.out.println("Address: " + (patient != null ? patient.getAddress() : "null"));
+        System.out.println("PhoneNumber: " + (patient != null ? patient.getPhoneNumber() : "null"));
+        System.out.println("RegistrationDate: " + (patient != null ? patient.getRegistrationDate() : "null"));
+        System.out.println("=========================================");
 
         try {
             // Khởi tạo controller - có thể gây ra SQLException hoặc ClassNotFoundException
             this.controller = new PatientController(this, patient);
+            // In log để debug
+            System.out.println("PatientController đã được khởi tạo thành công");
 
             // Thiết lập giao diện
             setTitle("Hệ thống quản lý bệnh nhân - " + patient.getFullName());
@@ -112,6 +126,7 @@ public class PatientView extends JFrame {
             JOptionPane.showMessageDialog(this, 
                 "Lỗi kết nối cơ sở dữ liệu: " + e.getMessage(),
                 "Lỗi kết nối", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
             dispose();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(
@@ -121,8 +136,11 @@ public class PatientView extends JFrame {
                     JOptionPane.ERROR_MESSAGE
             );
             // Đóng cửa sổ sau khi hiển thị lỗi
+            System.err.println("Lỗi khởi tạo PatientController: " + e.getMessage());
+            e.printStackTrace();
             dispose();
         }
+        setVisible(true);
     }
 
     private void logout() {
