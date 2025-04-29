@@ -1,3 +1,6 @@
+
+import model.entity.Insurance;
+
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
@@ -13,6 +16,7 @@ public class Main {
 
         }
 
+        Insurance insurance = new Insurance();
     }
     //viet ham kiem tra so nguyen to
     public static boolean isPrime(int n) {
