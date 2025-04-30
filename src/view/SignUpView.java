@@ -40,7 +40,7 @@ public class SignUpView extends JFrame {
                     originalIcon = new ImageIcon(imageUrl);
                 } else {
                     // Thử đường dẫn tuyệt đối
-                    String absolutePath = "d:/codejava/BTL_QuanLyBenhNhan/resources/img/file_background.png";
+                    String absolutePath = "resources/img/file_background.png";
                     if (new File(absolutePath).exists()) {
                         System.out.println("Tìm thấy ảnh tại đường dẫn tuyệt đối");
                         originalIcon = new ImageIcon(absolutePath);
@@ -155,7 +155,7 @@ public class SignUpView extends JFrame {
         nextButton.setFont(new Font("Arial", Font.BOLD, 22));
         nextButton.setBackground(Color.WHITE);
         nextButton.setForeground(Color.BLACK);
-        nextButton.setIcon(resizeIcon("src/resources/img/add.png", nextButton, 0.5));
+        nextButton.setIcon(resizeIcon("resources/img/add.png", nextButton, 0.5));
         nextButton.addActionListener(e -> controller.signUp(usernameText.getText(), emailText.getText(), new String(passText.getPassword())));
 
         // Sign In Navigation Button

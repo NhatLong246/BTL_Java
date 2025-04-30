@@ -56,33 +56,63 @@ public class UserRepository {
         }
     }*/
 
-    public static boolean loginUser(String username, String password) {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            // Đảm bảo truy vấn này khớp với cấu trúc bảng trong database
-            String query = "SELECT Role FROM UserAccounts WHERE UserName = ? AND PasswordHash = SHA2(?, 256)";
-            
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, username);
-            stmt.setString(2, password);
-            
-            System.out.println("Executing login query for user: " + username);
-            
-            ResultSet rs = stmt.executeQuery();
-            boolean result = rs.next();
-            
-            if (result) {
-                System.out.println("Login success with role: " + rs.getString("Role"));
-            } else {
-                System.out.println("Login failed for user: " + username);
-            }
-            
-            return result;
-        } catch (SQLException e) {
-            System.err.println("Lỗi đăng nhập: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
+	public static boolean loginUser(String username, String password) {
+	    String query = "SELECT Role, PasswordHash, IsLocked FROM UserAccounts WHERE UserName = ?";
+	    Connection conn = null;
+	    try {
+	        conn = DatabaseConnection.getConnection();
+	        if (conn == null) {
+	            System.err.println("Không thể kết nối đến cơ sở dữ liệu!");
+	            return false;
+	        }
+	        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+	            stmt.setString(1, username);
+	            System.out.println("Executing login query for user: " + username);
+	            ResultSet rs = stmt.executeQuery();
+	            if (rs.next()) {
+	                // Kiểm tra xem tài khoản có bị khóa không
+	                boolean isLocked = rs.getBoolean("IsLocked");
+	                if (isLocked) {
+	                    System.out.println("Tài khoản đã bị khóa: " + username);
+	                    return false;
+	                }
+	                // So sánh mật khẩu
+	                String storedHash = rs.getString("PasswordHash");
+	                String hashedPasswordQuery = "SELECT SHA2(?, 256) AS hashedPassword";
+	                try (PreparedStatement hashStmt = conn.prepareStatement(hashedPasswordQuery)) {
+	                    hashStmt.setString(1, password);
+	                    ResultSet hashRs = hashStmt.executeQuery();
+	                    if (hashRs.next()) {
+	                        String hashedInputPassword = hashRs.getString("hashedPassword");
+	                        if (hashedInputPassword.equals(storedHash)) {
+	                            System.out.println("Login success with role: " + rs.getString("Role"));
+	                            return true;
+	                        }
+	                    }
+	                }
+	                System.out.println("Login failed for user: " + username + " - Mật khẩu không khớp");
+	                return false;
+	            } else {
+	                System.out.println("Login failed for user: " + username + " - Không tìm thấy tài khoản");
+	                return false;
+	            }
+	        }
+	    } catch (SQLException e) {
+	        System.err.println("Lỗi đăng nhập: " + e.getMessage());
+	        e.printStackTrace();
+	        return false;
+	    } finally {
+	        if (conn != null) {
+	            try {
+	                conn.close();
+	                System.out.println("Đã đóng kết nối cơ sở dữ liệu");
+	            } catch (SQLException e) {
+	                System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+	                e.printStackTrace();
+	            }
+	        }
+	    }
+	}
 
     /*public static boolean loginUser(String username, String password) {
         Connection conn = null;
@@ -357,5 +387,136 @@ public class UserRepository {
             e.printStackTrace();
             return "Error: " + e.getMessage();
         }
+    }
+    public boolean registerUser(String userId, String username, String fullName, String role, String email, String phoneNumber, String passwordHash) {
+        String sql = "INSERT INTO UserAccounts (UserID, UserName, FullName, Role, Email, PhoneNumber, PasswordHash) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, userId);
+            pstmt.setString(2, username);
+            pstmt.setString(3, fullName);
+            pstmt.setString(4, role);
+            pstmt.setString(5, email);
+            pstmt.setString(6, phoneNumber);
+            pstmt.setString(7, passwordHash);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteUser(String userId) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                System.err.println("Không thể kết nối đến cơ sở dữ liệu!");
+                return false;
+            }
+            String sql = "DELETE FROM UserAccounts WHERE UserID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, userId);
+                int rowsAffected = pstmt.executeUpdate();
+                return rowsAffected > 0;
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi xóa tài khoản người dùng: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public String getFullNameByUserId(String userId) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) return null;
+            String sql = "SELECT FullName FROM UserAccounts WHERE UserID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, userId);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString("FullName");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getEmailByUserId(String userId) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) return null;
+            String sql = "SELECT Email FROM UserAccounts WHERE UserID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, userId);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString("Email");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getPhoneByUserId(String userId) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) return null;
+            String sql = "SELECT PhoneNumber FROM UserAccounts WHERE UserID = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, userId);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString("PhoneNumber");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
     }
 }

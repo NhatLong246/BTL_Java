@@ -24,7 +24,7 @@ public class LoginView extends JFrame {
         setLayout(null);
 
         // Load background image
-        String imagePath = "src/resources/img/file_background.png";
+        String imagePath = "resources/img/file_background.png";
         File imageFile = new File(imagePath);
         if (!imageFile.exists()) {
             System.err.println("ERROR: Image not found: " + imageFile.getAbsolutePath());
@@ -266,7 +266,7 @@ public class LoginView extends JFrame {
         loginButton.setBackground(Color.WHITE);
         loginButton.setForeground(Color.BLACK);
         // Đường dẫn khác với đường dẫn hình nền
-        loginButton.setIcon(resizeIcon("src/resources/img/user-profile.png", loginButton, 0.5));
+        loginButton.setIcon(resizeIcon("resources/img/user-profile.png", loginButton, 0.5));
         loginButton.addActionListener(e -> {
             // Kiểm tra đầu vào
             String username = userText.getText();
@@ -319,7 +319,7 @@ public class LoginView extends JFrame {
         signUpButton.setFont(new Font("Arial", Font.BOLD, 22));
         signUpButton.setBackground(Color.WHITE);
         signUpButton.setForeground(Color.BLACK);
-        signUpButton.setIcon(resizeIcon("src/resources/img/add.png", signUpButton, 0.5));
+        signUpButton.setIcon(resizeIcon("resources/img/add.png", signUpButton, 0.5));
         signUpButton.addActionListener(e -> controller.navigateToSignUp());
 
         // Sign Up Navigation Button
