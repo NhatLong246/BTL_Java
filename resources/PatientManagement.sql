@@ -1,18 +1,39 @@
+DROP DATABASE IF EXISTS PatientManagement;
 CREATE DATABASE IF NOT EXISTS PatientManagement;
 USE PatientManagement;
 
 -- Bảng Tài Khoản Người Dùng
 CREATE TABLE UserAccounts (
     UserID VARCHAR(50) PRIMARY KEY,
-    UserName VARCHAR(50) UNIQUE NOT NULL, -- thêm sau
+    UserName VARCHAR(50) UNIQUE NOT NULL,
     FullName VARCHAR(100) NOT NULL,
     Role ENUM('Bác sĩ', 'Bệnh nhân', 'Quản lí') NOT NULL,
     Email VARCHAR(100) UNIQUE NOT NULL,
     PhoneNumber VARCHAR(15) UNIQUE,
     PasswordHash VARCHAR(255) NOT NULL,
-    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_role (Role)
 );
 ALTER TABLE UserAccounts ADD COLUMN PasswordChangeRequired BOOLEAN DEFAULT 1;
+
+-- Thêm cột IsLocked với giá trị mặc định là 0 (không khóa)
+ALTER TABLE UserAccounts
+ADD IsLocked TINYINT(1) NOT NULL DEFAULT 0;
+
+-- Cập nhật dữ liệu hiện có: nếu PasswordHash là NULL, đặt IsLocked = 1
+UPDATE UserAccounts
+SET IsLocked = 1
+WHERE PasswordHash IS NULL;
+
+-- Đảm bảo PasswordHash không NULL cho các tài khoản hiện có
+UPDATE UserAccounts
+SET PasswordHash = SHA2('default_password', 256)
+WHERE PasswordHash IS NULL;
+-- Bảng Chuyên Khoa
+CREATE TABLE Specialties (
+    SpecialtyID VARCHAR(50) PRIMARY KEY,
+    SpecialtyName VARCHAR(100) NOT NULL UNIQUE
+);
 
 -- Bảng Bác Sĩ
 CREATE TABLE Doctors (
@@ -20,29 +41,27 @@ CREATE TABLE Doctors (
     UserID VARCHAR(50) UNIQUE NOT NULL,
     DateOfBirth DATE NOT NULL,
     Gender ENUM('Nam', 'Nữ') NOT NULL,
-    FullName NVARCHAR(100) NOT NULL,
-    PhoneNumber VARCHAR(20),
-    Email VARCHAR(100),
     Address TEXT,
     SpecialtyID VARCHAR(50),
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (SpecialtyID) REFERENCES Specialties(SpecialtyID) 
-        ON DELETE SET NULL ON UPDATE CASCADE
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_specialty (SpecialtyID)
 );
 
--- thêm bảng lịch làm việc cho bác sĩ 
+-- Bảng lịch làm việc cho bác sĩ
 CREATE TABLE DoctorSchedule (
+    ScheduleID VARCHAR(50) PRIMARY KEY,
     DoctorID VARCHAR(50) NOT NULL,
     DayOfWeek ENUM('Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật') NOT NULL,
     ShiftType ENUM('Sáng', 'Chiều', 'Tối') NOT NULL,
     Status ENUM('Đang làm việc', 'Hết ca làm việc') DEFAULT 'Đang làm việc',
-    PRIMARY KEY (DoctorID, DayOfWeek, ShiftType),
+    UNIQUE KEY unique_doctor_schedule (DoctorID, DayOfWeek, ShiftType),
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
-
 
 -- Bảng Bệnh Nhân
 CREATE TABLE Patients (
@@ -66,17 +85,21 @@ CREATE TABLE Appointments (
     AppointmentDate DATETIME NOT NULL,
     Status ENUM('Chờ xác nhận', 'Hoàn thành', 'Hủy') DEFAULT 'Chờ xác nhận',
     Notes TEXT,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
-        ON DELETE SET NULL ON UPDATE CASCADE
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_appointment_date (AppointmentDate),
+    INDEX idx_appointment_status (Status)
 );
 
 -- Bảng Dịch Vụ
 CREATE TABLE Services (
     ServiceID VARCHAR(50) PRIMARY KEY,
     ServiceName VARCHAR(255) NOT NULL,
-    Cost DECIMAL(10,2) NOT NULL CHECK (Cost >= 0)
+    Cost DECIMAL(10,2) NOT NULL CHECK (Cost >= 0),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Bảng Hóa Đơn
@@ -87,17 +110,22 @@ CREATE TABLE Billing (
     PaymentMethod ENUM('Tiền mặt', 'Chuyển khoản'),
     Status ENUM('Chưa thanh toán', 'Đã thanh toán') DEFAULT 'Chưa thanh toán',
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) ON DELETE CASCADE ON UPDATE CASCADE
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) 
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_billing_status (Status)
 );
 
 -- Bảng Chi Tiết Hóa Đơn
 CREATE TABLE BillingDetails (
+    BillDetailID VARCHAR(50) PRIMARY KEY,
     BillID VARCHAR(50) NOT NULL,
     ServiceID VARCHAR(50) NOT NULL,
     Amount DECIMAL(10,2) NOT NULL CHECK (Amount >= 0),
-    PRIMARY KEY (BillID, ServiceID),
-    FOREIGN KEY (BillID) REFERENCES Billing(BillID) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (ServiceID) REFERENCES Services(ServiceID) ON DELETE CASCADE ON UPDATE CASCADE
+    UNIQUE KEY unique_bill_service (BillID, ServiceID),
+    FOREIGN KEY (BillID) REFERENCES Billing(BillID) 
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ServiceID) REFERENCES Services(ServiceID) 
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Bảng Hồ Sơ Y Tế
@@ -110,10 +138,12 @@ CREATE TABLE MedicalRecords (
     TreatmentPlan TEXT,
     RecordDate DATE NOT NULL,
     IsHistory BOOLEAN DEFAULT FALSE,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE SET NULL ON UPDATE CASCADE,
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
-        ON DELETE SET NULL ON UPDATE CASCADE
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_record_date (RecordDate)
 );
 
 ALTER TABLE MedicalRecords
@@ -129,7 +159,8 @@ CREATE TABLE VitalSigns (
     OxygenSaturation DECIMAL(5,2) CHECK (OxygenSaturation BETWEEN 0 AND 100),
     RecordedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
-        ON DELETE CASCADE ON UPDATE CASCADE
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_recorded_at (RecordedAt)
 );
 
 -- Bảng Đơn thuốc
@@ -138,10 +169,12 @@ CREATE TABLE Prescriptions (
     PatientID VARCHAR(50),
     DoctorID VARCHAR(50),
     PrescriptionDate DATE NOT NULL,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
-        ON DELETE SET NULL ON UPDATE CASCADE
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_prescription_date (PrescriptionDate)
 );
 
 -- Bảng Thuốc
@@ -151,16 +184,19 @@ CREATE TABLE Medications (
     Description TEXT,
     Manufacturer VARCHAR(255),
     DosageForm VARCHAR(100),
-    SideEffects TEXT
+    SideEffects TEXT,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_medicine_name (MedicineName)
 );
 
 -- Bảng Chi tiết Đơn thuốc
 CREATE TABLE PrescriptionDetails (
-    PrescriptionID VARCHAR(50),
-    MedicationID VARCHAR(50),
-    Dosage VARCHAR(50),
+    PrescriptionDetailID VARCHAR(50) PRIMARY KEY,
+    PrescriptionID VARCHAR(50) NOT NULL,
+    MedicationID VARCHAR(50) NOT NULL,
+    Dosage VARCHAR(50) NOT NULL,
     Instructions TEXT,
-    PRIMARY KEY (PrescriptionID, MedicationID),
+    UNIQUE KEY unique_prescription_medication (PrescriptionID, MedicationID),
     FOREIGN KEY (PrescriptionID) REFERENCES Prescriptions(PrescriptionID)
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (MedicationID) REFERENCES Medications(MedicationID)
@@ -169,42 +205,87 @@ CREATE TABLE PrescriptionDetails (
 
 -- Bảng Insurance (Thông tin bảo hiểm y tế)
 CREATE TABLE Insurance (
-    InsuranceID VARCHAR(20) PRIMARY KEY,
-    PatientID VARCHAR(20),
-    Provider TEXT NOT NULL,
+    InsuranceID VARCHAR(50) PRIMARY KEY,
+    PatientID VARCHAR(50) NOT NULL,
+    Provider VARCHAR(255) NOT NULL,
     PolicyNumber VARCHAR(100) UNIQUE NOT NULL,
     StartDate DATE NOT NULL,
     ExpirationDate DATE NOT NULL,
     CoverageDetails TEXT,
     Status ENUM('Hoạt Động', 'Hết Hạn', 'Không Xác Định') DEFAULT 'Hoạt Động',
-    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) ON DELETE SET NULL,
-    INDEX (PatientID),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) 
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_insurance_status (Status),
     CHECK (StartDate < ExpirationDate)
 );
 
 -- Bảng HospitalRooms (Danh sách phòng bệnh viện)
 CREATE TABLE HospitalRooms (
-    RoomID VARCHAR(20) PRIMARY KEY,
+    RoomID VARCHAR(50) PRIMARY KEY,
     RoomType ENUM('Tiêu chuẩn', 'VIP', 'ICU', 'Cấp cứu') NOT NULL,
-    TotalBeds INT CHECK (TotalBeds > 0),  -- Tổng số giường trong phòng
-    AvailableBeds INT CHECK (AvailableBeds >= 0),  -- Số giường còn trống
+    TotalBeds INT CHECK (TotalBeds > 0),
+    AvailableBeds INT CHECK (AvailableBeds >= 0),
     FloorNumber INT CHECK (FloorNumber > 0),
-    Status ENUM('Trống', 'Đang sử dụng', 'Đầy', 'Bảo trì') DEFAULT 'Trống'
+    Status ENUM('Trống', 'Đang sử dụng', 'Đầy', 'Bảo trì') DEFAULT 'Trống',
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (AvailableBeds <= TotalBeds),
+    INDEX idx_room_status (Status),
+    INDEX idx_room_type (RoomType)
 );
 
 -- Bảng Nhập Viện
 CREATE TABLE Admissions (
     AdmissionID VARCHAR(50) PRIMARY KEY,
-    PatientID VARCHAR(50),
+    PatientID VARCHAR(50) NOT NULL,
     DoctorID VARCHAR(50),
     RoomID VARCHAR(50),
     AdmissionDate DATE NOT NULL,
     DischargeDate DATE,
     Notes TEXT,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
-        ON DELETE SET NULL ON UPDATE CASCADE,
+        ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
         ON DELETE SET NULL ON UPDATE CASCADE,
     FOREIGN KEY (RoomID) REFERENCES HospitalRooms(RoomID)
-        ON DELETE SET NULL ON UPDATE CASCADE
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_admission_date (AdmissionDate),
+    INDEX idx_discharge_date (DischargeDate),
+    CHECK (DischargeDate IS NULL OR AdmissionDate <= DischargeDate)
 );
+
+-- Trigger to update room availability when a patient is admitted
+DELIMITER //
+CREATE TRIGGER after_admission_insert
+AFTER INSERT ON Admissions
+FOR EACH ROW
+BEGIN
+    IF NEW.RoomID IS NOT NULL THEN
+        UPDATE HospitalRooms
+        SET AvailableBeds = AvailableBeds - 1,
+            Status = CASE 
+                WHEN AvailableBeds - 1 = 0 THEN 'Đầy'
+                ELSE 'Đang sử dụng' 
+            END
+        WHERE RoomID = NEW.RoomID AND Status != 'Bảo trì';
+    END IF;
+END//
+
+-- Trigger to update room availability when a patient is discharged
+CREATE TRIGGER after_admission_update
+AFTER UPDATE ON Admissions
+FOR EACH ROW
+BEGIN
+    IF NEW.DischargeDate IS NOT NULL AND OLD.DischargeDate IS NULL AND NEW.RoomID IS NOT NULL THEN
+        UPDATE HospitalRooms
+        SET AvailableBeds = AvailableBeds + 1,
+            Status = CASE 
+                WHEN AvailableBeds + 1 = TotalBeds THEN 'Trống'
+                ELSE 'Đang sử dụng' 
+            END
+        WHERE RoomID = NEW.RoomID AND Status != 'Bảo trì';
+    END IF;
+END//
+DELIMITER ;
+

@@ -42,7 +42,6 @@ public enum Gender {
         
         return null;  // Không xác định được
     }
-
     @Override
     public String toString() {
         return vietnamese;

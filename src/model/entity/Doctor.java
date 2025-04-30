@@ -43,7 +43,7 @@ public class Doctor extends Person {
         this.createdAt = createdAt;
     }
 
-    private String generateDoctorId() {
+    public String generateDoctorId() {
         return String.format("DOC-%03d", id++);
     }
 
