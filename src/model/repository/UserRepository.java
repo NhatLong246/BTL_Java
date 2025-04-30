@@ -600,4 +600,78 @@ public class UserRepository {
         }
         return null;
     }
+
+    /**
+     * Lấy ID admin từ tên đăng nhập
+     * @param username Tên đăng nhập
+     * @return ID admin hoặc null nếu không tìm thấy
+     */
+    public static String getAdminIdByUsername(String username) {
+        String query = "SELECT a.AdminID FROM Admins a JOIN UserAccounts u ON a.UserID = u.UserID WHERE u.UserName = ?";
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                System.err.println("Không thể kết nối đến cơ sở dữ liệu!");
+                return null;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, username);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getString("AdminID");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi lấy ID admin: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Lấy UserID từ username
+     * @param username Tên đăng nhập
+     * @return UserID hoặc null nếu không tìm thấy
+     */
+    public static String getUserIdByUsername(String username) {
+        String query = "SELECT UserID FROM UserAccounts WHERE UserName = ?";
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                System.err.println("Không thể kết nối đến cơ sở dữ liệu!");
+                return null;
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, username);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getString("UserID");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi lấy UserID: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
 }

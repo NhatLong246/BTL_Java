@@ -3,11 +3,8 @@ package controller;
 import model.entity.Patient;
 import model.repository.PatientRepository;
 import model.repository.UserRepository;
-import view.DoctorView;
-import view.LoginView;
-import view.PatientView;
-import view.RequestResetView;
-import view.SignUpView; 
+import view.*;
+
 import javax.swing.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement; 
@@ -78,9 +75,15 @@ public class LoginController {
             // Điều hướng dựa trên vai trò
             switch (role) {
                 case "Quản lí":
-                    // Placeholder từ nhánh 3f457736d1bb724311adaa4fc92302c9e9dc98cb vì AdminView chưa triển khai
-                    JOptionPane.showMessageDialog(view, "Đăng nhập với vai trò Quản lí thành công! (Admin View chưa triển khai)");
-                    break;
+                    String adminId = UserRepository.getUserIdByUsername(username);
+                    if (adminId != null) {
+                        new AdminView(adminId).setVisible(true);
+                        view.dispose();
+                        return true;
+                    } else {
+                        view.showError("Không tìm thấy thông tin quản lý!");
+                        return false;
+                    }
                 case "Bác sĩ":
                     String doctorId = getDoctorID(userId); // Sử dụng getDoctorID từ nhánh 3f457736d1bb724311adaa4fc92302c9e9dc98cb
                     if (doctorId != null) {
