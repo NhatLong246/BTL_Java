@@ -12,22 +12,7 @@ CREATE TABLE UserAccounts (
     PasswordHash VARCHAR(255) NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Bước 1: Thêm cột UserName
-ALTER TABLE UserAccounts
-ADD COLUMN UserName VARCHAR(50) UNIQUE NULL AFTER UserID;
-
-
--- Bước 3: Đặt lại UserName NOT NULL
-ALTER TABLE UserAccounts
-MODIFY COLUMN UserName VARCHAR(50) UNIQUE NOT NULL;
-
-
--- Bảng Chuyên Khoa
-CREATE TABLE Specialties (
-    SpecialtyID VARCHAR(50) PRIMARY KEY,
-    SpecialtyName VARCHAR(100) NOT NULL UNIQUE
-);
+ALTER TABLE UserAccounts ADD COLUMN PasswordChangeRequired BOOLEAN DEFAULT 1;
 
 -- Bảng Bác Sĩ
 CREATE TABLE Doctors (
@@ -47,24 +32,6 @@ CREATE TABLE Doctors (
         ON DELETE SET NULL ON UPDATE CASCADE
 );
 
-ALTER TABLE Doctors
-MODIFY Gender ENUM('Nam', 'Nữ') NOT NULL;
-
-ALTER TABLE Doctors
-ADD FullName NVARCHAR(100) NOT NULL;
-
-ALTER TABLE Doctors
-ADD PhoneNumber VARCHAR(20);
-
-ALTER TABLE Doctors
-ADD Email VARCHAR(100);
-
-ALTER TABLE Doctors
-ADD CreatedAt DATE;
-
-ALTER TABLE Doctors
-ADD DateOfBirth DATE;
-
 -- thêm bảng lịch làm việc cho bác sĩ 
 CREATE TABLE DoctorSchedule (
     DoctorID VARCHAR(50) NOT NULL,
@@ -81,19 +48,15 @@ CREATE TABLE DoctorSchedule (
 CREATE TABLE Patients (
     PatientID VARCHAR(50) PRIMARY KEY,
     UserID VARCHAR(50) UNIQUE NOT NULL,
+    FullName VARCHAR(255) NOT NULL,
     DateOfBirth DATE NOT NULL,
     Gender ENUM('Nam', 'Nữ') NOT NULL,
+    PhoneNumber VARCHAR(20),
     Address TEXT,
-    DateOfBirth DATE,
 	CreatedAt DATE, -- Ngày nhập viện
     FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
-
-ALTER TABLE Patients
-ADD FullName VARCHAR(255) NOT NULL AFTER UserID;
-ALTER TABLE Patients
-ADD PhoneNumber VARCHAR(20) AFTER Gender;
 
 -- Bảng Cuộc Hẹn
 CREATE TABLE Appointments (
@@ -143,7 +106,8 @@ CREATE TABLE MedicalRecords (
     PatientID VARCHAR(50),
     DoctorID VARCHAR(50),
     Diagnosis TEXT NOT NULL,
-    TreatmentPlan TEXT NOT NULL,
+--    TreatmentPlan TEXT NOT NULL,
+    TreatmentPlan TEXT,
     RecordDate DATE NOT NULL,
     IsHistory BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
@@ -151,6 +115,9 @@ CREATE TABLE MedicalRecords (
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
         ON DELETE SET NULL ON UPDATE CASCADE
 );
+
+ALTER TABLE MedicalRecords
+MODIFY COLUMN TreatmentPlan TEXT NULL;
 
 -- Bảng Chỉ Số Sức Khỏe
 CREATE TABLE VitalSigns (

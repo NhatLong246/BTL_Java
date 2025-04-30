@@ -10,9 +10,14 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class PatientView extends JFrame {
     private JPanel contentPanel;
@@ -73,7 +78,7 @@ public class PatientView extends JFrame {
             btnViewInfo = createButton("View Info");
             btnViewAppointments = createButton("View Appointments");
             btnViewMedicalHistory = createButton("View Medical History");
-            btnViewPrescriptions = createButton("Xem chi tiết đơn thuốc");
+            btnViewPrescriptions = createButton("Xem đơn thuốc");
             btnPayFees = createButton("Pay Fees");
             btnPaymentHistory = createButton("Payment History");
             JButton btnLogout = createButton("Logout");
@@ -402,7 +407,7 @@ public class PatientView extends JFrame {
         contentPanel.repaint();
     }
 
-    public void showPayFees() {
+    /*public void showPayFees() {
         contentPanel.removeAll();
 
         JPanel feesPanel = new JPanel(new BorderLayout());
@@ -462,6 +467,76 @@ public class PatientView extends JFrame {
         feesPanel.add(titleLabel, BorderLayout.NORTH);
         feesPanel.add(wrapperPanel, BorderLayout.CENTER);
 
+        contentPanel.add(feesPanel);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }*/
+
+    public void showPayFees() {
+        contentPanel.removeAll();
+    
+        JPanel feesPanel = new JPanel(new BorderLayout());
+        feesPanel.setBackground(new Color(245, 245, 245));
+    
+        JLabel titleLabel = new JLabel("Thanh toán viện phí", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
+        
+        List<Object[]> bills = controller.getBills();
+        System.out.println("Số lượng hóa đơn từ controller: " + (bills == null ? "null" : bills.size()));
+    
+        JPanel tablePanel = new JPanel(new BorderLayout());
+        tablePanel.setBackground(Color.WHITE);
+        tablePanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+        
+        if (bills == null || bills.isEmpty()) {
+            // Hiển thị thông báo khi không có hóa đơn
+            JLabel noDataLabel = new JLabel("Không có hóa đơn cần thanh toán", SwingConstants.CENTER);
+            noDataLabel.setFont(new Font("Arial", Font.ITALIC, 16));
+            tablePanel.add(noDataLabel, BorderLayout.CENTER);
+        } else {
+            // Có hóa đơn, hiển thị bảng
+            String[] columnNames = {"ID Hóa đơn", "Ngày", "Dịch vụ", "Số tiền", "Trạng thái", "Thanh toán"};
+    
+            DefaultTableModel model = new DefaultTableModel() {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return column == 5; // Chỉ cho phép chỉnh sửa cột "Thanh toán"
+                }
+            };
+            model.setColumnIdentifiers(columnNames);
+    
+            for (Object[] bill : bills) {
+                Object[] rowData = new Object[6];
+                System.arraycopy(bill, 0, rowData, 0, 5);
+                rowData[5] = "Thanh toán";
+                model.addRow(rowData);
+            }
+    
+            JTable table = new JTable(model);
+            table.setRowHeight(40);
+            table.setFont(new Font("Arial", Font.PLAIN, 14));
+            table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+    
+            table.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
+            table.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox(), table));
+    
+            JScrollPane scrollPane = new JScrollPane(table);
+            scrollPane.setBorder(BorderFactory.createEmptyBorder());
+            tablePanel.add(scrollPane, BorderLayout.CENTER);
+        }
+    
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setOpaque(false);
+        wrapperPanel.add(tablePanel, BorderLayout.CENTER);
+        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
+    
+        feesPanel.add(titleLabel, BorderLayout.NORTH);
+        feesPanel.add(wrapperPanel, BorderLayout.CENTER);
+    
         contentPanel.add(feesPanel);
         contentPanel.revalidate();
         contentPanel.repaint();
@@ -810,12 +885,11 @@ public class PatientView extends JFrame {
     }
     
     /**
-     * Main method to start the patient application
-     * This would typically be called from a launcher or login screen
-     * For testing purposes, this creates a sample patient
+     * Phương thức main để test PatientView với dữ liệu từ database
      */
     public static void main(String[] args) {
         try {
+            // Thiết lập look and feel cho giao diện
             UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
         } catch (Exception e) {
             e.printStackTrace();
@@ -823,71 +897,106 @@ public class PatientView extends JFrame {
         
         SwingUtilities.invokeLater(() -> {
             try {
-                // Để kiểm thử: Tạo một bệnh nhân mẫu
-                // Trong ứng dụng thực tế, thông tin này sẽ được lấy từ xác thực đăng nhập
-                Patient samplePatient = new Patient(
-                    "USER001", // userID
-                    "PAT-001", // patientID 
-                    "Nguyễn Văn A", // fullName
-                    LocalDate.of(1990, 5, 15), // dateOfBirth
-                    "123 Đường ABC, Quận 1, TP.HCM", // address
-                    Gender.MALE, // gender
-                    "0901234567", // phoneNumber
-                    LocalDate.now().minusYears(1) // createdAt (ngày đăng ký cách đây 1 năm)
+                // Kết nối database
+                Connection conn = DatabaseConnection.getConnection();
+                System.out.println("Kết nối database thành công!");
+                
+                // Truy vấn thông tin bệnh nhân với mã PAT-001
+                String patientId = "PAT-001";
+                String sql = "SELECT p.*, u.UserID, u.CreatedAt as RegistrationDate " +
+                             "FROM Patients p " + 
+                             "JOIN UserAccounts u ON p.UserID = u.UserID " +
+                             "WHERE p.PatientID = ?";
+                
+                Patient patient = null;
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, patientId);
+                    ResultSet rs = stmt.executeQuery();
+                    
+                    if (rs.next()) {
+                        // Tạo đối tượng Patient từ dữ liệu database
+                        System.out.println("Tìm thấy bệnh nhân trong database!");
+                        patient = new Patient(
+                            rs.getString("UserID"),
+                            rs.getString("PatientID"),
+                            rs.getString("FullName"),
+                            rs.getDate("DateOfBirth").toLocalDate(),
+                            rs.getString("Address"),
+                            Gender.fromDatabase(rs.getString("Gender")),
+                            rs.getString("PhoneNumber"),
+                            rs.getDate("RegistrationDate").toLocalDate()
+                        );
+                    }
+                }
+                
+                // Nếu không tìm thấy trong database, tạo một đối tượng mẫu
+                if (patient == null) {
+                    System.out.println("Không tìm thấy bệnh nhân trong database, tạo dữ liệu mẫu...");
+                    patient = new Patient(
+                        "USER001", // userID
+                        patientId, // patientID 
+                        "Nguyễn Văn A", // fullName
+                        LocalDate.of(1990, 5, 15), // dateOfBirth
+                        "123 Đường ABC, Quận 1, TP.HCM", // address
+                        Gender.MALE, // gender
+                        "0901234567", // phoneNumber
+                        LocalDate.now().minusYears(1) // createdAt (ngày đăng ký cách đây 1 năm)
+                    );
+                }
+                
+                System.out.println("============ THÔNG TIN BỆNH NHÂN ============");
+                System.out.println("PatientID: " + patient.getPatientID());
+                System.out.println("Họ tên: " + patient.getFullName());
+                System.out.println("Ngày sinh: " + patient.getDateOfBirth());
+                System.out.println("Giới tính: " + patient.getGender());
+                System.out.println("Địa chỉ: " + patient.getAddress());
+                System.out.println("SĐT: " + patient.getPhoneNumber());
+                System.out.println("Ngày đăng ký: " + patient.getRegistrationDate());
+                System.out.println("===========================================");
+                
+                // Hiển thị giao diện PatientView với thông tin bệnh nhân
+                new PatientView(patient);
+                
+            } catch (SQLException e) {
+                System.err.println("Lỗi kết nối database: " + e.getMessage());
+                e.printStackTrace();
+                
+                // Fallback: Tạo giao diện với dữ liệu mẫu nếu kết nối database thất bại
+                JOptionPane.showMessageDialog(
+                    null,
+                    "Không thể kết nối đến cơ sở dữ liệu. Sử dụng dữ liệu mẫu thay thế.",
+                    "Cảnh báo",
+                    JOptionPane.WARNING_MESSAGE
                 );
                 
-                // Create the patient view
-                new PatientView(samplePatient);
+                Patient fallbackPatient = new Patient(
+                    "USER001", 
+                    "PAT-001", 
+                    "Nguyễn Văn A", 
+                    LocalDate.of(1990, 5, 15), 
+                    "123 Đường ABC, Quận 1, TP.HCM", 
+                    Gender.MALE, 
+                    "0901234567", 
+                    LocalDate.now().minusYears(1)
+                );
+                
+                new PatientView(fallbackPatient);
             } catch (Exception e) {
+                System.err.println("Lỗi không xác định: " + e.getMessage());
+                e.printStackTrace();
                 JOptionPane.showMessageDialog(
                     null,
                     "Lỗi khởi động ứng dụng: " + e.getMessage(),
                     "Lỗi",
                     JOptionPane.ERROR_MESSAGE
                 );
-                e.printStackTrace();
             }
         });
     }
 
-        /**
-     * Main method to start the patient application
-     * This would typically be called from a launcher or login screen
-     */
-    /*public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            System.err.println("Không thể thiết lập giao diện: " + e.getMessage());
-        }
-        
-        SwingUtilities.invokeLater(() -> {
-            try {
-                // Kiểm tra kết nối cơ sở dữ liệu trước khi mở LoginView
-                try (Connection testConnection = DatabaseConnection.getConnection()) {
-                    System.out.println("Kết nối cơ sở dữ liệu thành công");
-                } catch (SQLException e) {
-                    throw new Exception("Không thể kết nối đến cơ sở dữ liệu: " + e.getMessage(), e);
-                }
-                
-                // Hiển thị màn hình đăng nhập sau khi đã kiểm tra kết nối thành công
-                LoginView loginView = new LoginView();
-                loginView.setVisible(true);
-                
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(
-                    null,
-                    "Lỗi khởi động ứng dụng: " + e.getMessage(),
-                    "Lỗi",
-                    JOptionPane.ERROR_MESSAGE
-                );
-                e.printStackTrace();
-            }
-        });
-    }*/
 
     // Add new method to show prescription details
-    public void showPrescriptionDetails() {
+    /*public void showPrescriptionDetails() {
         contentPanel.removeAll();
 
         JPanel prescriptionPanel = new JPanel(new BorderLayout());
@@ -1006,6 +1115,235 @@ public class PatientView extends JFrame {
 
         // Set the selected button
         setSelectedButton(btnViewPrescriptions);
+    }*/
+
+        public void showPrescriptionDetails() {
+        contentPanel.removeAll();
+    
+        JPanel prescriptionPanel = new JPanel(new BorderLayout());
+        prescriptionPanel.setBackground(new Color(245, 245, 245));
+    
+        // Title
+        JLabel titleLabel = new JLabel("Chi tiết đơn thuốc", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
+    
+        // Disease Filter Panel
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        filterPanel.setBackground(Color.WHITE);
+        filterPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+    
+        JLabel filterLabel = new JLabel("Chọn loại bệnh:");
+        filterLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        
+        // Lấy danh sách chẩn đoán từ database
+        List<String> diagnoses = controller.getDiagnosisList();
+        JComboBox<String> diseaseComboBox = new JComboBox<>(diagnoses.toArray(new String[0]));
+        diseaseComboBox.setPreferredSize(new Dimension(200, 30));
+    
+        filterPanel.add(filterLabel);
+        filterPanel.add(Box.createHorizontalStrut(10));
+        filterPanel.add(diseaseComboBox);
+    
+        // Prescription List Panel
+        JPanel prescriptionListPanel = new JPanel();
+        prescriptionListPanel.setLayout(new BoxLayout(prescriptionListPanel, BoxLayout.Y_AXIS));
+        prescriptionListPanel.setBackground(Color.WHITE);
+        prescriptionListPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+    
+        JLabel prescriptionListLabel = new JLabel("Danh sách đơn thuốc:");
+        prescriptionListLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        prescriptionListPanel.add(prescriptionListLabel);
+        prescriptionListPanel.add(Box.createVerticalStrut(10));
+    
+        // Lấy danh sách đơn thuốc từ database
+        List<Map<String, Object>> prescriptions = controller.getPrescriptionsForPatient(patient.getPatientID());
+    
+        JPanel prescriptionButtonsPanel = new JPanel();
+        prescriptionButtonsPanel.setLayout(new BoxLayout(prescriptionButtonsPanel, BoxLayout.Y_AXIS));
+        prescriptionButtonsPanel.setBackground(Color.WHITE);
+    
+        // Tạo một CardLayout để hiển thị chi tiết đơn thuốc
+        JPanel detailsContainer = new JPanel(new CardLayout());
+        detailsContainer.setBackground(Color.WHITE);
+        
+        // Tạo một panel trống cho trạng thái mặc định
+        JPanel emptyPanel = new JPanel();
+        emptyPanel.setBackground(Color.WHITE);
+        JLabel emptyLabel = new JLabel("Vui lòng chọn đơn thuốc để xem chi tiết", SwingConstants.CENTER);
+        emptyLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+        emptyPanel.add(emptyLabel);
+        
+        detailsContainer.add(emptyPanel, "EMPTY");
+    
+        // Tạo các nút cho từng đơn thuốc và panel chi tiết tương ứng
+        ButtonGroup prescriptionGroup = new ButtonGroup();
+        for (Map<String, Object> prescription : prescriptions) {
+            String prescriptionId = (String) prescription.get("prescriptionId");
+            Date date = (Date) prescription.get("date");
+            String doctorName = (String) prescription.get("doctorName");
+            String diagnosis = (String) prescription.get("diagnosis");
+    
+            // Tạo nút radio cho đơn thuốc
+            JRadioButton prescriptionButton = new JRadioButton(
+                    "<html><b>" + prescriptionId + "</b> - " + date + " - " + doctorName + "<br>" +
+                    "<i>Chẩn đoán: " + (diagnosis != null ? diagnosis : "N/A") + "</i></html>"
+            );
+            prescriptionButton.setBackground(Color.WHITE);
+            prescriptionButton.setFocusPainted(false);
+            prescriptionGroup.add(prescriptionButton);
+    
+            // Tạo panel chi tiết cho đơn thuốc
+            JPanel detailsPanel = createPrescriptionDetailsPanel(prescriptionId);
+            detailsContainer.add(detailsPanel, prescriptionId);
+    
+            // Khi nút được chọn, hiển thị chi tiết tương ứng
+            prescriptionButton.addActionListener(e -> {
+                CardLayout cardLayout = (CardLayout) detailsContainer.getLayout();
+                cardLayout.show(detailsContainer, prescriptionId);
+            });
+    
+            prescriptionButtonsPanel.add(prescriptionButton);
+            prescriptionButtonsPanel.add(Box.createVerticalStrut(5));
+        }
+    
+        // Nếu không có đơn thuốc nào
+        if (prescriptions.isEmpty()) {
+            JLabel noDataLabel = new JLabel("Không có đơn thuốc nào!", SwingConstants.CENTER);
+            noDataLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+            prescriptionButtonsPanel.add(noDataLabel);
+        }
+    
+        JScrollPane prescriptionScroll = new JScrollPane(prescriptionButtonsPanel);
+        prescriptionScroll.setPreferredSize(new Dimension(300, 300));
+        prescriptionScroll.setBorder(BorderFactory.createEmptyBorder());
+        prescriptionListPanel.add(prescriptionScroll);
+    
+        // Add action listener for disease filter
+        diseaseComboBox.addActionListener(e -> {
+            String selectedDisease = (String) diseaseComboBox.getSelectedItem();
+            // Tải lại danh sách đơn thuốc theo chẩn đoán
+            updatePrescriptionList(prescriptionButtonsPanel, detailsContainer, selectedDisease);
+        });
+    
+        // Main layout
+        JPanel mainPanel = new JPanel(new BorderLayout(20, 20));
+        mainPanel.setOpaque(false);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
+        
+        // Top panel chứa filter
+        mainPanel.add(filterPanel, BorderLayout.NORTH);
+        
+        // Left panel chứa danh sách đơn thuốc
+        mainPanel.add(prescriptionListPanel, BorderLayout.WEST);
+        
+        // Center panel chứa chi tiết đơn thuốc
+        mainPanel.add(detailsContainer, BorderLayout.CENTER);
+    
+        prescriptionPanel.add(titleLabel, BorderLayout.NORTH);
+        prescriptionPanel.add(mainPanel, BorderLayout.CENTER);
+    
+        contentPanel.add(prescriptionPanel);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    
+        // Set the selected button
+        setSelectedButton(btnViewPrescriptions);
+    }
+    
+    private JPanel createPrescriptionDetailsPanel(String prescriptionId) {
+        JPanel detailsPanel = new JPanel(new BorderLayout(0, 20));
+        detailsPanel.setBackground(Color.WHITE);
+        detailsPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+    
+        // Lấy chi tiết đơn thuốc từ database
+        Map<String, Object> details = controller.getPrescriptionDetails(prescriptionId);
+        
+        if (details == null || details.isEmpty()) {
+            JLabel errorLabel = new JLabel("Không thể tải thông tin đơn thuốc!", SwingConstants.CENTER);
+            errorLabel.setFont(new Font("Arial", Font.BOLD, 14));
+            errorLabel.setForeground(Color.RED);
+            detailsPanel.add(errorLabel, BorderLayout.CENTER);
+            return detailsPanel;
+        }
+    
+        // Info Panel
+        JPanel infoPanel = new JPanel(new GridBagLayout());
+        infoPanel.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 5, 5, 5);
+    
+        // Add prescription information fields
+        JLabel lblPrescriptionId = createInfoLabel("Mã đơn thuốc: " + prescriptionId);
+        JLabel lblDiagnosis = createInfoLabel("Chẩn đoán: " + details.getOrDefault("diagnosis", "N/A"));
+        JLabel lblDate = createInfoLabel("Ngày kê đơn: " + details.getOrDefault("date", "N/A"));
+        JLabel lblDoctor = createInfoLabel("Bác sĩ: " + details.getOrDefault("doctorName", "N/A"));
+    
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        infoPanel.add(lblPrescriptionId, gbc);
+        gbc.gridy = 1;
+        infoPanel.add(lblDiagnosis, gbc);
+        gbc.gridy = 2;
+        infoPanel.add(lblDate, gbc);
+        gbc.gridy = 3;
+        infoPanel.add(lblDoctor, gbc);
+    
+        // Medicine Table
+        String[] columns = {"STT", "Tên thuốc", "Đơn vị", "Liều dùng", "Cách dùng"};
+        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> medications = (List<Map<String, Object>>) details.getOrDefault("medications", new ArrayList<>());
+        
+        for (Map<String, Object> med : medications) {
+            model.addRow(new Object[]{
+                med.get("index"),
+                med.get("medicineName"),
+                med.get("dosageForm"),
+                med.get("dosage"),
+                med.get("instructions")
+            });
+        }
+    
+        JTable medicineTable = new JTable(model);
+        medicineTable.setRowHeight(30);
+        medicineTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        JScrollPane scrollPane = new JScrollPane(medicineTable);
+    
+        // Notes Panel
+        JPanel notesPanel = new JPanel(new BorderLayout());
+        notesPanel.setBorder(BorderFactory.createTitledBorder("Ghi chú"));
+        JTextArea txtNotes = new JTextArea(4, 40);
+        txtNotes.setEditable(false);
+        txtNotes.setFont(new Font("Arial", Font.PLAIN, 14));
+        txtNotes.setLineWrap(true);
+        txtNotes.setWrapStyleWord(true);
+        txtNotes.setText((String) details.getOrDefault("notes", ""));
+        JScrollPane notesScroll = new JScrollPane(txtNotes);
+        notesPanel.add(notesScroll);
+    
+        // Add components to details panel
+        detailsPanel.add(infoPanel, BorderLayout.NORTH);
+        detailsPanel.add(scrollPane, BorderLayout.CENTER);
+        detailsPanel.add(notesPanel, BorderLayout.SOUTH);
+    
+        return detailsPanel;
     }
 
     private JLabel createInfoLabel(String text) {
@@ -1013,8 +1351,77 @@ public class PatientView extends JFrame {
         label.setFont(new Font("Arial", Font.PLAIN, 14));
         return label;
     }
+    
+    private void updatePrescriptionList(JPanel prescriptionButtonsPanel, JPanel detailsContainer, String selectedDisease) {
+        // Xóa tất cả các nút cũ
+        prescriptionButtonsPanel.removeAll();
+        
+        // Lấy danh sách đơn thuốc mới theo chẩn đoán
+        List<Map<String, Object>> filteredPrescriptions = controller.getPrescriptionsByDiagnosis(
+                patient.getPatientID(), selectedDisease);
+        
+        ButtonGroup prescriptionGroup = new ButtonGroup();
+        
+        // Thêm các nút mới
+        for (Map<String, Object> prescription : filteredPrescriptions) {
+            String prescriptionId = (String) prescription.get("prescriptionId");
+            Date date = (Date) prescription.get("date");
+            String doctorName = (String) prescription.get("doctorName");
+            String diagnosis = (String) prescription.get("diagnosis");
+            
+            // Tạo nút radio cho đơn thuốc
+            JRadioButton prescriptionButton = new JRadioButton(
+                    "<html><b>" + prescriptionId + "</b> - " + date + " - " + doctorName + "<br>" +
+                    "<i>Chẩn đoán: " + (diagnosis != null ? diagnosis : "N/A") + "</i></html>"
+            );
+            prescriptionButton.setBackground(Color.WHITE);
+            prescriptionButton.setFocusPainted(false);
+            prescriptionGroup.add(prescriptionButton);
+            
+            // Kiểm tra xem panel chi tiết đã tồn tại chưa
+            boolean panelExists = false;
+            for (Component comp : detailsContainer.getComponents()) {
+                if (comp instanceof JPanel && comp.getName() != null && comp.getName().equals(prescriptionId)) {
+                    panelExists = true;
+                    break;
+                }
+            }
+            
+            // Nếu chưa tồn tại, tạo mới
+            if (!panelExists) {
+                JPanel detailsPanel = createPrescriptionDetailsPanel(prescriptionId);
+                detailsPanel.setName(prescriptionId);
+                detailsContainer.add(detailsPanel, prescriptionId);
+            }
+            
+            // Khi nút được chọn, hiển thị chi tiết tương ứng
+            prescriptionButton.addActionListener(e -> {
+                CardLayout cardLayout = (CardLayout) detailsContainer.getLayout();
+                cardLayout.show(detailsContainer, prescriptionId);
+            });
+            
+            prescriptionButtonsPanel.add(prescriptionButton);
+            prescriptionButtonsPanel.add(Box.createVerticalStrut(5));
+        }
+        
+        // Nếu không có đơn thuốc nào
+        if (filteredPrescriptions.isEmpty()) {
+            JLabel noDataLabel = new JLabel("Không có đơn thuốc nào phù hợp với tiêu chí!", SwingConstants.CENTER);
+            noDataLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+            prescriptionButtonsPanel.add(noDataLabel);
+            
+            // Hiển thị panel rỗng
+            CardLayout cardLayout = (CardLayout) detailsContainer.getLayout();
+            cardLayout.show(detailsContainer, "EMPTY");
+        }
+        
+        prescriptionButtonsPanel.revalidate();
+        prescriptionButtonsPanel.repaint();
+    }
 
-    private void updatePrescriptionDetails(DefaultTableModel model, JTextArea txtNotes, String disease) {
+    
+
+    /*private void updatePrescriptionDetails(DefaultTableModel model, JTextArea txtNotes, String disease) {
         // Clear existing data
         model.setRowCount(0);
         txtNotes.setText("");
@@ -1026,5 +1433,5 @@ public class PatientView extends JFrame {
             model.addRow(new Object[]{2, "Vitamin C", "Viên", "10", "1 viên/lần", "Ngày uống 1 lần sau ăn sáng"});
             txtNotes.setText("Uống thuốc đều đặn, nghỉ ngơi nhiều");
         }
-    }
+    }*/
 }

@@ -83,4 +83,12 @@ public class Admission {
     public void setNotes(String notes) {
         this.notes = notes;
     }
+
+    public String getAdmissionId() {
+        return admissionId;
+    }
+
+    public void setAdmissionId(String admissionId) {
+        this.admissionId = admissionId;
+    }
 }

@@ -4,12 +4,20 @@ import model.entity.Patient;
 import model.entity.Doctor;
 import model.enums.Gender;
 import model.repository.DoctorRepository;
+import model.repository.PatientRepository;
 import view.DoctorView;
 import view.LoginView;
 import database.DatabaseConnection;
 
 import javax.swing.*;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -23,10 +31,12 @@ public class DoctorController {
     private final DoctorRepository repository;
     private final String doctorId;
     private Doctor doctorInfo; // Thêm thông tin bác sĩ
+    private final PatientRepository patientRepository;
 
     public DoctorController(DoctorView view, String doctorId) {
         this.view = view;
         this.repository = new DoctorRepository();
+        this.patientRepository = new PatientRepository();
         this.doctorId = doctorId;
         
         // Tải thông tin bác sĩ khi khởi tạo controller
@@ -176,50 +186,242 @@ public class DoctorController {
         view.showDeletePatientForm();
     }
 
-    public void addPatient(String name, String birthDateStr, String address, String phone, Gender gender, String medicalHistory) {
+        /**
+     * Thêm bệnh nhân mới vào hệ thống
+     * @param name Tên bệnh nhân
+     * @param birthDateStr Ngày sinh (dạng chuỗi YYYY-MM-DD)
+     * @param address Địa chỉ
+     * @param phone Số điện thoại
+     * @param gender Giới tính
+     * @param medicalHistory Bệnh lý/chẩn đoán
+     */
+    public void addPatient(String name, String birthDateStr, String address, String phone, Gender gender, String medicalHistory, String email) {
+        // Kiểm tra dữ liệu đầu vào
         if (name.isEmpty() || birthDateStr.isEmpty() || address.isEmpty() || phone.isEmpty()) {
             JOptionPane.showMessageDialog(view, "Vui lòng điền đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+    
         try {
+            // Chuyển đổi chuỗi ngày sinh thành LocalDate
             LocalDate birthDate = LocalDate.parse(birthDateStr);
-            // Tạo UserID có định dạng đúng với schema
-            String userId = "USR-" + System.currentTimeMillis() % 10000;
-
-            try (Connection conn = DatabaseConnection.getConnection()) {
-                if (conn == null) {
-                    JOptionPane.showMessageDialog(view, "Không thể kết nối đến cơ sở dữ liệu!", 
-                        "Lỗi", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-                
-                // Tạo đối tượng Patient với các tham số phù hợp
-                Patient patient = new Patient(
-                    userId,          // userID
-                    null,            // patientID - sẽ được tạo trong repository
-                    name,            // fullName
-                    birthDate,       // dateOfBirth
-                    address,         // address
-                    gender,          // gender
-                    phone,           // phoneNumber
-                    LocalDate.now()  // registrationDate
-                );
-
-                if (repository.addPatient(patient, medicalHistory)) {
-                    JOptionPane.showMessageDialog(view, "Thêm bệnh nhân thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
-                    showHome();
-                } else {
-                    JOptionPane.showMessageDialog(view, "Không thể thêm bệnh nhân!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                }
-            } catch (SQLException e) {
-                JOptionPane.showMessageDialog(view, "Lỗi kết nối cơ sở dữ liệu: " + e.getMessage(), 
+            
+            // Kiểm tra ngày sinh hợp lệ (không trong tương lai và không quá xa quá khứ)
+            if (birthDate.isAfter(LocalDate.now())) {
+                JOptionPane.showMessageDialog(view, "Ngày sinh không thể ở tương lai!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            if (birthDate.isBefore(LocalDate.now().minusYears(120))) {
+                JOptionPane.showMessageDialog(view, "Ngày sinh không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Kiểm tra định dạng số điện thoại
+            if (!isValidVietnamesePhoneNumber(phone)) {
+                JOptionPane.showMessageDialog(view, 
+                    "Số điện thoại không hợp lệ! Số điện thoại Việt Nam phải:\n" +
+                    "- Bắt đầu bằng 0 hoặc +84\n" +
+                    "- Đầu số hợp lệ (03x, 05x, 07x, 08x, 09x)\n" +
+                    "- Tổng 10 chữ số (không tính mã quốc gia)",
                     "Lỗi", JOptionPane.ERROR_MESSAGE);
-                e.printStackTrace();
+                return;
+            }
+
+            if (patientRepository.isPhoneNumberExists(phone)) {
+                JOptionPane.showMessageDialog(view, 
+                    "Số điện thoại " + phone + " đã được sử dụng.\n" +
+                    "Vui lòng sử dụng số điện thoại khác.", 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Debug email
+            System.out.println("Email nhập vào: '" + email + "'");
+            System.out.println("Độ dài email: " + email.length());
+            System.out.println("Mã ASCII của từng ký tự:");
+            for (int i = 0; i < email.length(); i++) {
+                System.out.println("Vị trí " + i + ": " + (int)email.charAt(i));
+            }
+
+            if (!email.isEmpty() && !isValidEmail(email)) {
+                JOptionPane.showMessageDialog(view, "Định dạng email không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+    
+            String userId = generateNewUserID();
+            
+            // Tạo đối tượng Patient
+            Patient patient = new Patient(
+                userId,          // userID
+                null,            // patientID - sẽ được tạo trong repository
+                name,            // fullName
+                birthDate,       // dateOfBirth
+                address,         // address
+                gender,          // gender
+                phone,           // phoneNumber
+                LocalDate.now()  // registrationDate
+            );
+    
+            // Thêm bệnh nhân vào database
+            if (patientRepository.addPatient(patient, medicalHistory, doctorId, email)) {
+                if (patient.getTempUsername() != null && patient.getTempPassword() != null) {
+                    JOptionPane.showMessageDialog(
+                        view, 
+                        "Đã thêm bệnh nhân thành công!\n\n" +
+                        "ID Bệnh nhân: " + patient.getPatientID() + "\n" +
+                        "Thông tin đăng nhập:\n" +
+                        "- Tên đăng nhập: " + patient.getTempUsername() + "\n" +
+                        "- Mật khẩu: " + patient.getTempPassword() + "\n\n" +
+                        "Vui lòng cung cấp thông tin đăng nhập này cho bệnh nhân.",
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                    
+                    // Tùy chọn: Lưu thông tin đăng nhập vào file để in sau
+                    savePrintableCredentials(patient);
+                } else {
+                    JOptionPane.showMessageDialog(
+                        view, 
+                        "Đã thêm bệnh nhân thành công!\nID Bệnh nhân: " + patient.getPatientID(), 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                }
+                // Quay về trang chủ
+                showHome();
+            } else {
+                JOptionPane.showMessageDialog(
+                    view, 
+                    "Không thể thêm bệnh nhân! Vui lòng kiểm tra lại thông tin.", 
+                    "Lỗi", 
+                    JOptionPane.ERROR_MESSAGE
+                );
             }
         } catch (DateTimeParseException e) {
-            JOptionPane.showMessageDialog(view, "Định dạng ngày không hợp lệ (YYYY-MM-DD)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(
+                view, 
+                "Định dạng ngày không hợp lệ! Vui lòng nhập theo định dạng YYYY-MM-DD.", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(view, 
+                "Lỗi khi kiểm tra dữ liệu: " + e.getMessage(), 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+        private void savePrintableCredentials(Patient patient) {
+        // Tạo thư mục để lưu thông tin đăng nhập
+        String directory = "credentials";
+        File dir = new File(directory);
+        if (!dir.exists()) {
+            dir.mkdirs(); // Tạo thư mục nếu chưa tồn tại
+        }
+        
+        // Tạo tên file có định dạng rõ ràng
+        String filename = directory + File.separator + 
+                         "credentials_" + patient.getPatientID() + "_" + 
+                         java.time.LocalDate.now().toString() + ".txt";
+        
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("THÔNG TIN ĐĂNG NHẬP HỆ THỐNG QUẢN LÝ BỆNH NHÂN");
+            writer.println("-----------------------------------------------");
+            writer.println("Họ và tên: " + patient.getFullName());
+            writer.println("ID Bệnh nhân: " + patient.getPatientID());
+            writer.println();
+            writer.println("Tên đăng nhập: " + patient.getTempUsername());
+            writer.println("Mật khẩu: " + patient.getTempPassword());
+            writer.println();
+            writer.println("Vui lòng đổi mật khẩu khi đăng nhập lần đầu tiên.");
+            writer.println("-----------------------------------------------");
+            writer.println("Ngày tạo: " + java.time.LocalDate.now());
+            
+            System.out.println("Đã lưu thông tin đăng nhập vào file: " + filename);
+            
+            // Hiển thị thông báo cho người dùng biết file được lưu ở đâu
+            JOptionPane.showMessageDialog(
+                view,
+                "Thông tin đăng nhập đã được lưu tại:\n" + new File(filename).getAbsolutePath(),
+                "Thông tin file",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+        } catch (IOException e) {
+            System.err.println("Không thể lưu thông tin đăng nhập: " + e.getMessage());
+            JOptionPane.showMessageDialog(
+                view,
+                "Không thể lưu thông tin đăng nhập: " + e.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    /**
+     * Tạo UserID mới dựa trên mã lớn nhất trong database + 1
+     * @return UserID mới với định dạng USR-XXX
+     */
+    private String generateNewUserID() {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT MAX(SUBSTRING(UserID, 5)) AS maxID FROM UserAccounts WHERE UserID LIKE 'USR-%'";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                ResultSet rs = stmt.executeQuery();
+                int maxID = 0;
+                if (rs.next()) {
+                    String maxIDStr = rs.getString("maxID");
+                    if (maxIDStr != null && !maxIDStr.isEmpty()) {
+                        try {
+                            maxID = Integer.parseInt(maxIDStr);
+                        } catch (NumberFormatException e) {
+                            // Nếu không phải số, giữ nguyên maxID = 0
+                            System.err.println("Lỗi chuyển đổi mã UserID: " + e.getMessage());
+                        }
+                    }
+                }
+                return String.format("USR-%03d", maxID + 1); // Định dạng USR-XXX
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi tạo UserID mới: " + e.getMessage());
+            e.printStackTrace();
+            // Fallback nếu không thể kết nối database
+            return "USR-" + (int)(Math.random() * 900 + 100);
+        }
+    }
+
+    private boolean isValidVietnamesePhoneNumber(String phone) {
+        // Loại bỏ khoảng trắng và dấu ngoặc nếu có
+        String cleanPhone = phone.replaceAll("\\s+|-|\\(|\\)", "");
+        
+        // Chuyển đổi +84 thành 0
+        if (cleanPhone.startsWith("+84")) {
+            cleanPhone = "0" + cleanPhone.substring(3);
+        }
+        
+        // Kiểm tra số điện thoại Việt Nam: 
+        // - Bắt đầu bằng 0
+        // - Tiếp theo là một trong các đầu số: 3, 5, 7, 8, 9
+        // - Tổng cộng 10 chữ số
+        String regex = "^0[35789]\\d{8}$";
+        
+        return cleanPhone.matches(regex);
+    }
+
+    private boolean isValidEmail(String email) {
+        // Loại bỏ khoảng trắng thừa
+        String trimmedEmail = email.trim();
+        
+        // In ra log để debug
+        System.out.println("Đang kiểm tra email: '" + trimmedEmail + "'");
+        
+        // Biểu thức chính quy kiểm tra định dạng email được cải tiến
+        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+        boolean isValid = trimmedEmail.matches(emailRegex);
+        
+        System.out.println("Kết quả kiểm tra: " + isValid);
+        
+        return isValid;
     }
 
     public void bookAppointment(String patientId, String dateStr) {

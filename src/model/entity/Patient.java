@@ -14,6 +14,10 @@ public class Patient extends Person{
 	private LocalDate createdAt; // Ngày tạo (ngày nhập viện)
 	private Insurance insurance; // Bảo hiểm của bệnh nhân (nếu có)
 
+	// Thêm các trường để lưu thông tin đăng nhập tạm thời
+	private String tempUsername;
+	private String tempPassword;
+
 	private static int autoId = 1; //Biến đếm ID tự tăng của bệnh nhân
 
 	//Tạo mã bệnh nhân tự động (PAT-001, PAT-002, ...)
@@ -91,6 +95,19 @@ public class Patient extends Person{
 
 	public LocalDate getRegistrationDate() {
 		return createdAt;  // giả định rằng createdAt là ngày đăng ký
+	}
+
+	public void setLoginCredentials(String username, String password) {
+		this.tempUsername = username;
+		this.tempPassword = password;
+	}
+	
+	public String getTempUsername() {
+		return tempUsername;
+	}
+	
+	public String getTempPassword() {
+		return tempPassword;
 	}
 }
 

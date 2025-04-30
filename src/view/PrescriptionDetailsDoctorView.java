@@ -373,12 +373,17 @@ public class PrescriptionDetailsDoctorView extends JFrame {
     }
 
     public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         SwingUtilities.invokeLater(() -> {
-            try {
+            /*try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
                 e.printStackTrace();
-            }
+            }*/
             PrescriptionDetailsDoctorView frame = new PrescriptionDetailsDoctorView("DT001", "DOC001");
             frame.setVisible(true);
         });

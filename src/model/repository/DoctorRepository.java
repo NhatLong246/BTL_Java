@@ -189,68 +189,6 @@ public class DoctorRepository {
     }
 
     /**
-     * Thêm bệnh nhân mới
-     * @param patient Thông tin bệnh nhân
-     * @param medicalHistory Lịch sử bệnh
-     * @return true nếu thêm thành công
-     */
-    public boolean addPatient(Patient patient, String medicalHistory) {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            conn.setAutoCommit(false);
-            
-            // Tạo ID bệnh nhân mới
-            String patientID = "PAT-" + System.currentTimeMillis() % 10000;
-            patient.setPatientID(patientID);
-            
-            // Thêm vào bảng UserAccounts
-            String userQuery = "INSERT INTO UserAccounts (UserID, UserName, FullName, Role, Email, PhoneNumber, PasswordHash) " +
-                    "VALUES (?, ?, ?, 'Bệnh nhân', ?, ?, SHA2(?, 256))";
-            PreparedStatement userStmt = conn.prepareStatement(userQuery);
-            userStmt.setString(1, patient.getUserID());
-            userStmt.setString(2, generateUsername(patient.getFullName()));
-            userStmt.setString(3, patient.getFullName());
-            userStmt.setString(4, patient.getUserID() + "@example.com"); // Giả định email
-            userStmt.setString(5, patient.getPhoneNumber());
-            userStmt.setString(6, "password123"); // Mật khẩu mặc định
-            userStmt.executeUpdate();
-
-            // Thêm vào bảng Patients
-            String patientQuery = "INSERT INTO Patients (PatientID, UserID, FullName, DateOfBirth, Gender, Address, PhoneNumber, CreatedAt) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            PreparedStatement patientStmt = conn.prepareStatement(patientQuery);
-            patientStmt.setString(1, patientID);
-            patientStmt.setString(2, patient.getUserID());
-            patientStmt.setString(3, patient.getFullName());
-            patientStmt.setDate(4, Date.valueOf(patient.getDateOfBirth()));
-            patientStmt.setString(5, patient.getGender().toString());
-            patientStmt.setString(6, patient.getAddress());
-            patientStmt.setString(7, patient.getPhoneNumber());
-            patientStmt.setDate(8, Date.valueOf(LocalDate.now()));
-            patientStmt.executeUpdate();
-
-            // Thêm vào bảng MedicalRecords (nếu có medicalHistory)
-            if (medicalHistory != null && !medicalHistory.isEmpty()) {
-                String recordQuery = "INSERT INTO MedicalRecords (RecordID, PatientID, DoctorID, Diagnosis, TreatmentPlan, RecordDate) " +
-                        "VALUES (?, ?, ?, ?, ?, ?)";
-                PreparedStatement recordStmt = conn.prepareStatement(recordQuery);
-                recordStmt.setString(1, "REC-" + System.currentTimeMillis() % 10000);
-                recordStmt.setString(2, patientID);
-                recordStmt.setString(3, "DOC-001"); // ID bác sĩ mặc định
-                recordStmt.setString(4, medicalHistory);
-                recordStmt.setString(5, "Chưa có kế hoạch điều trị");
-                recordStmt.setDate(6, Date.valueOf(LocalDate.now()));
-                recordStmt.executeUpdate();
-            }
-            
-            conn.commit();
-            return true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    /**
      * Lấy tất cả bệnh nhân từ database
      * @return Danh sách tất cả bệnh nhân
      */

@@ -23,7 +23,7 @@ public class DoctorView extends JFrame {
     private JButton btnHome, btnAdd, btnView, btnBook, btnDel, btnLogout;
     private JButton currentSelectedButton;
     private DoctorController controller;
-    private JTextField txtName, txtBirthDate, txtAddress, txtPhone, txtDisease, txtPatientId, txtDate;
+    private JTextField txtName, txtBirthDate, txtAddress, txtPhone, txtDisease, txtPatientId, txtDate, txtEmail;
     private JComboBox<Gender> cbGender;
     private DefaultTableModel tableModel;
     private JTable table;
@@ -675,6 +675,7 @@ public class DoctorView extends JFrame {
         txtAddress = new JTextField(40);
         txtPhone = new JTextField(40);
         txtDisease = new JTextField(40);
+        txtEmail = new JTextField(40);
         cbGender = new JComboBox<>(Gender.values());
 
         Font fieldFont = new Font("Arial", Font.PLAIN, 16);
@@ -683,6 +684,7 @@ public class DoctorView extends JFrame {
         txtAddress.setFont(fieldFont);
         txtPhone.setFont(fieldFont);
         txtDisease.setFont(fieldFont);
+        txtEmail.setFont(fieldFont);
         cbGender.setFont(fieldFont);
 
         addFormField(formPanel, gbc, "Họ và tên:", txtName, 0);
@@ -690,7 +692,8 @@ public class DoctorView extends JFrame {
         addFormField(formPanel, gbc, "Địa chỉ:", txtAddress, 2);
         addFormField(formPanel, gbc, "Giới tính:", cbGender, 3);
         addFormField(formPanel, gbc, "Số điện thoại:", txtPhone, 4);
-        addFormField(formPanel, gbc, "Bệnh:", txtDisease, 5);
+        addFormField(formPanel, gbc, "Email:", txtEmail, 5);
+        addFormField(formPanel, gbc, "Bệnh:", txtDisease, 6);
 
         JButton btnSave = new JButton("Lưu");
         btnSave.setFont(new Font("Arial", Font.BOLD, 16));
@@ -701,7 +704,7 @@ public class DoctorView extends JFrame {
         btnSave.setPreferredSize(new Dimension(200, 45));
 
         gbc.gridx = 0;
-        gbc.gridy = 6;
+        gbc.gridy = 7;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.insets = new Insets(30, 10, 10, 10);
@@ -709,7 +712,8 @@ public class DoctorView extends JFrame {
 
         btnSave.addActionListener(e -> controller.addPatient(txtName.getText(), txtBirthDate.getText(), 
                                                           txtAddress.getText(), txtPhone.getText(), 
-                                                          (Gender) cbGender.getSelectedItem(), txtDisease.getText()));
+                                                          (Gender) cbGender.getSelectedItem(), 
+                                                          txtDisease.getText(), txtEmail.getText()));
 
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
