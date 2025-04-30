@@ -1,55 +1,158 @@
 package controller;
 
 import model.repository.UserRepository;
+import model.service.PatientService;
+import model.entity.Patient;
 import view.LoginView;
-import view.PatientInfoView;
+import view.PatientView;
 import view.SignUpView;
-
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 
 public class SignUpController {
     private final SignUpView view;
+    private final PatientService patientService;
 
     public SignUpController(SignUpView view) {
         this.view = view;
+        this.patientService = new PatientService();
+
+        // Thêm FocusListener cho các ô text
+        addFocusListeners();
+
+        // Thêm ActionListener cho các nút
+        view.getSignInButtonNav().addActionListener(e -> navigateToLogin());
+        view.getNextButton().addActionListener(e -> signUp());
     }
 
-    public void signUp(String username, String email, String password) {
-        if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
-            view.showError("Please fill all fields!");
+    private void addFocusListeners() {
+        // FocusListener cho usernameText
+        view.getUsernameText().addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (view.getUsernameText().getText().equals("USERNAME")) {
+                    view.getUsernameText().setText("");
+                    view.getUsernameText().setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (view.getUsernameText().getText().isEmpty()) {
+                    view.getUsernameText().setText("USERNAME");
+                    view.getUsernameText().setForeground(Color.GRAY);
+                }
+            }
+        });
+
+        // FocusListener cho emailText
+        view.getEmailText().addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (view.getEmailText().getText().equals("EMAIL")) {
+                    view.getEmailText().setText("");
+                    view.getEmailText().setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (view.getEmailText().getText().isEmpty()) {
+                    view.getEmailText().setText("EMAIL");
+                    view.getEmailText().setForeground(Color.GRAY);
+                }
+            }
+        });
+
+        // FocusListener cho passText
+        view.getPassText().addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (new String(view.getPassText().getPassword()).equals("PASSWORD")) {
+                    view.getPassText().setText("");
+                    view.getPassText().setForeground(Color.BLACK);
+                    view.getPassText().setEchoChar('●');
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (view.getPassText().getPassword().length == 0) {
+                    view.getPassText().setText("PASSWORD");
+                    view.getPassText().setForeground(Color.GRAY);
+                    view.getPassText().setEchoChar((char) 0);
+                }
+            }
+        });
+    }
+
+    public void signUp() {
+        String username = view.getUsernameText().getText();
+        String email = view.getEmailText().getText();
+        String password = new String(view.getPassText().getPassword());
+
+        // Kiểm tra placeholder
+        if (username.isEmpty() || username.equals("USERNAME") ||
+                email.isEmpty() || email.equals("EMAIL") ||
+                password.isEmpty() || password.equals("PASSWORD")) {
+            view.showError("Vui lòng điền đầy đủ các trường!");
             return;
         }
 
+        // Kiểm tra định dạng email
         if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-            view.showError("Invalid email format!");
+            view.showError("Định dạng email không hợp lệ!");
             return;
         }
 
-        // Sửa vai trò thành "Bệnh nhân" với chữ B viết hoa
+        // Đăng ký người dùng với vai trò "Bệnh nhân"
         String result = UserRepository.registerUser(username, email, password, "Bệnh nhân");
-        
-        // Xử lý kết quả phù hợp với định dạng trả về từ UserRepository
         if (result != null && result.startsWith("Success")) {
             try {
                 // Tách lấy userId từ kết quả
                 String userIdStr = result.split(":")[1];
-                String userId = userIdStr.trim(); // Đảm bảo không có khoảng trắng
-                
-                view.showSuccess("Sign up successful! Proceeding to patient details.");
-                view.dispose();
-                new PatientInfoView(Integer.parseInt(userId)).setVisible(true);
+                int userId = Integer.parseInt(userIdStr.trim());
+
+                // Lấy thông tin bệnh nhân từ userId
+                Patient patient = patientService.getPatientByUserId(userId);
+                if (patient != null) {
+                    JOptionPane.showMessageDialog(view, "Đăng ký thành công! Chuyển đến thông tin bệnh nhân.", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                    view.dispose();
+                    new PatientView(patient).setVisible(true);
+                } else {
+                    view.showError("Đăng ký thành công nhưng không thể tải thông tin bệnh nhân!");
+                }
             } catch (Exception e) {
-                // Xử lý lỗi nếu định dạng kết quả không như mong đợi
-                System.err.println("Error processing registration result: " + e.getMessage());
+                System.err.println("Lỗi khi xử lý kết quả đăng ký: " + e.getMessage());
                 e.printStackTrace();
-                view.showError("Registration successful but error occurred processing user data.");
+                view.showError("Đăng ký thành công nhưng xảy ra lỗi khi xử lý dữ liệu người dùng!");
             }
         } else {
-            view.showError("Sign up failed! " + (result != null ? result : "Unknown error"));
+            view.showError("Đăng ký thất bại! " + (result != null ? result : "Lỗi không xác định"));
         }
     }
 
     public void navigateToLogin() {
+        int panelWidth = 900;
+        int defaultWidth = 200;
+        int activeWidth = 240;
+        int buttonY = 80;
+
+        int totalButtonWidthActive = activeWidth + defaultWidth;
+        int startXActive = (panelWidth - totalButtonWidthActive) / 2;
+
+        view.getSignInButtonNav().setBounds(startXActive, buttonY, activeWidth, 60);
+        view.getSignInButtonNav().setBackground(Color.WHITE);
+        view.getSignInButtonNav().setForeground(Color.BLACK);
+        view.getSignInButtonNav().setFont(new Font("Arial", Font.BOLD, 24));
+
+        view.getSignUpButtonNav().setBounds(startXActive + activeWidth, buttonY, defaultWidth, 50);
+        view.getSignUpButtonNav().setBackground(Color.GRAY);
+        view.getSignUpButtonNav().setForeground(Color.WHITE);
+        view.getSignUpButtonNav().setFont(new Font("Arial", Font.BOLD, 20));
+
         view.dispose();
         new LoginView().setVisible(true);
     }

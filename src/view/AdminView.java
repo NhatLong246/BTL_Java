@@ -1179,30 +1179,30 @@ public class AdminView extends JFrame {
             }
         }
     }
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        if (!DatabaseConnection.testConnection()) {
-            JOptionPane.showMessageDialog(null, "Không thể kết nối đến cơ sở dữ liệu!", 
-                "Lỗi", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        SwingUtilities.invokeLater(() -> {
-            try {
-                String testAdminId = "ADM-001";
-                AdminView adminView = new AdminView(testAdminId);
-                adminView.setVisible(true);
-                System.out.println("Đã khởi tạo giao diện quản trị với ID: " + testAdminId);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null, "Lỗi khởi động giao diện: " + e.getMessage(), 
-                    "Lỗi", JOptionPane.ERROR_MESSAGE);
-                e.printStackTrace();
-            }
-        });
-    }
+//    public static void main(String[] args) {
+//        try {
+//            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//        if (!DatabaseConnection.testConnection()) {
+//            JOptionPane.showMessageDialog(null, "Không thể kết nối đến cơ sở dữ liệu!", 
+//                "Lỗi", JOptionPane.ERROR_MESSAGE);
+//            return;
+//        }
+//
+//        SwingUtilities.invokeLater(() -> {
+//            try {
+//                String testAdminId = "ADM-001";
+//                AdminView adminView = new AdminView(testAdminId);
+//                adminView.setVisible(true);
+//                System.out.println("Đã khởi tạo giao diện quản trị với ID: " + testAdminId);
+//            } catch (Exception e) {
+//                JOptionPane.showMessageDialog(null, "Lỗi khởi động giao diện: " + e.getMessage(), 
+//                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+//                e.printStackTrace();
+//            }
+//        });
+//    }
 }

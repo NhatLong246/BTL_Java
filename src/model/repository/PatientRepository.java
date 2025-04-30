@@ -12,6 +12,34 @@ public class PatientRepository {
     private static final String DB_URL = "jdbc:mysql://localhost:3306/PatientManagement?useSSL=false&serverTimezone=UTC";
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "2005";
+    
+    public Patient getPatientByUserId(int userId) {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String query = "SELECT p.*, ua.FullName, ua.PhoneNumber, ua.Email " +
+                          "FROM Patients p " +
+                          "JOIN UserAccounts ua ON p.UserID = ua.UserID " +
+                          "WHERE p.UserID = ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return new Patient(
+                    rs.getString("UserID"),
+                    rs.getString("PatientID"),
+                    rs.getString("FullName"),
+                    rs.getDate("DateOfBirth").toLocalDate(),
+                    rs.getString("Address"),
+                    Gender.valueOf(rs.getString("Gender")),
+                    rs.getString("PhoneNumber"),
+                    rs.getDate("CreatedAt").toLocalDate()
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     public Patient getPatientByID(String patientID) {
         System.out.println("Đang tìm bệnh nhân với ID: " + patientID);

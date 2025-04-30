@@ -3,15 +3,19 @@ package view;
 import controller.SignUpController;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.io.File;
 import java.net.URL;
 
 public class SignUpView extends JFrame {
+    private JLabel titleLabel;
     private JButton signUpButtonNav;
     private JButton signInButtonNav;
     private JTextField usernameText;
     private JTextField emailText;
     private JPasswordField passText;
+    private JButton nextButton;
     private SignUpController controller;
 
     public SignUpView() {
@@ -23,7 +27,6 @@ public class SignUpView extends JFrame {
 
         // Load background image
         try {
-            // Kiểm tra file trực tiếp
             String imagePath = "resources/img/file_background.png";
             File imageFile = new File(imagePath);
             
@@ -33,13 +36,11 @@ public class SignUpView extends JFrame {
                 System.out.println("Tìm thấy ảnh tại: " + imageFile.getAbsolutePath());
                 originalIcon = new ImageIcon(imagePath);
             } else {
-                // Thử dùng ClassLoader
                 URL imageUrl = getClass().getClassLoader().getResource("img/file_background.png");
                 if (imageUrl != null) {
                     System.out.println("Tìm thấy ảnh qua ClassLoader: " + imageUrl);
                     originalIcon = new ImageIcon(imageUrl);
                 } else {
-                    // Thử đường dẫn tuyệt đối
                     String absolutePath = "resources/img/file_background.png";
                     if (new File(absolutePath).exists()) {
                         System.out.println("Tìm thấy ảnh tại đường dẫn tuyệt đối");
@@ -49,7 +50,7 @@ public class SignUpView extends JFrame {
             }
             
             if (originalIcon == null || originalIcon.getIconWidth() <= 0) {
-                System.err.println("Failed to load image");
+                System.err.println("Không thể tải hình nền");
                 getContentPane().setBackground(new Color(41, 128, 185));
             } else {
                 Image scaledImage = originalIcon.getImage().getScaledInstance(
@@ -61,14 +62,14 @@ public class SignUpView extends JFrame {
                 
                 JLabel background = new JLabel(bgImage);
                 background.setBounds(0, 0, 
-                                  Toolkit.getDefaultToolkit().getScreenSize().width, 
-                                  Toolkit.getDefaultToolkit().getScreenSize().height);
+                        Toolkit.getDefaultToolkit().getScreenSize().width, 
+                        Toolkit.getDefaultToolkit().getScreenSize().height);
                 
                 setContentPane(background);
                 setLayout(null);
             }
         } catch (Exception e) {
-            System.err.println("Error loading background image: " + e.getMessage());
+            System.err.println("Lỗi khi tải hình nền: " + e.getMessage());
             e.printStackTrace();
             getContentPane().setBackground(new Color(41, 128, 185));
         }
@@ -83,11 +84,11 @@ public class SignUpView extends JFrame {
         panel.setBackground(new Color(0, 0, 0, 150));
 
         panel.setBounds((Toolkit.getDefaultToolkit().getScreenSize().width - panelWidth) / 2,
-                        (Toolkit.getDefaultToolkit().getScreenSize().height - panelHeight) / 2,
-                        panelWidth, panelHeight);
+                (Toolkit.getDefaultToolkit().getScreenSize().height - panelHeight) / 2,
+                panelWidth, panelHeight);
 
         // Tiêu đề
-        JLabel titleLabel = new JLabel("SIGN UP", SwingConstants.CENTER);
+        titleLabel = new JLabel("SIGN UP", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 40));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setBounds(0, 20, panelWidth, 50);
@@ -123,9 +124,31 @@ public class SignUpView extends JFrame {
         usernameLabel.setForeground(Color.WHITE);
         usernameLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        usernameText = new JTextField();
+        usernameText = new JTextField("USERNAME");
         usernameText.setBounds(250, 200, 400, 50);
         usernameText.setFont(new Font("Arial", Font.PLAIN, 20));
+        usernameText.setForeground(Color.GRAY);
+        usernameText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        usernameText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (usernameText.getText().equals("USERNAME")) {
+                    usernameText.setText("");
+                    usernameText.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (usernameText.getText().isEmpty()) {
+                    usernameText.setText("USERNAME");
+                    usernameText.setForeground(Color.GRAY);
+                }
+            }
+        });
 
         // Email
         JLabel emailLabel = new JLabel("Email:");
@@ -133,9 +156,31 @@ public class SignUpView extends JFrame {
         emailLabel.setForeground(Color.WHITE);
         emailLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        emailText = new JTextField();
+        emailText = new JTextField("EMAIL");
         emailText.setBounds(250, 300, 400, 50);
         emailText.setFont(new Font("Arial", Font.PLAIN, 20));
+        emailText.setForeground(Color.GRAY);
+        emailText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        emailText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (emailText.getText().equals("EMAIL")) {
+                    emailText.setText("");
+                    emailText.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (emailText.getText().isEmpty()) {
+                    emailText.setText("EMAIL");
+                    emailText.setForeground(Color.GRAY);
+                }
+            }
+        });
 
         // Password
         JLabel passLabel = new JLabel("Password:");
@@ -143,38 +188,44 @@ public class SignUpView extends JFrame {
         passLabel.setForeground(Color.WHITE);
         passLabel.setFont(new Font("Arial", Font.BOLD, 20));
 
-        passText = new JPasswordField();
+        passText = new JPasswordField("PASSWORD");
         passText.setBounds(250, 400, 400, 50);
         passText.setFont(new Font("Arial", Font.PLAIN, 20));
+        passText.setForeground(Color.GRAY);
+        passText.setEchoChar((char) 0);
+        passText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        passText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (new String(passText.getPassword()).equals("PASSWORD")) {
+                    passText.setText("");
+                    passText.setForeground(Color.BLACK);
+                    passText.setEchoChar('●');
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (passText.getPassword().length == 0) {
+                    passText.setText("PASSWORD");
+                    passText.setForeground(Color.GRAY);
+                    passText.setEchoChar((char) 0);
+                }
+            }
+        });
 
         // NEXT Button
-        JButton nextButton = new JButton(" NEXT");
+        nextButton = new JButton(" NEXT");
         int buttonWidth = 200;
         int buttonHeight = 60;
         nextButton.setBounds((panelWidth - buttonWidth) / 2, 480, buttonWidth, buttonHeight);
         nextButton.setFont(new Font("Arial", Font.BOLD, 22));
         nextButton.setBackground(Color.WHITE);
         nextButton.setForeground(Color.BLACK);
-        nextButton.setIcon(resizeIcon("resources/img/add.png", nextButton, 0.5));
-        nextButton.addActionListener(e -> controller.signUp(usernameText.getText(), emailText.getText(), new String(passText.getPassword())));
-
-        // Sign In Navigation Button
-        signInButtonNav.addActionListener(e -> {
-            int totalButtonWidthActive = activeWidth + defaultWidth;
-            int startXActive = (panelWidth - totalButtonWidthActive) / 2;
-
-            signInButtonNav.setBounds(startXActive, buttonY, activeWidth, activeHeight);
-            signInButtonNav.setBackground(Color.WHITE);
-            signInButtonNav.setForeground(Color.BLACK);
-            signInButtonNav.setFont(new Font("Arial", Font.BOLD, 24));
-
-            signUpButtonNav.setBounds(startXActive + activeWidth, buttonY, defaultWidth, defaultHeight);
-            signUpButtonNav.setBackground(Color.GRAY);
-            signUpButtonNav.setForeground(Color.WHITE);
-            signUpButtonNav.setFont(new Font("Arial", Font.BOLD, 20));
-
-            controller.navigateToLogin();
-        });
+        nextButton.setIcon(resizeIcon("resources/img/next_icon.png", nextButton, 0.5));
 
         // Thêm thành phần vào panel
         panel.add(titleLabel);
@@ -193,19 +244,48 @@ public class SignUpView extends JFrame {
         setVisible(true);
     }
 
+    // Getters cho các thành phần giao diện
+    public JButton getSignInButtonNav() {
+        return signInButtonNav;
+    }
+
+    public JButton getSignUpButtonNav() {
+        return signUpButtonNav;
+    }
+
+    public JTextField getUsernameText() {
+        return usernameText;
+    }
+
+    public JTextField getEmailText() {
+        return emailText;
+    }
+
+    public JPasswordField getPassText() {
+        return passText;
+    }
+
+    public JButton getNextButton() {
+        return nextButton;
+    }
+
     private ImageIcon resizeIcon(String path, JButton button, double scaleFactor) {
         int iconSize = (int) (button.getHeight() * scaleFactor);
         ImageIcon originalIcon = new ImageIcon(path);
+        if (originalIcon.getIconWidth() == -1 || originalIcon.getIconHeight() == -1) {
+            System.out.println("Không thể tải hình ảnh: " + path);
+            return null;
+        }
         Image resizedImage = originalIcon.getImage().getScaledInstance(iconSize, iconSize, Image.SCALE_SMOOTH);
         return new ImageIcon(resizedImage);
     }
 
     public void showError(String message) {
-        JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
 
     public void showSuccess(String message) {
-        JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, message, "Thành công", JOptionPane.INFORMATION_MESSAGE);
     }
 
     public static void main(String[] args) {
@@ -214,6 +294,6 @@ public class SignUpView extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        SwingUtilities.invokeLater(() -> new SignUpView().setVisible(true));
+        SwingUtilities.invokeLater(() -> new SignUpView());
     }
 }
