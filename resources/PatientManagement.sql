@@ -191,12 +191,11 @@ CREATE TABLE Medications (
 
 -- Bảng Chi tiết Đơn thuốc
 CREATE TABLE PrescriptionDetails (
-    PrescriptionDetailID VARCHAR(50) PRIMARY KEY,
-    PrescriptionID VARCHAR(50) NOT NULL,
-    MedicationID VARCHAR(50) NOT NULL,
-    Dosage VARCHAR(50) NOT NULL,
+    PrescriptionID VARCHAR(50),
+    MedicationID VARCHAR(50),
+    Dosage VARCHAR(50),
     Instructions TEXT,
-    UNIQUE KEY unique_prescription_medication (PrescriptionID, MedicationID),
+    PRIMARY KEY (PrescriptionID, MedicationID),
     FOREIGN KEY (PrescriptionID) REFERENCES Prescriptions(PrescriptionID)
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (MedicationID) REFERENCES Medications(MedicationID)

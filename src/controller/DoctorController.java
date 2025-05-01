@@ -429,9 +429,16 @@ public class DoctorController {
             JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bệnh nhân và ngày hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+    
         try {
             LocalDate appointmentDate = LocalDate.parse(dateStr);
+            
+            // Kiểm tra ngày hẹn phải sau ngày hiện tại
+            if (appointmentDate.isBefore(LocalDate.now()) || appointmentDate.isEqual(LocalDate.now())) {
+                JOptionPane.showMessageDialog(view, "Ngày hẹn phải sau ngày hiện tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
             if (repository.bookAppointment(patientId, appointmentDate, doctorId)) {
                 JOptionPane.showMessageDialog(view, "Đặt lịch hẹn thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
                 showHome();

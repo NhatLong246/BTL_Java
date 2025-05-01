@@ -223,7 +223,7 @@ public class DoctorRepository {
         return patients;
     }
 
-    /**
+        /**
      * Đặt lịch hẹn mới
      * @param patientId ID bệnh nhân
      * @param appointmentDate Ngày hẹn
@@ -232,7 +232,15 @@ public class DoctorRepository {
      */
     public boolean bookAppointment(String patientId, LocalDate appointmentDate, String doctorId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String appId = "APP-" + System.currentTimeMillis() % 10000;
+            // Kiểm tra ngày hẹn có hợp lệ không (phải sau ngày hiện tại)
+            if (appointmentDate.isBefore(LocalDate.now()) || appointmentDate.isEqual(LocalDate.now())) {
+                System.err.println("Lỗi: Ngày hẹn phải sau ngày hiện tại!");
+                return false;
+            }
+            
+            // Tạo ID lịch hẹn mới theo định dạng APP-xxx
+            String appId = generateNewAppointmentID(conn);
+            
             String query = "INSERT INTO Appointments (AppointmentID, PatientID, DoctorID, AppointmentDate, Status, Notes) " +
                     "VALUES (?, ?, ?, ?, 'Chờ xác nhận', 'Cuộc hẹn mới')";
             PreparedStatement stmt = conn.prepareStatement(query);
@@ -245,6 +253,31 @@ public class DoctorRepository {
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
+        }
+    }
+    
+    /**
+     * Tạo ID mới cho lịch hẹn theo mẫu APP-001, APP-002, ...
+     * @param conn Kết nối database
+     * @return ID mới với định dạng APP-XXX
+     * @throws SQLException nếu có lỗi
+     */
+    private String generateNewAppointmentID(Connection conn) throws SQLException {
+        String query = "SELECT MAX(SUBSTRING(AppointmentID, 5)) AS MaxID FROM Appointments WHERE AppointmentID LIKE 'APP-%'";
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            ResultSet rs = stmt.executeQuery();
+            int maxID = 0;
+            if (rs.next()) {
+                String maxIDStr = rs.getString("MaxID");
+                if (maxIDStr != null && !maxIDStr.isEmpty()) {
+                    try {
+                        maxID = Integer.parseInt(maxIDStr);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Lỗi chuyển đổi ID lịch hẹn: " + e.getMessage());
+                    }
+                }
+            }
+            return String.format("APP-%03d", maxID + 1);
         }
     }
 
