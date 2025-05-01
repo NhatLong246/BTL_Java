@@ -12,6 +12,7 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.io.File;
 import java.awt.image.BufferedImage;
 import java.awt.event.MouseAdapter;
@@ -23,6 +24,30 @@ public class AdminView extends JFrame {
     private JButton btnHome, btnCreateDoctor, btnManageDoctor, btnViewLockedDoctors, btnScheduleDoctor, btnViewDoctorInfo, btnLogout;
     private JButton currentSelectedButton;
     private ImageIcon workingIcon, finishedIcon, notWorkingIcon;
+
+    // Lớp để lưu trữ và hiển thị chuyên khoa trong ComboBox
+    private class SpecialtyItem {
+        private String id;
+        private String name;
+        
+        public SpecialtyItem(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+        
+        public String getId() {
+            return id;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        @Override
+        public String toString() {
+            return name; // Để hiển thị tên trong ComboBox
+        }
+    }
 
     public AdminView(String adminId) {
         this.controller = new AdminController(this, adminId);
@@ -443,26 +468,26 @@ public class AdminView extends JFrame {
         contentPanel.repaint();
     }
 
-    public void showCreateDoctorForm() {
+        public void showCreateDoctorForm() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
-
+    
         JLabel titleLabel = new JLabel("Tạo tài khoản bác sĩ", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
+    
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(Color.WHITE);
         formPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(30, 50, 30, 50)
         ));
-
+    
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 10, 15, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-
+    
         JTextField txtUsername = new JTextField(40);
         JTextField txtFullName = new JTextField(40);
         JTextField txtEmail = new JTextField(40);
@@ -470,8 +495,20 @@ public class AdminView extends JFrame {
         JTextField txtAddress = new JTextField(40);
         JTextField txtBirthDate = new JTextField(40);
         JComboBox<Gender> cbGender = new JComboBox<>(Gender.values());
-        JComboBox<Specialization> cbSpecialty = new JComboBox<>(Specialization.values());
-
+        
+        // Tạo model cho JComboBox chuyên khoa từ database
+        DefaultComboBoxModel<SpecialtyItem> specialtyModel = new DefaultComboBoxModel<>();
+        List<Map<String, String>> specialties = controller.getAllSpecialties();
+        
+        for (Map<String, String> specialty : specialties) {
+            specialtyModel.addElement(new SpecialtyItem(
+                specialty.get("id"),
+                specialty.get("name")
+            ));
+        }
+        
+        JComboBox<SpecialtyItem> cbSpecialty = new JComboBox<>(specialtyModel);
+    
         Font fieldFont = new Font("Arial", Font.PLAIN, 16);
         txtUsername.setFont(fieldFont);
         txtFullName.setFont(fieldFont);
@@ -481,7 +518,7 @@ public class AdminView extends JFrame {
         txtBirthDate.setFont(fieldFont);
         cbGender.setFont(fieldFont);
         cbSpecialty.setFont(fieldFont);
-
+    
         addFormField(formPanel, gbc, "Tên đăng nhập:", txtUsername, 0);
         addFormField(formPanel, gbc, "Họ và tên:", txtFullName, 1);
         addFormField(formPanel, gbc, "Email:", txtEmail, 2);
@@ -490,7 +527,7 @@ public class AdminView extends JFrame {
         addFormField(formPanel, gbc, "Ngày sinh (yyyy-MM-dd):", txtBirthDate, 5);
         addFormField(formPanel, gbc, "Giới tính:", cbGender, 6);
         addFormField(formPanel, gbc, "Chuyên khoa:", cbSpecialty, 7);
-
+    
         JButton btnSubmit = new JButton("Tạo bác sĩ");
         btnSubmit.setFont(new Font("Arial", Font.BOLD, 16));
         btnSubmit.setBackground(new Color(0, 123, 255));
@@ -498,25 +535,28 @@ public class AdminView extends JFrame {
         btnSubmit.setFocusPainted(false);
         btnSubmit.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSubmit.setPreferredSize(new Dimension(200, 45));
-
+    
         gbc.gridx = 0;
         gbc.gridy = 8;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.insets = new Insets(30, 10, 10, 10);
         formPanel.add(btnSubmit, gbc);
-
-        btnSubmit.addActionListener(e -> controller.createDoctor(
-            txtUsername.getText(), txtFullName.getText(), txtEmail.getText(), txtPhone.getText(),
-            txtAddress.getText(), txtBirthDate.getText(), (Gender) cbGender.getSelectedItem(),
-            (Specialization) cbSpecialty.getSelectedItem()
-        ));
-
+    
+        btnSubmit.addActionListener(e -> {
+            SpecialtyItem selectedSpecialty = (SpecialtyItem) cbSpecialty.getSelectedItem();
+            controller.createDoctor(
+                txtUsername.getText(), txtFullName.getText(), txtEmail.getText(), txtPhone.getText(),
+                txtAddress.getText(), txtBirthDate.getText(), (Gender) cbGender.getSelectedItem(),
+                selectedSpecialty != null ? selectedSpecialty.getId() : null
+            );
+        });
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(formPanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
-
+    
         contentPanel.add(titleLabel, BorderLayout.NORTH);
         contentPanel.add(wrapperPanel, BorderLayout.CENTER);
         contentPanel.revalidate();

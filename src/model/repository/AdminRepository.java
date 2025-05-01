@@ -12,7 +12,9 @@ import java.sql.SQLException;
 import java.sql.DatabaseMetaData;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class AdminRepository {
@@ -92,7 +94,7 @@ public class AdminRepository {
     }
 
     public boolean createDoctor(String userId, String fullName, LocalDate dateOfBirth, String address, Gender gender,
-                                String phoneNumber, Specialization specialty, String email) {
+                                String phoneNumber, String specialtyId, String email) {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
@@ -127,7 +129,7 @@ public class AdminRepository {
                 pstmt.setDate(3, java.sql.Date.valueOf(dateOfBirth));
                 pstmt.setString(4, gender != null ? gender.getVietnamese() : null);
                 pstmt.setString(5, address);
-                pstmt.setString(6, specialty != null ? specialty.getId() : null);
+                pstmt.setString(6, specialtyId);
                 pstmt.setDate(7, java.sql.Date.valueOf(LocalDate.now()));
                 pstmt.executeUpdate();
             }
@@ -505,5 +507,29 @@ public class AdminRepository {
 
     private String hashPassword(String password) {
         return password; // Mật khẩu sẽ được mã hóa bằng SHA2 trong truy vấn SQL
+    }
+
+        public List<Map<String, String>> getAllSpecialties() {
+        List<Map<String, String>> specialties = new ArrayList<>();
+        String sql = "SELECT SpecialtyID, SpecialtyName FROM Specialties ORDER BY SpecialtyName";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                Map<String, String> specialty = new HashMap<>();
+                specialty.put("id", rs.getString("SpecialtyID"));
+                specialty.put("name", rs.getString("SpecialtyName"));
+                specialties.add(specialty);
+            }
+            
+            System.out.println("Đã lấy " + specialties.size() + " chuyên khoa từ database");
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi lấy danh sách chuyên khoa: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return specialties;
     }
 }

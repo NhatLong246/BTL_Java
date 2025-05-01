@@ -18,12 +18,12 @@ public enum Gender {
     public static Gender fromString(String text) {
         if (text == null) return null;
         switch (text.trim().toLowerCase()) {
-            case "male":
-            case "nam":
+            case "Male":
+            case "Nam":
             case "m":
                 return MALE;
             case "female":
-            case "nữ":
+            case "Nữ":
             case "f":
                 return FEMALE;
             default:
@@ -42,4 +42,9 @@ public enum Gender {
         
         return null;  // Không xác định được
     }
+    @Override
+    public String toString() {
+        return vietnamese;
+    }
 }
+

@@ -5,6 +5,7 @@ import model.entity.Patient;
 import model.enums.Gender;
 
 import javax.swing.*;
+import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -12,18 +13,34 @@ import java.awt.event.MouseEvent;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
+import java.util.Properties;
+import java.text.SimpleDateFormat;
+import javax.swing.JFormattedTextField.AbstractFormatter;
+import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Date;
+import java.time.ZoneId;
 
 public class DoctorView extends JFrame {
     private JPanel contentPanel;
     private JButton btnHome, btnAdd, btnView, btnBook, btnDel, btnLogout;
     private JButton currentSelectedButton;
     private DoctorController controller;
-    private JTextField txtName, txtBirthDate, txtAddress, txtPhone, txtDisease, txtPatientId, txtDate;
+    // private JTextField txtName, txtBirthDate, txtAddress, txtPhone, txtDisease, txtPatientId, txtDate, txtEmail;
+    private JTextField txtName, txtAddress, txtPhone, txtDisease, txtPatientId, txtDate, txtEmail;
+    private JDatePickerImpl datePicker;
     private JComboBox<Gender> cbGender;
     private DefaultTableModel tableModel;
     private JTable table;
@@ -32,27 +49,31 @@ public class DoctorView extends JFrame {
     private ImageIcon finishedIcon;
     private ImageIcon notWorkingIcon;
 
+    public class DateLabelFormatter extends AbstractFormatter {
+        private String datePattern = "yyyy-MM-dd";
+        private SimpleDateFormat dateFormatter = new SimpleDateFormat(datePattern);
+
+        @Override
+        public Object stringToValue(String text) throws ParseException {
+            return dateFormatter.parse(text);
+        }
+
+        @Override
+        public String valueToString(Object value) throws ParseException {
+            if (value != null) {
+                Calendar cal = (Calendar) value;
+                return dateFormatter.format(cal.getTime());
+            }
+            return "";
+        }
+    }
+
     public DoctorView(String doctorId) {
         this.controller = new DoctorController(this, doctorId);
         setTitle("Bảng điều khiển bác sĩ");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Khởi tạo các icons
-        /*try {
-            workingIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/resources/icons/check.png")));
-            finishedIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/resources/icons/warning.png")));
-            notWorkingIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/resources/icons/cross.png")));
-            
-            // Resize icons để phù hợp
-            workingIcon = new ImageIcon(workingIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH));
-            finishedIcon = new ImageIcon(finishedIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH));
-            notWorkingIcon = new ImageIcon(notWorkingIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH));
-        } catch (Exception e) {
-            System.out.println("Không thể tải icons: " + e.getMessage());
-        }*/
-
-        
         // Khởi tạo các icons
         try {
             File checkFile = new File("resources/icons/check.png");
@@ -428,41 +449,6 @@ public class DoctorView extends JFrame {
                 // Tạo cell với trạng thái đã tính toán
                 JPanel cell = createScheduleCell(displayStatus, bgColor, isCurrentShift);
                 
-                // Nút cập nhật trạng thái chỉ hiển thị với ngày hiện tại
-                /*if (j == today.getDayOfWeek().getValue() - 1) {
-                    JButton updateBtn = new JButton("Cập nhật");
-                    updateBtn.setFont(new Font("Arial", Font.PLAIN, 10));
-                    updateBtn.setMargin(new Insets(2, 5, 2, 5));
-                    
-                    final int shiftIndex = i;
-                    final String shiftName = shifts[i].substring(0, shifts[i].indexOf(" "));
-                    // Sử dụng biến final cho lambda expression
-                    final String statusForUpdate = initialStatus; 
-                    
-                    updateBtn.addActionListener(e -> {
-                        // Quyết định trạng thái mới dựa trên trạng thái ban đầu từ database
-                        String newStatus;
-                        if (statusForUpdate.equals("Đang làm việc") || 
-                            statusForUpdate.equals("Không làm việc")) {
-                            newStatus = "Hết ca làm việc";
-                        } else {
-                            newStatus = "Đang làm việc";
-                        }
-                        
-                        boolean success = controller.updateCurrentShiftStatus(
-                            dayOfWeek,
-                            shiftName,
-                            newStatus
-                        );
-                        
-                        if (success) {
-                            controller.showHome();
-                        }
-                    });
-                    
-                    ((JPanel)cell.getComponent(0)).add(updateBtn, BorderLayout.SOUTH);
-                }*/
-                
                 calendarPanel.add(cell);
             }
         }
@@ -650,7 +636,7 @@ public class DoctorView extends JFrame {
         return card;
     }
 
-    public void showAddPatientForm() {
+    /*public void showAddPatientForm() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
 
@@ -675,6 +661,7 @@ public class DoctorView extends JFrame {
         txtAddress = new JTextField(40);
         txtPhone = new JTextField(40);
         txtDisease = new JTextField(40);
+        txtEmail = new JTextField(40);
         cbGender = new JComboBox<>(Gender.values());
 
         Font fieldFont = new Font("Arial", Font.PLAIN, 16);
@@ -683,6 +670,7 @@ public class DoctorView extends JFrame {
         txtAddress.setFont(fieldFont);
         txtPhone.setFont(fieldFont);
         txtDisease.setFont(fieldFont);
+        txtEmail.setFont(fieldFont);
         cbGender.setFont(fieldFont);
 
         addFormField(formPanel, gbc, "Họ và tên:", txtName, 0);
@@ -690,7 +678,8 @@ public class DoctorView extends JFrame {
         addFormField(formPanel, gbc, "Địa chỉ:", txtAddress, 2);
         addFormField(formPanel, gbc, "Giới tính:", cbGender, 3);
         addFormField(formPanel, gbc, "Số điện thoại:", txtPhone, 4);
-        addFormField(formPanel, gbc, "Bệnh:", txtDisease, 5);
+        addFormField(formPanel, gbc, "Email:", txtEmail, 5);
+        addFormField(formPanel, gbc, "Bệnh:", txtDisease, 6);
 
         JButton btnSave = new JButton("Lưu");
         btnSave.setFont(new Font("Arial", Font.BOLD, 16));
@@ -701,7 +690,7 @@ public class DoctorView extends JFrame {
         btnSave.setPreferredSize(new Dimension(200, 45));
 
         gbc.gridx = 0;
-        gbc.gridy = 6;
+        gbc.gridy = 7;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.insets = new Insets(30, 10, 10, 10);
@@ -709,7 +698,8 @@ public class DoctorView extends JFrame {
 
         btnSave.addActionListener(e -> controller.addPatient(txtName.getText(), txtBirthDate.getText(), 
                                                           txtAddress.getText(), txtPhone.getText(), 
-                                                          (Gender) cbGender.getSelectedItem(), txtDisease.getText()));
+                                                          (Gender) cbGender.getSelectedItem(), 
+                                                          txtDisease.getText(), txtEmail.getText()));
 
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
@@ -720,6 +710,117 @@ public class DoctorView extends JFrame {
         contentPanel.add(wrapperPanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
+    }*/
+
+    public void showAddPatientForm() {
+        contentPanel.removeAll();
+        contentPanel.setLayout(new BorderLayout());
+
+        JLabel titleLabel = new JLabel("Thêm bệnh nhân mới", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
+
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(30, 50, 30, 50)
+        ));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        txtName = new JTextField(40);
+        txtAddress = new JTextField(40);
+        txtPhone = new JTextField(40);
+        txtDisease = new JTextField(40);
+        txtEmail = new JTextField(40);
+        cbGender = new JComboBox<>(Gender.values());
+
+        // Thay thế JTextField bằng JDatePicker
+        UtilDateModel model = new UtilDateModel();
+        // Đặt giá trị mặc định là ngày hiện tại trừ 18 năm
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.YEAR, -18);
+        model.setValue(calendar.getTime());
+        
+        Properties properties = new Properties();
+        properties.put("text.today", "Hôm nay");
+        properties.put("text.month", "Tháng");
+        properties.put("text.year", "Năm");
+        
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, properties);
+        datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
+        datePicker.setBackground(Color.WHITE);
+        datePicker.setOpaque(false);
+        
+        // Thiết lập font cho JDatePicker
+        Font fieldFont = new Font("Arial", Font.PLAIN, 16);
+        datePicker.getJFormattedTextField().setFont(fieldFont);
+        
+        txtName.setFont(fieldFont);
+        txtAddress.setFont(fieldFont);
+        txtPhone.setFont(fieldFont);
+        txtDisease.setFont(fieldFont);
+        txtEmail.setFont(fieldFont);
+        cbGender.setFont(fieldFont);
+
+        addFormField(formPanel, gbc, "Họ và tên:", txtName, 0);
+        addFormField(formPanel, gbc, "Ngày sinh:", datePicker, 1);  // Thay đổi từ txtBirthDate sang datePicker
+        addFormField(formPanel, gbc, "Địa chỉ:", txtAddress, 2);
+        addFormField(formPanel, gbc, "Giới tính:", cbGender, 3);
+        addFormField(formPanel, gbc, "Số điện thoại:", txtPhone, 4);
+        addFormField(formPanel, gbc, "Email:", txtEmail, 5);
+        addFormField(formPanel, gbc, "Bệnh:", txtDisease, 6);
+
+        JButton btnSave = new JButton("Lưu");
+        btnSave.setFont(new Font("Arial", Font.BOLD, 16));
+        btnSave.setBackground(new Color(0, 123, 255));
+        btnSave.setForeground(Color.WHITE);
+        btnSave.setFocusPainted(false);
+        btnSave.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnSave.setPreferredSize(new Dimension(200, 45));
+
+        gbc.gridx = 0;
+        gbc.gridy = 7;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(30, 10, 10, 10);
+        formPanel.add(btnSave, gbc);
+
+        // Sửa đổi action listener để lấy giá trị từ JDatePicker
+        btnSave.addActionListener(e -> {
+            // Chuyển đổi từ java.util.Date sang LocalDate
+            Date selectedDate = (Date) datePicker.getModel().getValue();
+            if (selectedDate != null) {
+                LocalDate birthDate = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                String dateStr = birthDate.toString(); // Chuyển sang định dạng YYYY-MM-DD
+                
+                controller.addPatient(txtName.getText(), dateStr, 
+                                        txtAddress.getText(), txtPhone.getText(), 
+                                        (Gender) cbGender.getSelectedItem(), 
+                                        txtDisease.getText(), txtEmail.getText());
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng chọn ngày sinh!", 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setOpaque(false);
+        wrapperPanel.add(formPanel, BorderLayout.CENTER);
+        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
+
+        contentPanel.add(titleLabel, BorderLayout.NORTH);
+        contentPanel.add(wrapperPanel, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+        
+        // Đặt nút hiện tại là nút "Thêm bệnh nhân"
+        setSelectedButton(btnAdd);
     }
 
     private void addFormField(JPanel formPanel, GridBagConstraints gbc, String label, JComponent field, int row) {
@@ -791,35 +892,105 @@ public class DoctorView extends JFrame {
         contentPanel.repaint();
     }
 
-    public void showBookAppointment() {
+    // public void showBookAppointment() {
+    //     contentPanel.removeAll();
+    //     contentPanel.setLayout(new BorderLayout());
+
+    //     JLabel titleLabel = new JLabel("Đặt lịch hẹn", SwingConstants.CENTER);
+    //     titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+    //     titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
+
+    //     JPanel formPanel = new JPanel(new GridBagLayout());
+    //     formPanel.setBackground(Color.WHITE);
+    //     formPanel.setBorder(BorderFactory.createCompoundBorder(
+    //             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+    //             BorderFactory.createEmptyBorder(30, 50, 30, 50)
+    //     ));
+
+    //     GridBagConstraints gbc = new GridBagConstraints();
+    //     gbc.insets = new Insets(15, 10, 15, 10);
+    //     gbc.fill = GridBagConstraints.HORIZONTAL;
+    //     gbc.weightx = 1.0;
+
+    //     txtPatientId = new JTextField(40);
+    //     txtDate = new JTextField(40);
+
+    //     txtPatientId.setFont(new Font("Arial", Font.PLAIN, 16));
+    //     txtDate.setFont(new Font("Arial", Font.PLAIN, 16));
+
+    //     addFormField(formPanel, gbc, "ID Bệnh nhân:", txtPatientId, 0);
+    //     addFormField(formPanel, gbc, "Ngày hẹn (YYYY-MM-DD):", txtDate, 1);
+
+    //     JButton btnBook = new JButton("Đặt lịch");
+    //     btnBook.setFont(new Font("Arial", Font.BOLD, 16));
+    //     btnBook.setBackground(new Color(0, 123, 255));
+    //     btnBook.setForeground(Color.WHITE);
+    //     btnBook.setFocusPainted(false);
+    //     btnBook.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    //     btnBook.setPreferredSize(new Dimension(200, 45));
+
+    //     gbc.gridx = 0;
+    //     gbc.gridy = 2;
+    //     gbc.gridwidth = 3;
+    //     gbc.anchor = GridBagConstraints.CENTER;
+    //     gbc.insets = new Insets(30, 10, 10, 10);
+    //     formPanel.add(btnBook, gbc);
+
+    //     btnBook.addActionListener(e -> controller.bookAppointment(txtPatientId.getText(), txtDate.getText()));
+
+    //     JPanel wrapperPanel = new JPanel(new BorderLayout());
+    //     wrapperPanel.setOpaque(false);
+    //     wrapperPanel.add(formPanel, BorderLayout.CENTER);
+    //     wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
+
+    //     contentPanel.add(titleLabel, BorderLayout.NORTH);
+    //     contentPanel.add(wrapperPanel, BorderLayout.CENTER);
+    //     contentPanel.revalidate();
+    //     contentPanel.repaint();
+    // }
+
+        public void showBookAppointment() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
-
+    
         JLabel titleLabel = new JLabel("Đặt lịch hẹn", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
+    
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(Color.WHITE);
         formPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(30, 50, 30, 50)
         ));
-
+    
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 10, 15, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-
+    
         txtPatientId = new JTextField(40);
-        txtDate = new JTextField(40);
-
         txtPatientId.setFont(new Font("Arial", Font.PLAIN, 16));
-        txtDate.setFont(new Font("Arial", Font.PLAIN, 16));
-
+    
+        // Thay thế JTextField bằng JDatePicker cho ngày hẹn
+        UtilDateModel appointmentModel = new UtilDateModel();
+        // Đặt giá trị mặc định là ngày hiện tại
+        appointmentModel.setValue(Calendar.getInstance().getTime());
+        
+        Properties properties = new Properties();
+        properties.put("text.today", "Hôm nay");
+        properties.put("text.month", "Tháng");
+        properties.put("text.year", "Năm");
+        
+        JDatePanelImpl appointmentDatePanel = new JDatePanelImpl(appointmentModel, properties);
+        JDatePickerImpl appointmentDatePicker = new JDatePickerImpl(appointmentDatePanel, new DateLabelFormatter());
+        appointmentDatePicker.setBackground(Color.WHITE);
+        appointmentDatePicker.setOpaque(false);
+        appointmentDatePicker.getJFormattedTextField().setFont(new Font("Arial", Font.PLAIN, 16));
+    
         addFormField(formPanel, gbc, "ID Bệnh nhân:", txtPatientId, 0);
-        addFormField(formPanel, gbc, "Ngày hẹn (YYYY-MM-DD):", txtDate, 1);
-
+        addFormField(formPanel, gbc, "Ngày hẹn:", appointmentDatePicker, 1);
+    
         JButton btnBook = new JButton("Đặt lịch");
         btnBook.setFont(new Font("Arial", Font.BOLD, 16));
         btnBook.setBackground(new Color(0, 123, 255));
@@ -827,25 +998,40 @@ public class DoctorView extends JFrame {
         btnBook.setFocusPainted(false);
         btnBook.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBook.setPreferredSize(new Dimension(200, 45));
-
+    
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.gridwidth = 3;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.insets = new Insets(30, 10, 10, 10);
         formPanel.add(btnBook, gbc);
-
-        btnBook.addActionListener(e -> controller.bookAppointment(txtPatientId.getText(), txtDate.getText()));
-
+    
+        // Sửa action listener để lấy giá trị từ JDatePicker
+        btnBook.addActionListener(e -> {
+            Date selectedDate = (Date) appointmentDatePicker.getModel().getValue();
+            if (selectedDate != null) {
+                LocalDate appointmentDate = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                String dateStr = appointmentDate.toString(); // Chuyển sang định dạng YYYY-MM-DD
+                controller.bookAppointment(txtPatientId.getText(), dateStr);
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng chọn ngày hẹn!", 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(formPanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
-
+    
         contentPanel.add(titleLabel, BorderLayout.NORTH);
         contentPanel.add(wrapperPanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
+        
+        // Đặt nút hiện tại là nút "Đặt lịch hẹn"
+        // setSelectedButton(btnBook);
     }
 
     public void showDeletePatientForm() {
@@ -912,7 +1098,7 @@ public class DoctorView extends JFrame {
         contentPanel.repaint();
     }
 
-        /**
+    /**
      * Phương thức main để test DoctorView
      * Phương thức này tạo một giao diện DoctorView với một ID bác sĩ mẫu
      */

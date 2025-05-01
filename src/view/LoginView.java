@@ -395,6 +395,12 @@ public class LoginView extends JFrame {
     }
 
     public static void main(String[] args) {
+        try {
+            // Thiết lập look and feel để có giao diện đẹp hơn
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         SwingUtilities.invokeLater(() -> new LoginView());
     }
 }

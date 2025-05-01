@@ -10,6 +10,7 @@ import view.AdminView;
 import javax.swing.*;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class AdminController {
@@ -51,15 +52,19 @@ public class AdminController {
         view.showCreateDoctorForm();
     }
 
-    public void createDoctor(String username, String fullName, String email, String phone, String address,
-                             String birthDate, Gender gender, Specialization specialty) {
+    public List<Map<String, String>> getAllSpecialties() {
+        return adminRepository.getAllSpecialties();
+    }
+
+        public void createDoctor(String username, String fullName, String email, String phone, String address,
+                             String birthDate, Gender gender, String specialtyId) {
         try {
             if (username.isEmpty() || fullName.isEmpty() || email.isEmpty() || phone.isEmpty() ||
                 address.isEmpty() || birthDate.isEmpty()) {
                 JOptionPane.showMessageDialog(view, "Vui lòng điền đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
+    
             LocalDate dateOfBirth;
             try {
                 dateOfBirth = LocalDate.parse(birthDate);
@@ -68,24 +73,24 @@ public class AdminController {
                     "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
+    
             String userId = "USR-" + UUID.randomUUID().toString().substring(0, 8);
             String defaultPassword = "Doctor@123";
             String passwordHash = hashPassword(defaultPassword);
-
+    
             boolean userCreated = userRepository.registerUser(
                 userId, username, fullName, "Bác sĩ", email, phone, passwordHash
             );
-
+    
             if (!userCreated) {
                 JOptionPane.showMessageDialog(view, "Không thể tạo tài khoản người dùng!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
+    
             boolean doctorCreated = adminRepository.createDoctor(
-                userId, fullName, dateOfBirth, address, gender, phone, specialty, email
+                userId, fullName, dateOfBirth, address, gender, phone, specialtyId, email
             );
-
+    
             if (doctorCreated) {
                 JOptionPane.showMessageDialog(view, "Tạo tài khoản bác sĩ thành công!\nMật khẩu mặc định: " + defaultPassword,
                     "Thành công", JOptionPane.INFORMATION_MESSAGE);

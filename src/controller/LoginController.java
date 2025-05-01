@@ -77,17 +77,17 @@ public class LoginController {
 
             switch (role) {
                 case "Quản lí":
-                    String userId = UserRepository.getUserIdByUsername(username);
-                    if (userId != null) {
-                        new AdminView(userId).setVisible(true);
+                    String adminId = UserRepository.getAdminIdByUsername(username);
+                    if (adminId != null) {
+                        new AdminView(adminId).setVisible(true);
                         view.dispose();
                         return true;
                     } else {
-                        view.showError("Không tìm thấy thông tin người dùng!");
+                        view.showError("Không tìm thấy thông tin quản lý!");
                         return false;
                     }
                 case "Bác sĩ":
-                    userId = UserRepository.getUserIdByUsernameOrEmail(username);
+                    String userId = UserRepository.getUserIdByUsernameOrEmail(username);
                     String doctorId = getDoctorID(userId);
                     if (doctorId != null) {
                         new DoctorView(doctorId).setVisible(true);
