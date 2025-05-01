@@ -89,11 +89,10 @@ public class SignUpController {
     }
 
     public void signUp() {
-        String username = view.getUsernameText().getText();
-        String email = view.getEmailText().getText();
-        String password = new String(view.getPassText().getPassword());
+        String username = view.getUsernameText().getText().trim();
+        String email = view.getEmailText().getText().trim();
+        String password = new String(view.getPassText().getPassword()).trim();
 
-        // Kiểm tra placeholder
         if (username.isEmpty() || username.equals("USERNAME") ||
                 email.isEmpty() || email.equals("EMAIL") ||
                 password.isEmpty() || password.equals("PASSWORD")) {
@@ -101,28 +100,36 @@ public class SignUpController {
             return;
         }
 
-        // Kiểm tra định dạng email
+        if (password.length() < 6) {
+            view.showError("Mật khẩu phải có ít nhất 6 ký tự!");
+            return;
+        }
+
+        if (!username.matches("^[A-Za-z0-9_]+$")) {
+            view.showError("Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới!");
+            return;
+        }
+
         if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
             view.showError("Định dạng email không hợp lệ!");
             return;
         }
 
-        // Đăng ký người dùng với vai trò "Bệnh nhân"
         String result = UserRepository.registerUser(username, email, password, "Bệnh nhân");
         if (result != null && result.startsWith("Success")) {
             try {
-                // Tách lấy userId từ kết quả
                 String userIdStr = result.split(":")[1];
                 int userId = Integer.parseInt(userIdStr.trim());
 
-                // Lấy thông tin bệnh nhân từ userId
                 Patient patient = patientService.getPatientByUserId(userId);
                 if (patient != null) {
                     JOptionPane.showMessageDialog(view, "Đăng ký thành công! Chuyển đến thông tin bệnh nhân.", "Thành công", JOptionPane.INFORMATION_MESSAGE);
                     view.dispose();
                     new PatientView(patient).setVisible(true);
                 } else {
-                    view.showError("Đăng ký thành công nhưng không thể tải thông tin bệnh nhân!");
+                    JOptionPane.showMessageDialog(view, "Đăng ký thành công! Vui lòng đăng nhập để tiếp tục.", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                    view.dispose();
+                    new LoginView().setVisible(true);
                 }
             } catch (Exception e) {
                 System.err.println("Lỗi khi xử lý kết quả đăng ký: " + e.getMessage());

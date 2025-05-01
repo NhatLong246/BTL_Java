@@ -378,6 +378,7 @@ public class AdminRepository {
             }
             conn.setAutoCommit(false);
 
+            // Kiểm tra bác sĩ có tồn tại không
             String checkSql = "SELECT COUNT(*) FROM Doctors WHERE DoctorID = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(checkSql)) {
                 pstmt.setString(1, doctorId);
@@ -388,25 +389,25 @@ public class AdminRepository {
                 }
             }
 
+            // Xóa lịch cũ
             String deleteSql = "DELETE FROM DoctorSchedule WHERE DoctorID = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(deleteSql)) {
                 pstmt.setString(1, doctorId);
                 pstmt.executeUpdate();
             }
 
-            String insertSql = "INSERT INTO DoctorSchedule (ScheduleID, DoctorID, DayOfWeek, ShiftType, Status) VALUES (?, ?, ?, ?, ?)";
+            // Lưu lịch mới (chỉ lưu các ca làm việc)
+            String insertSql = "INSERT INTO DoctorSchedule (DoctorID, DayOfWeek, ShiftType, Status) VALUES (?, ?, ?, ?)";
             String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
             String[] shifts = {"Sáng", "Chiều", "Tối"};
             try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
                 for (int shift = 0; shift < 3; shift++) {
                     for (int day = 0; day < 7; day++) {
                         if (schedule[shift][day]) {
-                            String scheduleId = "SCH-" + UUID.randomUUID().toString().substring(0, 8);
-                            pstmt.setString(1, scheduleId);
-                            pstmt.setString(2, doctorId);
-                            pstmt.setString(3, days[day]);
-                            pstmt.setString(4, shifts[shift]);
-                            pstmt.setString(5, "Đang làm việc");
+                            pstmt.setString(1, doctorId);
+                            pstmt.setString(2, days[day]);
+                            pstmt.setString(3, shifts[shift]);
+                            pstmt.setString(4, "Đang làm việc");
                             pstmt.addBatch();
                         }
                     }
@@ -499,6 +500,8 @@ public class AdminRepository {
             }
         }
     }
+    
+    
 
     private String hashPassword(String password) {
         return password; // Mật khẩu sẽ được mã hóa bằng SHA2 trong truy vấn SQL

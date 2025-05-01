@@ -3,10 +3,7 @@ package view;
 import controller.SignUpController;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.io.File;
-import java.net.URL;
 
 public class SignUpView extends JFrame {
     private JLabel titleLabel;
@@ -16,62 +13,34 @@ public class SignUpView extends JFrame {
     private JTextField emailText;
     private JPasswordField passText;
     private JButton nextButton;
+    private JLabel errorLabel;
     private SignUpController controller;
 
     public SignUpView() {
-        this.controller = new SignUpController(this);
         setTitle("Sign Up");
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(null);
 
         // Load background image
-        try {
-            String imagePath = "resources/img/file_background.png";
-            File imageFile = new File(imagePath);
-            
-            ImageIcon originalIcon = null;
-            
-            if (imageFile.exists()) {
-                System.out.println("Tìm thấy ảnh tại: " + imageFile.getAbsolutePath());
-                originalIcon = new ImageIcon(imagePath);
-            } else {
-                URL imageUrl = getClass().getClassLoader().getResource("img/file_background.png");
-                if (imageUrl != null) {
-                    System.out.println("Tìm thấy ảnh qua ClassLoader: " + imageUrl);
-                    originalIcon = new ImageIcon(imageUrl);
-                } else {
-                    String absolutePath = "resources/img/file_background.png";
-                    if (new File(absolutePath).exists()) {
-                        System.out.println("Tìm thấy ảnh tại đường dẫn tuyệt đối");
-                        originalIcon = new ImageIcon(absolutePath);
-                    }
-                }
-            }
-            
-            if (originalIcon == null || originalIcon.getIconWidth() <= 0) {
-                System.err.println("Không thể tải hình nền");
-                getContentPane().setBackground(new Color(41, 128, 185));
-            } else {
-                Image scaledImage = originalIcon.getImage().getScaledInstance(
-                        Toolkit.getDefaultToolkit().getScreenSize().width,
-                        Toolkit.getDefaultToolkit().getScreenSize().height,
-                        Image.SCALE_SMOOTH
-                );
-                ImageIcon bgImage = new ImageIcon(scaledImage);
-                
-                JLabel background = new JLabel(bgImage);
-                background.setBounds(0, 0, 
-                        Toolkit.getDefaultToolkit().getScreenSize().width, 
-                        Toolkit.getDefaultToolkit().getScreenSize().height);
-                
-                setContentPane(background);
-                setLayout(null);
-            }
-        } catch (Exception e) {
-            System.err.println("Lỗi khi tải hình nền: " + e.getMessage());
-            e.printStackTrace();
-            getContentPane().setBackground(new Color(41, 128, 185));
+        String imagePath = "resources/img/file_background.png";
+        File imageFile = new File(imagePath);
+        if (!imageFile.exists()) {
+            System.out.println("Image not found: " + imagePath);
+            getContentPane().setBackground(Color.LIGHT_GRAY);
+        } else {
+            ImageIcon originalIcon = new ImageIcon(imagePath);
+            Image scaledImage = originalIcon.getImage().getScaledInstance(
+                    Toolkit.getDefaultToolkit().getScreenSize().width,
+                    Toolkit.getDefaultToolkit().getScreenSize().height,
+                    Image.SCALE_SMOOTH
+            );
+            ImageIcon bgImage = new ImageIcon(scaledImage);
+
+            JLabel background = new JLabel(bgImage);
+            background.setBounds(0, 0, Toolkit.getDefaultToolkit().getScreenSize().width,
+                    Toolkit.getDefaultToolkit().getScreenSize().height);
+            setContentPane(background);
         }
 
         // Panel đăng ký
@@ -132,23 +101,6 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
-        usernameText.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (usernameText.getText().equals("USERNAME")) {
-                    usernameText.setText("");
-                    usernameText.setForeground(Color.BLACK);
-                }
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (usernameText.getText().isEmpty()) {
-                    usernameText.setText("USERNAME");
-                    usernameText.setForeground(Color.GRAY);
-                }
-            }
-        });
 
         // Email
         JLabel emailLabel = new JLabel("Email:");
@@ -164,23 +116,6 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
-        emailText.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (emailText.getText().equals("EMAIL")) {
-                    emailText.setText("");
-                    emailText.setForeground(Color.BLACK);
-                }
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (emailText.getText().isEmpty()) {
-                    emailText.setText("EMAIL");
-                    emailText.setForeground(Color.GRAY);
-                }
-            }
-        });
 
         // Password
         JLabel passLabel = new JLabel("Password:");
@@ -197,25 +132,13 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
-        passText.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (new String(passText.getPassword()).equals("PASSWORD")) {
-                    passText.setText("");
-                    passText.setForeground(Color.BLACK);
-                    passText.setEchoChar('●');
-                }
-            }
 
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (passText.getPassword().length == 0) {
-                    passText.setText("PASSWORD");
-                    passText.setForeground(Color.GRAY);
-                    passText.setEchoChar((char) 0);
-                }
-            }
-        });
+        // Error Label
+        errorLabel = new JLabel("");
+        errorLabel.setBounds(250, 450, 400, 30);
+        errorLabel.setForeground(Color.RED);
+        errorLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        errorLabel.setVisible(false);
 
         // NEXT Button
         nextButton = new JButton(" NEXT");
@@ -237,11 +160,14 @@ public class SignUpView extends JFrame {
         panel.add(emailText);
         panel.add(passLabel);
         panel.add(passText);
+        panel.add(errorLabel);
         panel.add(nextButton);
 
-        // Thêm vào frame
+        // Thêm panel vào frame
         add(panel);
-        setVisible(true);
+
+        // Khởi tạo controller sau khi tất cả thành phần giao diện đã được tạo
+        this.controller = new SignUpController(this);
     }
 
     // Getters cho các thành phần giao diện
@@ -269,31 +195,35 @@ public class SignUpView extends JFrame {
         return nextButton;
     }
 
+    public void showError(String message) {
+        errorLabel.setText(message);
+        errorLabel.setVisible(true);
+    }
+
+    public void hideError() {
+        errorLabel.setVisible(false);
+    }
+
     private ImageIcon resizeIcon(String path, JButton button, double scaleFactor) {
+        File imageFile = new File(path);
+        if (!imageFile.exists()) {
+            System.out.println("Failed to load image: " + path);
+            return null;
+        }
         int iconSize = (int) (button.getHeight() * scaleFactor);
         ImageIcon originalIcon = new ImageIcon(path);
         if (originalIcon.getIconWidth() == -1 || originalIcon.getIconHeight() == -1) {
-            System.out.println("Không thể tải hình ảnh: " + path);
+            System.out.println("Failed to load image: " + path);
             return null;
         }
         Image resizedImage = originalIcon.getImage().getScaledInstance(iconSize, iconSize, Image.SCALE_SMOOTH);
         return new ImageIcon(resizedImage);
     }
 
-    public void showError(String message) {
-        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
-    }
-
-    public void showSuccess(String message) {
-        JOptionPane.showMessageDialog(this, message, "Thành công", JOptionPane.INFORMATION_MESSAGE);
-    }
-
     public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        SwingUtilities.invokeLater(() -> new SignUpView());
+        SwingUtilities.invokeLater(() -> {
+            SignUpView signUpView = new SignUpView();
+            signUpView.setVisible(true);
+        });
     }
 }

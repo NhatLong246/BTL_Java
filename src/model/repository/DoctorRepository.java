@@ -704,4 +704,6 @@ public class DoctorRepository {
             System.out.println("Lỗi kiểm tra bảng: " + e.getMessage());
         }
     }
+    
+    
 }

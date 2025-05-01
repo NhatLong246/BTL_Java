@@ -29,41 +29,34 @@ public class LoginView extends JFrame {
         if (!imageFile.exists()) {
             System.err.println("ERROR: Image not found: " + imageFile.getAbsolutePath());
             System.out.println("Current directory: " + new File(".").getAbsolutePath());
-            // Fallback to alternative path
-            imagePath = "resource/img/file_background.png";
-            imageFile = new File(imagePath);
-            if (!imageFile.exists()) {
-                System.err.println("ERROR: Second path also failed: " + imageFile.getAbsolutePath());
-                getContentPane().setBackground(new Color(41, 128, 185));
-            }
-        }
-
-        // Load image if found
-        try {
-            ImageIcon originalIcon = new ImageIcon(imagePath);
-            if (originalIcon.getIconWidth() <= 0) {
-                System.err.println("ERROR: Failed to load image or invalid image");
-                getContentPane().setBackground(new Color(41, 128, 185));
-                return;
-            }
-
-            Image scaledImage = originalIcon.getImage().getScaledInstance(
-                    Toolkit.getDefaultToolkit().getScreenSize().width,
-                    Toolkit.getDefaultToolkit().getScreenSize().height,
-                    Image.SCALE_SMOOTH
-            );
-            ImageIcon bgImage = new ImageIcon(scaledImage);
-
-            JLabel background = new JLabel(bgImage);
-            background.setBounds(0, 0,
-                    Toolkit.getDefaultToolkit().getScreenSize().width,
-                    Toolkit.getDefaultToolkit().getScreenSize().height);
-
-            setContentPane(background);
-        } catch (Exception e) {
-            System.err.println("ERROR loading background image: " + e.getMessage());
-            e.printStackTrace();
             getContentPane().setBackground(new Color(41, 128, 185));
+        } else {
+            try {
+                ImageIcon originalIcon = new ImageIcon(imagePath);
+                if (originalIcon.getIconWidth() <= 0) {
+                    System.err.println("ERROR: Failed to load image or invalid image");
+                    getContentPane().setBackground(new Color(41, 128, 185));
+                    return;
+                }
+
+                Image scaledImage = originalIcon.getImage().getScaledInstance(
+                        Toolkit.getDefaultToolkit().getScreenSize().width,
+                        Toolkit.getDefaultToolkit().getScreenSize().height,
+                        Image.SCALE_SMOOTH
+                );
+                ImageIcon bgImage = new ImageIcon(scaledImage);
+
+                JLabel background = new JLabel(bgImage);
+                background.setBounds(0, 0,
+                        Toolkit.getDefaultToolkit().getScreenSize().width,
+                        Toolkit.getDefaultToolkit().getScreenSize().height);
+
+                setContentPane(background);
+            } catch (Exception e) {
+                System.err.println("ERROR loading background image: " + e.getMessage());
+                e.printStackTrace();
+                getContentPane().setBackground(new Color(41, 128, 185));
+            }
         }
 
         // Login panel
