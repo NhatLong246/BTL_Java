@@ -313,7 +313,7 @@ public class DoctorController {
         }
     }
 
-        private void savePrintableCredentials(Patient patient) {
+    private void savePrintableCredentials(Patient patient) {
         // Tạo thư mục để lưu thông tin đăng nhập
         String directory = "credentials";
         File dir = new File(directory);

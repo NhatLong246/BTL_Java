@@ -41,14 +41,16 @@ CREATE TABLE Doctors (
     UserID VARCHAR(50) UNIQUE NOT NULL,
     DateOfBirth DATE NOT NULL,
     Gender ENUM('Nam', 'Nữ') NOT NULL,
+    FullName NVARCHAR(100) NOT NULL,
+    PhoneNumber VARCHAR(20),
+    Email VARCHAR(100),
     Address TEXT,
     SpecialtyID VARCHAR(50),
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (SpecialtyID) REFERENCES Specialties(SpecialtyID) 
-        ON DELETE SET NULL ON UPDATE CASCADE,
-    INDEX idx_specialty (SpecialtyID)
+        ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- Bảng lịch làm việc cho bác sĩ
