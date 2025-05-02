@@ -15,6 +15,7 @@ import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -313,34 +314,111 @@ public class PatientView extends JFrame {
 
     public void showAppointments(List<String[]> appointments) {
         contentPanel.removeAll();
-
+    
         JPanel appointmentsPanel = new JPanel(new BorderLayout());
         appointmentsPanel.setBackground(new Color(245, 245, 245));
-
+    
         JLabel titleLabel = new JLabel("Lịch hẹn của bạn", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
+    
+        // Sửa lại tên các cột cho đúng
         String[] columnNames = {"ID Lịch hẹn", "Ngày hẹn", "Thời gian", "Bác sĩ", "Phòng", "Trạng thái"};
-
+    
         DefaultTableModel model = new DefaultTableModel();
         model.setColumnIdentifiers(columnNames);
-
-        if (appointments != null) {
+    
+        if (appointments != null && !appointments.isEmpty()) {
             for (String[] appointment : appointments) {
-                model.addRow(appointment);
+                // Đảm bảo dữ liệu được hiển thị đúng vào từng cột
+                // Nếu mảng appointment không chứa đủ dữ liệu, bổ sung giá trị rỗng
+                String[] rowData = new String[columnNames.length];
+                
+                // Duyệt qua mảng appointment và gán dữ liệu vào mảng rowData
+                for (int i = 0; i < rowData.length; i++) {
+                    if (i < appointment.length && appointment[i] != null) {
+                        rowData[i] = appointment[i];
+                    } else {
+                        rowData[i] = ""; // Giá trị rỗng cho các cột không có dữ liệu
+                    }
+                }
+                
+                model.addRow(rowData);
             }
+        } else {
+            // Thêm thông báo nếu không có lịch hẹn
+            JOptionPane.showMessageDialog(this, 
+                "Bạn chưa có lịch hẹn nào!", 
+                "Thông báo", 
+                JOptionPane.INFORMATION_MESSAGE);
         }
-
+    
         JTable table = new JTable(model);
         table.setRowHeight(40);
         table.setFont(new Font("Arial", Font.PLAIN, 14));
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
         table.setSelectionBackground(new Color(173, 216, 230));
-
+        
+        // Điều chỉnh độ rộng cột
+        table.getColumnModel().getColumn(0).setPreferredWidth(100); // ID
+        table.getColumnModel().getColumn(1).setPreferredWidth(100); // Ngày
+        table.getColumnModel().getColumn(2).setPreferredWidth(100); // Thời gian
+        table.getColumnModel().getColumn(3).setPreferredWidth(150); // Bác sĩ
+        table.getColumnModel().getColumn(4).setPreferredWidth(80);  // Phòng
+        table.getColumnModel().getColumn(5).setPreferredWidth(100); // Trạng thái
+    
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
+    
+        // Thêm panel chứa nút xuất lịch hẹn
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+        
+        JButton exportBtn = new JButton("Xuất lịch hẹn");
+        exportBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        exportBtn.setBackground(new Color(40, 167, 69));
+        exportBtn.setForeground(Color.WHITE);
+        exportBtn.setFocusPainted(false);
+        exportBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        buttonPanel.add(exportBtn);
+        
+        exportBtn.addActionListener(e -> {
+            if (appointments == null || appointments.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không có dữ liệu để xuất!", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu lịch hẹn");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+            fileChooser.setSelectedFile(new File("LichHen_" + patient.getPatientID() + ".xlsx"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".xlsx")) {
+                    filePath += ".xlsx";
+                }
+                
+                // Cần thêm phương thức này vào PatientController
+                boolean success = controller.exportAppointmentsToExcel(appointments, filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất lịch hẹn thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất lịch hẹn thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+    
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setBackground(Color.WHITE);
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
@@ -348,20 +426,23 @@ public class PatientView extends JFrame {
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
         tablePanel.add(scrollPane, BorderLayout.CENTER);
-
+        tablePanel.add(buttonPanel, BorderLayout.SOUTH);
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(tablePanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
-
+    
         appointmentsPanel.add(titleLabel, BorderLayout.NORTH);
         appointmentsPanel.add(wrapperPanel, BorderLayout.CENTER);
-
+    
         contentPanel.add(appointmentsPanel);
         contentPanel.revalidate();
         contentPanel.repaint();
+        
+        // Đặt nút xem lịch hẹn làm nút được chọn
+        setSelectedButton(btnViewAppointments);
     }
-
 
     public void showMedicalHistory(List<String[]> medicalHistory) {
         contentPanel.removeAll();
@@ -373,7 +454,6 @@ public class PatientView extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
     
-        // Sửa tên các cột để đúng với cấu trúc dữ liệu từ DB
         String[] columnNames = {"ID", "Ngày khám", "Bác sĩ", "Chẩn đoán", "Điều trị", "Ghi chú"};
     
         DefaultTableModel model = new DefaultTableModel() {
@@ -418,8 +498,77 @@ public class PatientView extends JFrame {
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
+         ));
+
+        // Thêm nút xuất báo cáo
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+        
+        JButton exportBtn = new JButton("Xuất hồ sơ bệnh án");
+        exportBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        exportBtn.setBackground(new Color(0, 123, 255));
+        exportBtn.setForeground(Color.WHITE);
+        exportBtn.setFocusPainted(false);
+        exportBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        buttonPanel.add(exportBtn);
+        
+        exportBtn.addActionListener(e -> {
+            if (medicalHistory == null || medicalHistory.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không có dữ liệu để xuất!", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu hồ sơ bệnh án");
+            
+            // Tạo filter cho file Excel và PDF
+            javax.swing.filechooser.FileNameExtensionFilter excelFilter = 
+                new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx");
+            javax.swing.filechooser.FileNameExtensionFilter pdfFilter = 
+                new javax.swing.filechooser.FileNameExtensionFilter("PDF Files (*.pdf)", "pdf");
+            
+            fileChooser.addChoosableFileFilter(excelFilter);
+            fileChooser.addChoosableFileFilter(pdfFilter);
+            fileChooser.setFileFilter(excelFilter); // Mặc định là Excel
+            
+            fileChooser.setSelectedFile(new File("HoSoBenhAn_" + patient.getPatientID() + ".xlsx"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                boolean success = false;
+                
+                if (fileChooser.getFileFilter().equals(excelFilter)) {
+                    if (!filePath.toLowerCase().endsWith(".xlsx")) {
+                        filePath += ".xlsx";
+                    }
+                    success = controller.exportMedicalHistoryToExcel(medicalHistory, filePath, patient.getFullName());
+                } else {
+                    if (!filePath.toLowerCase().endsWith(".pdf")) {
+                        filePath += ".pdf";
+                    }
+                    success = controller.exportMedicalHistoryToPdf(medicalHistory, filePath, patient.getFullName());
+                }
+                
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất hồ sơ bệnh án thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất hồ sơ bệnh án thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        
         tablePanel.add(scrollPane, BorderLayout.CENTER);
+        tablePanel.add(buttonPanel, BorderLayout.SOUTH);
     
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
@@ -1136,8 +1285,8 @@ public class PatientView extends JFrame {
     }
 
 
-
-        public void showPrescriptionDetails() {
+    // Add new method to show prescription details
+    public void showPrescriptionDetails() {
         contentPanel.removeAll();
     
         JPanel prescriptionPanel = new JPanel(new BorderLayout());
@@ -1442,20 +1591,4 @@ public class PatientView extends JFrame {
         prescriptionButtonsPanel.revalidate();
         prescriptionButtonsPanel.repaint();
     }
-
-    
-
-    /*private void updatePrescriptionDetails(DefaultTableModel model, JTextArea txtNotes, String disease) {
-        // Clear existing data
-        model.setRowCount(0);
-        txtNotes.setText("");
-
-        // TODO: Load prescription data from database based on selected disease
-        // This is sample data
-        if ("Viêm họng".equals(disease) || "Tất cả".equals(disease)) {
-            model.addRow(new Object[]{1, "Paracetamol", "Viên", "20", "2 viên/lần", "Ngày uống 3 lần sau ăn"});
-            model.addRow(new Object[]{2, "Vitamin C", "Viên", "10", "1 viên/lần", "Ngày uống 1 lần sau ăn sáng"});
-            txtNotes.setText("Uống thuốc đều đặn, nghỉ ngơi nhiều");
-        }
-    }*/
 }

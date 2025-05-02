@@ -132,7 +132,7 @@ public class AdminView extends JFrame {
         leftPanel.add(menuTitle, gbc);
 
         btnHome = createButton("Trang chủ");
-        btnCreateDoctor = createButton("Thêm khoản bác sĩ");
+        btnCreateDoctor = createButton("Thêm bác sĩ");
         btnManageDoctor = createButton("Quản lý bác sĩ");
         btnViewLockedDoctors = createButton("Xem bác sĩ bị khóa");
         btnScheduleDoctor = createButton("Lịch làm việc bác sĩ");
@@ -1159,6 +1159,99 @@ public class AdminView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
+        // Thêm panel chứa nút xuất báo cáo
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+        
+        JButton exportExcelBtn = new JButton("Xuất Excel");
+        exportExcelBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        exportExcelBtn.setBackground(new Color(40, 167, 69));
+        exportExcelBtn.setForeground(Color.WHITE);
+        exportExcelBtn.setFocusPainted(false);
+        exportExcelBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        JButton exportPdfBtn = new JButton("Xuất PDF");
+        exportPdfBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        exportPdfBtn.setBackground(new Color(220, 53, 69));
+        exportPdfBtn.setForeground(Color.WHITE);
+        exportPdfBtn.setFocusPainted(false);
+        exportPdfBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        buttonPanel.add(exportExcelBtn);
+        buttonPanel.add(exportPdfBtn);
+        
+        // Thêm sự kiện cho nút xuất Excel
+        exportExcelBtn.addActionListener(e -> {
+            if (doctors == null || doctors.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không có dữ liệu để xuất!", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu danh sách bác sĩ");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+            fileChooser.setSelectedFile(new File("DanhSachBacSi.xlsx"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".xlsx")) {
+                    filePath += ".xlsx";
+                }
+                
+                boolean success = controller.exportDoctorsToExcel(doctors, filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file Excel thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file Excel thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        
+        // Thêm sự kiện cho nút xuất PDF
+        exportPdfBtn.addActionListener(e -> {
+            if (doctors == null || doctors.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không có dữ liệu để xuất!", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu danh sách bác sĩ");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("PDF Files (*.pdf)", "pdf"));
+            fileChooser.setSelectedFile(new File("DanhSachBacSi.pdf"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".pdf")) {
+                    filePath += ".pdf";
+                }
+                
+                boolean success = controller.exportDoctorsToPdf(doctors, filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file PDF thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file PDF thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setBackground(Color.WHITE);
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
@@ -1166,6 +1259,7 @@ public class AdminView extends JFrame {
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
         tablePanel.add(scrollPane, BorderLayout.CENTER);
+        tablePanel.add(buttonPanel, BorderLayout.SOUTH);
 
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
@@ -1326,36 +1420,6 @@ public class AdminView extends JFrame {
         cell.add(label, BorderLayout.CENTER);
         return cell;
     }
-
-    /* private JPanel createScheduleCell(String status, Color bgColor, boolean isCurrentShift) {
-        JPanel cell = new JPanel(new BorderLayout());
-        cell.setBackground(bgColor);
-        cell.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
-
-        if (isCurrentShift) {
-            cell.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0, 123, 255), 2),
-                BorderFactory.createEmptyBorder(1, 1, 1, 1)
-            ));
-        }
-
-        JPanel contentPanel = new JPanel(new BorderLayout(5, 5));
-        contentPanel.setOpaque(false);
-
-        JLabel iconLabel = new JLabel("", SwingConstants.CENTER);
-        if (status.equals("Đang làm việc")) {
-            iconLabel.setIcon(workingIcon);
-        } else if (status.equals("Hết ca làm việc")) {
-            iconLabel.setIcon(finishedIcon);
-        } else {
-            iconLabel.setIcon(notWorkingIcon);
-        }
-
-        contentPanel.add(iconLabel, BorderLayout.CENTER);
-        cell.add(contentPanel, BorderLayout.CENTER);
-
-        return cell;
-    } */
 
     private JPanel createScheduleCell(String status, Color bgColor, boolean isCurrentShift) {
         JPanel cell = new JPanel(new BorderLayout());

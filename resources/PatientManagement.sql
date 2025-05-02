@@ -41,14 +41,13 @@ CREATE TABLE Doctors (
         ON DELETE SET NULL ON UPDATE CASCADE
 );
 
--- Bảng lịch làm việc cho bác sĩ
+-- thêm bảng lịch làm việc cho bác sĩ 
 CREATE TABLE DoctorSchedule (
-    ScheduleID VARCHAR(50) PRIMARY KEY,
     DoctorID VARCHAR(50) NOT NULL,
     DayOfWeek ENUM('Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật') NOT NULL,
     ShiftType ENUM('Sáng', 'Chiều', 'Tối') NOT NULL,
     Status ENUM('Đang làm việc', 'Hết ca làm việc') DEFAULT 'Đang làm việc',
-    UNIQUE KEY unique_doctor_schedule (DoctorID, DayOfWeek, ShiftType),
+    PRIMARY KEY (DoctorID, DayOfWeek, ShiftType),
     FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
         ON DELETE CASCADE ON UPDATE CASCADE
 );

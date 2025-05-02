@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import utils.ReportExporter;
 
 public class AdminController {
     private AdminView view;
@@ -387,6 +388,116 @@ public class AdminController {
                 "Lỗi", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
             return null;
+        }
+    }
+
+    /**
+     * Xuất danh sách bác sĩ ra file Excel
+     * @param filePath Đường dẫn file để lưu
+     * @return true nếu xuất thành công
+     */
+    public boolean exportDoctorsToExcel(String filePath) {
+        List<Doctor> doctors = getAllDoctors();
+        if (doctors == null || doctors.isEmpty()) {
+            JOptionPane.showMessageDialog(view, 
+                "Không có dữ liệu bác sĩ để xuất!", 
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        }
+        return utils.ReportExporter.exportDoctorsToExcel(doctors, filePath);
+    }
+    
+    public boolean exportDoctorsToPdf(String filePath) {
+        List<Doctor> doctors = getAllDoctors();
+        if (doctors == null || doctors.isEmpty()) {
+            JOptionPane.showMessageDialog(view, 
+                "Không có dữ liệu bác sĩ để xuất!", 
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        }
+        return utils.ReportExporter.exportDoctorsToPdf(doctors, filePath);
+    }
+    
+    public boolean exportDoctorScheduleToExcel(String doctorId, String filePath) {
+        Doctor doctor = adminRepository.getDoctorInfo(doctorId);
+        if (doctor == null) {
+            JOptionPane.showMessageDialog(view, 
+                "Không tìm thấy bác sĩ với ID: " + doctorId, 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        boolean[][] schedule = getDoctorSchedule(doctorId);
+        if (schedule == null) {
+            JOptionPane.showMessageDialog(view, 
+                "Không thể lấy lịch làm việc!", 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        return utils.ReportExporter.exportScheduleToExcel(
+            doctor.getDoctorId(), doctor.getFullName(), schedule, filePath);
+    }
+    
+    public boolean exportDoctorScheduleToPdf(String doctorId, String filePath) {
+        Doctor doctor = adminRepository.getDoctorInfo(doctorId);
+        if (doctor == null) {
+            JOptionPane.showMessageDialog(view, 
+                "Không tìm thấy bác sĩ với ID: " + doctorId, 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        boolean[][] schedule = getDoctorSchedule(doctorId);
+        if (schedule == null) {
+            JOptionPane.showMessageDialog(view, 
+                "Không thể lấy lịch làm việc!", 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        return utils.ReportExporter.exportScheduleToPdf(
+            doctor.getDoctorId(), doctor.getFullName(), schedule, filePath);
+    }
+
+    public List<Doctor> getAllDoctors() {
+        try {
+            return adminRepository.getAllDoctors();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(view, 
+                "Lỗi khi lấy danh sách bác sĩ: " + e.getMessage(), 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    // Thêm các phương thức sau vào lớp AdminController
+    public boolean exportDoctorsToExcel(List<Doctor> doctors, String filePath) {
+        try {
+            return ReportExporter.exportDoctorsToExcel(doctors, filePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    public boolean exportDoctorsToPdf(List<Doctor> doctors, String filePath) {
+        try {
+            return ReportExporter.exportDoctorsToPdf(doctors, filePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    // Thêm phương thức xuất lịch làm việc từ AdminView
+    public boolean exportScheduleToExcel(String doctorId, String doctorName, boolean[][] schedule, String filePath) {
+        try {
+            return ReportExporter.exportScheduleToExcel(doctorId, doctorName, schedule, filePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
     }
 }

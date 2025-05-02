@@ -4,6 +4,8 @@ import model.entity.Patient;
 import model.repository.PatientRepository;
 import view.PatientView;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,6 +14,21 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.swing.JOptionPane;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import utils.ReportExporter;
 
 import database.DatabaseConnection;
 
@@ -226,5 +243,87 @@ public class PatientController {
         }
         
         return prescriptions;
+    }
+    
+    // Thêm các phương thức sau vào lớp PatientController
+    public boolean exportMedicalHistoryToExcel(List<String[]> medicalHistory, String filePath, String patientName) {
+        try {
+            // Cần thêm phương thức này vào ReportExporter
+            // return ReportExporter.exportMedicalHistoryToExcel(medicalHistory, filePath, patientName);
+            JOptionPane.showMessageDialog(view, 
+                "Chức năng xuất Excel đang được phát triển!", 
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    public boolean exportMedicalHistoryToPdf(List<String[]> medicalHistory, String filePath, String patientName) {
+        try {
+            // Cần thêm phương thức này vào ReportExporter
+            // return ReportExporter.exportMedicalHistoryToPdf(medicalHistory, filePath, patientName);
+            JOptionPane.showMessageDialog(view, 
+                "Chức năng xuất PDF đang được phát triển!", 
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean exportAppointmentsToExcel(List<String[]> appointments, String filePath) {
+        try {
+            Workbook workbook = new XSSFWorkbook();
+            Sheet sheet = workbook.createSheet("Lịch hẹn");
+            
+            // Tạo font cho tiêu đề
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            
+            // Tạo style cho header
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            
+            // Tạo header row
+            String[] columns = {"ID Lịch hẹn", "Ngày hẹn", "Thời gian", "Bác sĩ", "Phòng", "Trạng thái"};
+            Row headerRow = sheet.createRow(0);
+            
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+                cell.setCellStyle(headerStyle);
+            }
+            
+            // Điền dữ liệu
+            int rowNum = 1;
+            for (String[] appointment : appointments) {
+                Row row = sheet.createRow(rowNum++);
+                for (int i = 0; i < appointment.length; i++) {
+                    row.createCell(i).setCellValue(appointment[i] != null ? appointment[i] : "");
+                }
+            }
+            
+            // Tự động điều chỉnh độ rộng cột
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            
+            // Ghi file
+            try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
+                workbook.write(fileOut);
+            }
+            
+            workbook.close();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }
