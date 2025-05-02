@@ -18,13 +18,17 @@ public class Doctor extends Person {
     private String email;
     private LocalDate createdAt; // Ngày tạo (tuyển dụng)
 
+    // Thêm biến lưu thông tin đăng nhập tạm thời
+    private String tempUsername;
+    private String tempPassword;
+
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$");
 
     public Doctor() {}
 
     // Constructor khi thêm bác sĩ mới (Tạo ID từ database, lấy ngày hiện tại)
-    public Doctor(Connection conn, String userId, String fullName, LocalDate dateOfBirth, String address, Gender gender, String phoneNumber, Specialization specialization, String email) {
+    public Doctor(Connection conn, String userId, String fullName, LocalDate dateOfBirth, String address, Gender gender, String phoneNumber, Specialization specialization, String email) throws SQLException {
         super(fullName, dateOfBirth, address, gender, phoneNumber);
         this.userId = userId;
         this.doctorId = generateNewDoctorID(conn); // Lấy ID từ database
@@ -47,25 +51,25 @@ public class Doctor extends Person {
         return String.format("DOC-%03d", id++);
     }
 
-    // Tạo mã bác sĩ mới (Tìm số lớn nhất từ database rồi +1)
-    public static String generateNewDoctorID(Connection conn) {
-        String newDoctorID = "DOC-001";
-        String sql = "SELECT MAX(CAST(REGEXP_SUBSTR(DoctorID, '[0-9]+') AS UNSIGNED)) AS maxID FROM Doctors";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            if (rs.next() && rs.getInt("maxID") > 0) {
-                int maxID = rs.getInt("maxID") + 1;
-                newDoctorID = String.format("DOC-%03d", maxID);
+     // Phương thức static để tạo DoctorID mới
+    public static String generateNewDoctorID(Connection conn) throws SQLException {
+        String query = "SELECT MAX(SUBSTRING(DoctorID, 5)) AS maxID FROM Doctors WHERE DoctorID LIKE 'DOC-%'";
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            ResultSet rs = stmt.executeQuery();
+            int maxID = 0;
+            if (rs.next()) {
+                String maxIDStr = rs.getString("maxID");
+                if (maxIDStr != null && !maxIDStr.isEmpty()) {
+                    try {
+                        maxID = Integer.parseInt(maxIDStr);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Lỗi chuyển đổi mã DoctorID: " + e.getMessage());
+                    }
+                }
             }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+            return String.format("DOC-%03d", maxID + 1); // Định dạng DOC-XXX
         }
-        return newDoctorID;
     }
-
     public String getDoctorId() {
         return doctorId;
     }
@@ -107,5 +111,27 @@ public class Doctor extends Person {
             throw new IllegalArgumentException("Email không hợp lệ! Vui lòng nhập đúng định dạng.");
         }
         this.email = email;
+    }
+
+    public String getTempUsername() {
+        return tempUsername;
+    }
+    
+    public void setTempUsername(String tempUsername) {
+        this.tempUsername = tempUsername;
+    }
+    
+    public String getTempPassword() {
+        return tempPassword;
+    }
+    
+    public void setTempPassword(String tempPassword) {
+        this.tempPassword = tempPassword;
+    }
+    
+    // Thêm phương thức để lưu thông tin đăng nhập
+    public void setLoginCredentials(String username, String password) {
+        this.tempUsername = username;
+        this.tempPassword = password;
     }
 }
