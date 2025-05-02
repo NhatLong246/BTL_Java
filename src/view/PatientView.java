@@ -314,34 +314,111 @@ public class PatientView extends JFrame {
 
     public void showAppointments(List<String[]> appointments) {
         contentPanel.removeAll();
-
+    
         JPanel appointmentsPanel = new JPanel(new BorderLayout());
         appointmentsPanel.setBackground(new Color(245, 245, 245));
-
+    
         JLabel titleLabel = new JLabel("Lịch hẹn của bạn", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
+    
+        // Sửa lại tên các cột cho đúng
         String[] columnNames = {"ID Lịch hẹn", "Ngày hẹn", "Thời gian", "Bác sĩ", "Phòng", "Trạng thái"};
-
+    
         DefaultTableModel model = new DefaultTableModel();
         model.setColumnIdentifiers(columnNames);
-
-        if (appointments != null) {
+    
+        if (appointments != null && !appointments.isEmpty()) {
             for (String[] appointment : appointments) {
-                model.addRow(appointment);
+                // Đảm bảo dữ liệu được hiển thị đúng vào từng cột
+                // Nếu mảng appointment không chứa đủ dữ liệu, bổ sung giá trị rỗng
+                String[] rowData = new String[columnNames.length];
+                
+                // Duyệt qua mảng appointment và gán dữ liệu vào mảng rowData
+                for (int i = 0; i < rowData.length; i++) {
+                    if (i < appointment.length && appointment[i] != null) {
+                        rowData[i] = appointment[i];
+                    } else {
+                        rowData[i] = ""; // Giá trị rỗng cho các cột không có dữ liệu
+                    }
+                }
+                
+                model.addRow(rowData);
             }
+        } else {
+            // Thêm thông báo nếu không có lịch hẹn
+            JOptionPane.showMessageDialog(this, 
+                "Bạn chưa có lịch hẹn nào!", 
+                "Thông báo", 
+                JOptionPane.INFORMATION_MESSAGE);
         }
-
+    
         JTable table = new JTable(model);
         table.setRowHeight(40);
         table.setFont(new Font("Arial", Font.PLAIN, 14));
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
         table.setSelectionBackground(new Color(173, 216, 230));
-
+        
+        // Điều chỉnh độ rộng cột
+        table.getColumnModel().getColumn(0).setPreferredWidth(100); // ID
+        table.getColumnModel().getColumn(1).setPreferredWidth(100); // Ngày
+        table.getColumnModel().getColumn(2).setPreferredWidth(100); // Thời gian
+        table.getColumnModel().getColumn(3).setPreferredWidth(150); // Bác sĩ
+        table.getColumnModel().getColumn(4).setPreferredWidth(80);  // Phòng
+        table.getColumnModel().getColumn(5).setPreferredWidth(100); // Trạng thái
+    
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
+    
+        // Thêm panel chứa nút xuất lịch hẹn
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+        
+        JButton exportBtn = new JButton("Xuất lịch hẹn");
+        exportBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        exportBtn.setBackground(new Color(40, 167, 69));
+        exportBtn.setForeground(Color.WHITE);
+        exportBtn.setFocusPainted(false);
+        exportBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        buttonPanel.add(exportBtn);
+        
+        exportBtn.addActionListener(e -> {
+            if (appointments == null || appointments.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không có dữ liệu để xuất!", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu lịch hẹn");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+            fileChooser.setSelectedFile(new File("LichHen_" + patient.getPatientID() + ".xlsx"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".xlsx")) {
+                    filePath += ".xlsx";
+                }
+                
+                // Cần thêm phương thức này vào PatientController
+                boolean success = controller.exportAppointmentsToExcel(appointments, filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất lịch hẹn thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất lịch hẹn thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+    
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setBackground(Color.WHITE);
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
@@ -349,18 +426,22 @@ public class PatientView extends JFrame {
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
         tablePanel.add(scrollPane, BorderLayout.CENTER);
-
+        tablePanel.add(buttonPanel, BorderLayout.SOUTH);
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(tablePanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
-
+    
         appointmentsPanel.add(titleLabel, BorderLayout.NORTH);
         appointmentsPanel.add(wrapperPanel, BorderLayout.CENTER);
-
+    
         contentPanel.add(appointmentsPanel);
         contentPanel.revalidate();
         contentPanel.repaint();
+        
+        // Đặt nút xem lịch hẹn làm nút được chọn
+        setSelectedButton(btnViewAppointments);
     }
 
     public void showMedicalHistory(List<String[]> medicalHistory) {
