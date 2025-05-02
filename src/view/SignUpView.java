@@ -14,6 +14,7 @@ public class SignUpView extends JFrame {
     private JTextField usernameText;
     private JTextField emailText;
     private JPasswordField passText;
+    private JTextField phoneText; // Thêm ô nhập số điện thoại
     private JButton nextButton;
     private JLabel errorLabel;
     private SignUpController controller;
@@ -103,23 +104,6 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
-        usernameText.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (usernameText.getText().equals("USERNAME")) {
-                    usernameText.setText("");
-                    usernameText.setForeground(Color.BLACK);
-                }
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (usernameText.getText().isEmpty()) {
-                    usernameText.setText("USERNAME");
-                    usernameText.setForeground(Color.GRAY);
-                }
-            }
-        });
 
         // Email
         JLabel emailLabel = new JLabel("Email:");
@@ -135,23 +119,6 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
-        emailText.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (emailText.getText().equals("EMAIL")) {
-                    emailText.setText("");
-                    emailText.setForeground(Color.BLACK);
-                }
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (emailText.getText().isEmpty()) {
-                    emailText.setText("EMAIL");
-                    emailText.setForeground(Color.GRAY);
-                }
-            }
-        });
 
         // Password
         JLabel passLabel = new JLabel("Password:");
@@ -168,31 +135,25 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
-        passText.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (new String(passText.getPassword()).equals("PASSWORD")) {
-                    passText.setText("");
-                    passText.setForeground(Color.BLACK);
-                    passText.setEchoChar('●');
-                }
-            }
 
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (passText.getPassword().length == 0) {
-                    passText.setText("PASSWORD");
-                    passText.setForeground(Color.GRAY);
-                    passText.setEchoChar((char) 0);
-                } else {
-                    passText.setEchoChar('●');
-                }
-            }
-        });
+        // Phone Number
+        JLabel phoneLabel = new JLabel("Phone:");
+        phoneLabel.setBounds(250, 460, 200, 40);
+        phoneLabel.setForeground(Color.WHITE);
+        phoneLabel.setFont(new Font("Arial", Font.BOLD, 20));
+
+        phoneText = new JTextField("PHONENUMBER (+84/0)");
+        phoneText.setBounds(250, 500, 400, 50);
+        phoneText.setFont(new Font("Arial", Font.PLAIN, 20));
+        phoneText.setForeground(Color.GRAY);
+        phoneText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
 
         // Error Label
         errorLabel = new JLabel("");
-        errorLabel.setBounds(250, 450, 400, 30);
+        errorLabel.setBounds(250, 560, 400, 30);
         errorLabel.setForeground(Color.RED);
         errorLabel.setFont(new Font("Arial", Font.PLAIN, 16));
         errorLabel.setVisible(false);
@@ -201,7 +162,7 @@ public class SignUpView extends JFrame {
         nextButton = new JButton(" NEXT");
         int buttonWidth = 200;
         int buttonHeight = 60;
-        nextButton.setBounds((panelWidth - buttonWidth) / 2, 480, buttonWidth, buttonHeight);
+        nextButton.setBounds((panelWidth - buttonWidth) / 2, 600, buttonWidth, buttonHeight);
         nextButton.setFont(new Font("Arial", Font.BOLD, 22));
         nextButton.setBackground(Color.WHITE);
         nextButton.setForeground(Color.BLACK);
@@ -217,6 +178,8 @@ public class SignUpView extends JFrame {
         panel.add(emailText);
         panel.add(passLabel);
         panel.add(passText);
+        panel.add(phoneLabel);
+        panel.add(phoneText);
         panel.add(errorLabel);
         panel.add(nextButton);
 
@@ -246,6 +209,10 @@ public class SignUpView extends JFrame {
 
     public JPasswordField getPassText() {
         return passText;
+    }
+
+    public JTextField getPhoneText() { // Thêm getter cho phoneText
+        return phoneText;
     }
 
     public JButton getNextButton() {

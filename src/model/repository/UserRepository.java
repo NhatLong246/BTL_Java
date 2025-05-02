@@ -18,46 +18,46 @@ public class UserRepository {
      * @param position Vai trò (admin/user)
      * @return Chuỗi kết quả: "Success:userId" nếu thành công, "Error:thông báo lỗi" nếu thất bại
      */
-    public static String registerUser(String username, String email, String password, String position) {
-        String sql = "INSERT INTO UserAccounts (UserName, Email, PasswordHash, Role, IsLocked) VALUES (?, ?, SHA2(?, 256), ?, ?)";
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            if (conn == null) {
-                return "Error: Could not connect to database";
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, username);
-                stmt.setString(2, email);
-                stmt.setString(3, password); // Mật khẩu được mã hóa bằng SHA2
-                stmt.setString(4, position.equalsIgnoreCase("admin") ? "Quản lí" : "Bệnh nhân"); // Vai trò: Quản lí hoặc Bệnh nhân
-                stmt.setBoolean(5, false); // Mặc định tài khoản không bị khóa
-
-                int rowsAffected = stmt.executeUpdate();
-                if (rowsAffected > 0) {
-                    ResultSet rs = stmt.getGeneratedKeys();
-                    if (rs.next()) {
-                        int userId = rs.getInt(1);
-                        return "Success:" + userId; // Trả về userId sau khi insert thành công
-                    }
-                }
-                return "Error: Failed to retrieve user ID";
-            }
-        } catch (SQLException e) {
-            System.err.println("Lỗi khi đăng ký người dùng: " + e.getMessage());
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.close();
-                } catch (SQLException e) {
-                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
+//    public static String registerUser(String username, String email, String password, String position) {
+//        String sql = "INSERT INTO UserAccounts (UserName, Email, PasswordHash, Role, IsLocked) VALUES (?, ?, SHA2(?, 256), ?, ?)";
+//        Connection conn = null;
+//        try {
+//            conn = DatabaseConnection.getConnection();
+//            if (conn == null) {
+//                return "Error: Could not connect to database";
+//            }
+//            try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+//                stmt.setString(1, username);
+//                stmt.setString(2, email);
+//                stmt.setString(3, password); // Mật khẩu được mã hóa bằng SHA2
+//                stmt.setString(4, position.equalsIgnoreCase("admin") ? "Quản lí" : "Bệnh nhân"); // Vai trò: Quản lí hoặc Bệnh nhân
+//                stmt.setBoolean(5, false); // Mặc định tài khoản không bị khóa
+//
+//                int rowsAffected = stmt.executeUpdate();
+//                if (rowsAffected > 0) {
+//                    ResultSet rs = stmt.getGeneratedKeys();
+//                    if (rs.next()) {
+//                        int userId = rs.getInt(1);
+//                        return "Success:" + userId; // Trả về userId sau khi insert thành công
+//                    }
+//                }
+//                return "Error: Failed to retrieve user ID";
+//            }
+//        } catch (SQLException e) {
+//            System.err.println("Lỗi khi đăng ký người dùng: " + e.getMessage());
+//            e.printStackTrace();
+//            return "Error: " + e.getMessage();
+//        } finally {
+//            if (conn != null) {
+//                try {
+//                    conn.close();
+//                } catch (SQLException e) {
+//                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
+//    }
 
     /**
      * Đăng ký người dùng với đầy đủ thông tin (dùng trong AdminRepository)
@@ -673,5 +673,79 @@ public class UserRepository {
             }
         }
         return null;
+    }
+    
+    private static String generateUserId(String rolePrefix) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT MAX(CAST(SUBSTRING(UserID, 5) AS UNSIGNED)) AS maxId FROM UserAccounts WHERE UserID LIKE ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, rolePrefix + "-%");
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                int maxId = rs.getInt("maxId");
+                return String.format("%s-%03d", rolePrefix, maxId + 1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return rolePrefix + "-001"; // Giá trị mặc định nếu không có dữ liệu
+    }
+
+    public static String registerUser(String username, String email, String password, String role) {
+        String userId = null;
+        String rolePrefix = role.equals("Bệnh nhân") ? "PAT" : (role.equals("Bác sĩ") ? "DOC" : "ADM");
+        userId = generateUserId(rolePrefix);
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "INSERT INTO useraccounts (UserID, UserName, FullName, Role, Email, PasswordHash, CreatedAt, PasswordChangeRequired, IsLocked) VALUES (?, ?, ?, ?, ?, SHA2(?, 256), NOW(), 1, 0)";
+            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            stmt.setString(1, userId);
+            stmt.setString(2, username);
+            stmt.setString(3, username); // Giả sử FullName = UserName, bạn có thể điều chỉnh
+            stmt.setString(4, role);
+            stmt.setString(5, email);
+            stmt.setString(6, password);
+
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected > 0) {
+                return "Success: " + userId;
+            }
+        } catch (SQLException e) {
+            System.err.println("SQL Error: " + e.getMessage());
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
+        }
+        return "Error: Đăng ký thất bại";
+    }
+
+    // Các phương thức khác như isUsernameTaken, isEmailTaken, v.v.
+    public static boolean isUsernameTaken(String username) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT COUNT(*) FROM useraccounts WHERE UserName = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean isEmailTaken(String email) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT COUNT(*) FROM useraccounts WHERE Email = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }

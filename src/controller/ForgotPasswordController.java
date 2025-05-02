@@ -25,7 +25,7 @@ public class ForgotPasswordController extends JFrame {
         add(view);
 
         // Background
-        JLabel background = new JLabel(new ImageIcon(new ImageIcon("img/file_background.png")
+        JLabel background = new JLabel(new ImageIcon(new ImageIcon("resources/img/file_background.png")
                 .getImage().getScaledInstance(
                         Toolkit.getDefaultToolkit().getScreenSize().width,
                         Toolkit.getDefaultToolkit().getScreenSize().height,

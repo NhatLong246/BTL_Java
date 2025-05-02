@@ -1,74 +1,64 @@
 package view;
 
+import controller.RequestResetController;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 
-public class RequestResetView extends JPanel {
-    public JTextField inputText;
-    public JButton submitButton;
+public class RequestResetView extends JFrame {
+    private JTextField usernameField;
+    private JTextField emailField;
+    private JButton resetButton;
+    private RequestResetController controller;
 
     public RequestResetView() {
+        this.controller = new RequestResetController(this);
+        setTitle("Forgot Password");
+        setSize(400, 300);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
         setLayout(null);
-        setOpaque(false);
-        setSize(900, 500);
-        setBounds(
-                (Toolkit.getDefaultToolkit().getScreenSize().width - 900) / 2,
-                (Toolkit.getDefaultToolkit().getScreenSize().height - 500) / 2,
-                900, 500);
 
-        JLabel titleLabel = new JLabel("REQUEST PASSWORD RESET", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 36));
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBounds(0, 80, 900, 50);
-        add(titleLabel);
+        // Panel chính
+        JPanel panel = new JPanel();
+        panel.setLayout(null);
+        panel.setBackground(new Color(200, 200, 200));
+        panel.setBounds(0, 0, 400, 300);
 
-        JLabel inputLabel = new JLabel("Username or Email:");
-        inputLabel.setBounds(250, 160, 200, 40);
-        inputLabel.setForeground(Color.WHITE);
-        inputLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        add(inputLabel);
+        // Nhãn và trường Username
+        JLabel usernameLabel = new JLabel("Username:");
+        usernameLabel.setBounds(50, 50, 100, 30);
+        usernameLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(usernameLabel);
 
-        inputText = new JTextField("ENTER USERNAME OR EMAIL");
-        inputText.setBounds(250, 200, 400, 50);
-        inputText.setFont(new Font("Arial", Font.PLAIN, 20));
-        inputText.setForeground(Color.GRAY);
-        add(inputText);
+        usernameField = new JTextField();
+        usernameField.setBounds(150, 50, 200, 30);
+        usernameField.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(usernameField);
 
-        // Thêm FocusListener cho inputText
-        inputText.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (inputText.getText().equals("ENTER USERNAME OR EMAIL")) {
-                    inputText.setText("");
-                    inputText.setForeground(Color.BLACK);
-                }
-            }
+        // Nhãn và trường Email
+        JLabel emailLabel = new JLabel("Email:");
+        emailLabel.setBounds(50, 100, 100, 30);
+        emailLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(emailLabel);
 
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (inputText.getText().isEmpty()) {
-                    inputText.setText("ENTER USERNAME OR EMAIL");
-                    inputText.setForeground(Color.GRAY);
-                }
-            }
-        });
+        emailField = new JTextField();
+        emailField.setBounds(150, 100, 200, 30);
+        emailField.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(emailField);
 
-        submitButton = new JButton("SUBMIT");
-        submitButton.setBounds(250, 300, 400, 60);
-        submitButton.setFont(new Font("Arial", Font.BOLD, 22));
-        submitButton.setBackground(Color.WHITE);
-        submitButton.setForeground(Color.BLACK);
-        add(submitButton);
+        // Nút Reset Password
+        resetButton = new JButton("Reset Password");
+        resetButton.setBounds(150, 160, 150, 40);
+        resetButton.setFont(new Font("Arial", Font.BOLD, 16));
+        resetButton.addActionListener(e -> controller.requestReset(usernameField.getText(), emailField.getText()));
+        panel.add(resetButton);
+
+        add(panel);
+        setVisible(true);
     }
 
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        SwingUtilities.invokeLater(() -> new RequestResetView().setVisible(true));
+    public void showMessage(String message) {
+        JOptionPane.showMessageDialog(this, message);
     }
 }

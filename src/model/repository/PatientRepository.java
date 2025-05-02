@@ -16,14 +16,14 @@ public class PatientRepository {
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "2005";
     
-    public Patient getPatientByUserId(int userId) {
+    public Patient getPatientByUserId(String userId) {
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             String query = "SELECT p.*, ua.FullName, ua.PhoneNumber, ua.Email " +
                           "FROM Patients p " +
                           "JOIN UserAccounts ua ON p.UserID = ua.UserID " +
                           "WHERE p.UserID = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setInt(1, userId);
+            stmt.setString(1, userId); // Sử dụng setString thay vì setInt
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
