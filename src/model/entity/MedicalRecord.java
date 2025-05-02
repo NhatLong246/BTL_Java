@@ -15,6 +15,12 @@ public class MedicalRecord {
     private LocalDate recordDate;   // Ngày ghi nhận
     private boolean isHistory;      // Cờ đánh dấu lịch sử
 
+    private boolean validateFields = true;
+
+    public MedicalRecord() {
+        this.validateFields = false; // Không kiểm tra khi tạo từ database
+    }
+
     // Constructor
     public MedicalRecord(Connection conn, String patientId, String doctorId, String diagnosis,
                          String treatmentPlan, LocalDate recordDate) {
@@ -36,6 +42,7 @@ public class MedicalRecord {
         this.treatmentPlan = treatmentPlan;
         this.recordDate = recordDate;
         this.isHistory = false;     // Mặc định là FALSE
+        this.validateFields = true;
     }
 
     // Phương thức sinh mã hồ sơ y tế tự động (MR-001, MR-002,...)
@@ -98,8 +105,10 @@ public class MedicalRecord {
         return treatmentPlan;
     }
 
+    
     public void setTreatmentPlan(String treatmentPlan) {
-        if (treatmentPlan == null || treatmentPlan.trim().isEmpty()) {
+        // Chỉ kiểm tra khi đang tạo hồ sơ mới, không phải khi đọc từ database
+        if (this.validateFields && (treatmentPlan == null || treatmentPlan.isEmpty())) {
             throw new IllegalArgumentException("Kế hoạch điều trị không được để trống!");
         }
         this.treatmentPlan = treatmentPlan;

@@ -862,4 +862,49 @@ public class DoctorController {
             return "Ngoài giờ làm việc";
         }
     }
+
+    // Thêm vào DoctorController
+    public void showExamination() {
+        view.setSelectedButton(view.getBtnExamination());
+        view.showExamination();
+    }
+    
+    /**
+     * Lấy danh sách bệnh nhân chờ khám
+     */
+    public List<Object[]> getPatientsForExamination() {
+        // Gọi repository để lấy danh sách bệnh nhân chờ khám
+        return repository.getPatientsForExamination(doctorId);
+    }
+    
+    /**
+     * Tìm kiếm bệnh nhân chờ khám theo từ khóa
+     */
+    public List<Object[]> searchPatientsForExamination(String keyword) {
+        // Gọi repository để tìm kiếm bệnh nhân
+        return repository.searchPatientsForExamination(doctorId, keyword);
+    }
+    
+    /**
+     * Cập nhật trạng thái hoàn thành khám cho bệnh nhân
+     */
+    public void completeExamination(String patientId) {
+        // Gọi repository để cập nhật trạng thái
+        repository.completePatientExamination(patientId, doctorId);
+    }
+    
+    /**
+     * Sinh ID mới cho đơn thuốc
+     */
+    public String generateNewPrescriptionId() {
+        // Gọi repository để tạo ID mới
+        return repository.generateNewPrescriptionId();
+    }
+    
+    /**
+     * Lấy ID của bác sĩ hiện tại
+     */
+    public String getDoctorId() {
+        return doctorId;
+    }
 }

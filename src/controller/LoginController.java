@@ -3,16 +3,12 @@ package controller;
 import model.entity.Patient;
 import model.repository.PatientRepository;
 import model.repository.UserRepository;
-import view.DoctorView;
-import view.LoginView;
-import view.PatientView;
-import view.RequestResetView;
-import view.SignUpView;
-import view.AdminView;
+import view.*;
+
 import javax.swing.*;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.PreparedStatement; 
+import java.sql.ResultSet; 
 import java.sql.SQLException;
 import database.DatabaseConnection;
 
@@ -23,6 +19,7 @@ public class LoginController {
         this.view = view;
     }
 
+    // Lấy DoctorID từ UserID - Lấy từ nhánh 3f457736d1bb724311adaa4fc92302c9e9dc98cb
     private String getDoctorID(String userId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
             String query = "SELECT DoctorID FROM Doctors WHERE UserID = ?";
@@ -38,19 +35,16 @@ public class LoginController {
         return null;
     }
 
+    // Phương thức login giữ kiểu trả về boolean như HEAD để tương thích với LoginView
     public boolean login(String username, String password) {
+        // Kiểm tra đầu vào
         if (username.isEmpty() || username.equals("USERNAME") ||
                 password.isEmpty() || password.equals("PASSWORD")) {
             view.showError("Vui lòng nhập tên đăng nhập và mật khẩu");
             return false;
         }
 
-        // Kiểm tra độ dài mật khẩu
-        if (password.length() < 6) {
-            view.showError("Mật khẩu phải có ít nhất 6 ký tự!");
-            return false;
-        }
-
+        // Kiểm tra kết nối cơ sở dữ liệu
         try {
             Connection testConnection = DatabaseConnection.getConnection();
             if (testConnection == null) {
@@ -64,20 +58,24 @@ public class LoginController {
             return false;
         }
 
+        // Thử đăng nhập
         boolean loginSuccess = UserRepository.loginUser(username, password);
         if (loginSuccess) {
             view.hideError();
             JOptionPane.showMessageDialog(view, "Đăng nhập thành công!");
 
             String role = UserRepository.getUserRole(username);
+            String userId = UserRepository.getUserIdByUsername(username); // Lấy UserID để sử dụng cho getDoctorID
+
             if (role == null) {
                 view.showError("Không thể xác định vai trò người dùng!");
                 return false;
             }
 
+            // Điều hướng dựa trên vai trò
             switch (role) {
                 case "Quản lí":
-                    String adminId = UserRepository.getAdminIdByUsername(username);
+                    String adminId = UserRepository.getUserIdByUsername(username);
                     if (adminId != null) {
                         new AdminView(adminId).setVisible(true);
                         view.dispose();
@@ -87,8 +85,7 @@ public class LoginController {
                         return false;
                     }
                 case "Bác sĩ":
-                    String userId = UserRepository.getUserIdByUsernameOrEmail(username);
-                    String doctorId = getDoctorID(userId);
+                    String doctorId = getDoctorID(userId); // Sử dụng getDoctorID từ nhánh 3f457736d1bb724311adaa4fc92302c9e9dc98cb
                     if (doctorId != null) {
                         new DoctorView(doctorId).setVisible(true);
                         view.dispose();
@@ -101,9 +98,11 @@ public class LoginController {
                     String patientID = UserRepository.getPatientIdByUsername(username);
                     if (patientID != null) {
                         try {
+                            // Lấy thông tin bệnh nhân từ database - Giữ từ HEAD
                             PatientRepository patientRepo = new PatientRepository();
                             Patient patient = patientRepo.getPatientByID(patientID);
 
+                            // Debug thông tin bệnh nhân - Giữ từ HEAD
                             System.out.println("============ DEBUG PATIENT BEFORE VIEW ============");
                             System.out.println("PatientID: " + (patient != null ? patient.getPatientID() : "null"));
                             System.out.println("UserID: " + (patient != null ? patient.getUserID() : "null"));
@@ -137,6 +136,8 @@ public class LoginController {
                     view.showError("Vai trò không xác định: " + role);
                     return false;
             }
+            // view.dispose();
+            // return true;
         } else {
             view.showError("Tên đăng nhập hoặc mật khẩu không đúng");
             return false;

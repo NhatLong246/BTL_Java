@@ -6,6 +6,7 @@ import model.entity.Doctor;
 import model.repository.AdminRepository;
 import model.repository.UserRepository;
 import view.AdminView;
+import view.LoginView;
 
 import javax.swing.*;
 
@@ -366,14 +367,16 @@ public class AdminController {
     }
 
     public void logout() {
-        int confirm = JOptionPane.showConfirmDialog(
-            view,
-            "Bạn có chắc chắn muốn đăng xuất không?",
-            "Xác nhận đăng xuất",
-            JOptionPane.YES_NO_OPTION
+        int option = JOptionPane.showConfirmDialog(
+                view,
+                "Bạn có chắc chắn muốn đăng xuất?",
+                "Xác nhận đăng xuất",
+                JOptionPane.YES_NO_OPTION
         );
-        if (confirm == JOptionPane.YES_OPTION) {
+
+        if (option == JOptionPane.YES_OPTION) {
             view.dispose();
+            new LoginView().setVisible(true);
         }
     }
 

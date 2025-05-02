@@ -3,6 +3,8 @@ package view;
 import controller.SignUpController;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.io.File;
 
 public class SignUpView extends JFrame {
@@ -101,6 +103,23 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
+        usernameText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (usernameText.getText().equals("USERNAME")) {
+                    usernameText.setText("");
+                    usernameText.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (usernameText.getText().isEmpty()) {
+                    usernameText.setText("USERNAME");
+                    usernameText.setForeground(Color.GRAY);
+                }
+            }
+        });
 
         // Email
         JLabel emailLabel = new JLabel("Email:");
@@ -116,6 +135,23 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
+        emailText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (emailText.getText().equals("EMAIL")) {
+                    emailText.setText("");
+                    emailText.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (emailText.getText().isEmpty()) {
+                    emailText.setText("EMAIL");
+                    emailText.setForeground(Color.GRAY);
+                }
+            }
+        });
 
         // Password
         JLabel passLabel = new JLabel("Password:");
@@ -132,6 +168,27 @@ public class SignUpView extends JFrame {
                 BorderFactory.createLineBorder(Color.WHITE, 2),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
+        passText.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (new String(passText.getPassword()).equals("PASSWORD")) {
+                    passText.setText("");
+                    passText.setForeground(Color.BLACK);
+                    passText.setEchoChar('●');
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (passText.getPassword().length == 0) {
+                    passText.setText("PASSWORD");
+                    passText.setForeground(Color.GRAY);
+                    passText.setEchoChar((char) 0);
+                } else {
+                    passText.setEchoChar('●');
+                }
+            }
+        });
 
         // Error Label
         errorLabel = new JLabel("");
