@@ -74,14 +74,14 @@ public class PatientView extends JFrame {
             gbc.weighty = 0.1;
             leftPanel.add(menuTitle, gbc);
 
-            btnHome = createButton("Home");
-            btnViewInfo = createButton("View Info");
-            btnViewAppointments = createButton("View Appointments");
-            btnViewMedicalHistory = createButton("View Medical History");
+            btnHome = createButton("Trang chủ");
+            btnViewInfo = createButton("Xem thông tin");
+            btnViewAppointments = createButton("Xem lịch hẹn");
+            btnViewMedicalHistory = createButton("Xem hồ sơ bệnh án");
             btnViewPrescriptions = createButton("Xem đơn thuốc");
-            btnPayFees = createButton("Pay Fees");
-            btnPaymentHistory = createButton("Payment History");
-            JButton btnLogout = createButton("Logout");
+            btnPayFees = createButton("Hóa đơn");
+            btnPaymentHistory = createButton("Lịch sử thanh toán");
+            JButton btnLogout = createButton("Đăng xuất");
 
             setSelectedButton(btnHome);
 
@@ -356,7 +356,7 @@ public class PatientView extends JFrame {
         contentPanel.repaint();
     }
 
-    public void showMedicalHistory(List<String[]> medicalHistory) {
+    /*public void showMedicalHistory(List<String[]> medicalHistory) {
         contentPanel.removeAll();
 
         JPanel historyPanel = new JPanel(new BorderLayout());
@@ -405,52 +405,58 @@ public class PatientView extends JFrame {
         contentPanel.add(historyPanel);
         contentPanel.revalidate();
         contentPanel.repaint();
-    }
+    }*/
 
-    /*public void showPayFees() {
+    public void showMedicalHistory(List<String[]> medicalHistory) {
         contentPanel.removeAll();
-
-        JPanel feesPanel = new JPanel(new BorderLayout());
-        feesPanel.setBackground(new Color(245, 245, 245));
-
-        JLabel titleLabel = new JLabel("Thanh toán viện phí", SwingConstants.CENTER);
+    
+        JPanel historyPanel = new JPanel(new BorderLayout());
+        historyPanel.setBackground(new Color(245, 245, 245));
+    
+        JLabel titleLabel = new JLabel("Lịch sử khám bệnh", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
-        String[] columnNames = {"ID Hóa đơn", "Ngày", "Dịch vụ", "Số tiền", "Trạng thái", "Thanh toán"};
-
+    
+        // Sửa tên các cột để đúng với cấu trúc dữ liệu từ DB
+        String[] columnNames = {"ID", "Ngày khám", "Bác sĩ", "Chẩn đoán", "Điều trị", "Ghi chú"};
+    
         DefaultTableModel model = new DefaultTableModel() {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 5; // Chỉ cho phép chỉnh sửa cột "Thanh toán"
+                return false; // Không cho phép sửa dữ liệu
             }
         };
         model.setColumnIdentifiers(columnNames);
-
-        List<Object[]> bills = controller.getBills();
-        if (bills != null) {
-            for (Object[] bill : bills) {
-                if ("Chưa thanh toán".equals(bill[4])) {
-                    Object[] rowData = new Object[6];
-                    System.arraycopy(bill, 0, rowData, 0, 5);
-                    rowData[5] = "Thanh toán";
-                    model.addRow(rowData);
-                }
+    
+        if (medicalHistory != null && !medicalHistory.isEmpty()) {
+            for (String[] record : medicalHistory) {
+                model.addRow(record);
             }
+        } else {
+            // Hiển thị thông báo nếu không có dữ liệu
+            JOptionPane.showMessageDialog(this, 
+                "Không tìm thấy hồ sơ bệnh án nào!", 
+                "Thông báo", 
+                JOptionPane.INFORMATION_MESSAGE);
         }
-
+    
         JTable table = new JTable(model);
         table.setRowHeight(40);
         table.setFont(new Font("Arial", Font.PLAIN, 14));
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-
-        // Thiết lập renderer và editor cho nút thanh toán
-        table.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
-        table.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox(), table));
-
+        table.setSelectionBackground(new Color(173, 216, 230));
+    
+        // Thiết lập độ rộng cho từng cột
+        table.getColumnModel().getColumn(0).setPreferredWidth(80);    // ID
+        table.getColumnModel().getColumn(1).setPreferredWidth(100);   // Ngày khám
+        table.getColumnModel().getColumn(2).setPreferredWidth(150);   // Bác sĩ
+        table.getColumnModel().getColumn(3).setPreferredWidth(200);   // Chẩn đoán
+        table.getColumnModel().getColumn(4).setPreferredWidth(200);   // Điều trị
+        table.getColumnModel().getColumn(5).setPreferredWidth(150);   // Ghi chú
+    
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
+    
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setBackground(Color.WHITE);
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
@@ -458,19 +464,22 @@ public class PatientView extends JFrame {
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
         tablePanel.add(scrollPane, BorderLayout.CENTER);
-
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(tablePanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
-
-        feesPanel.add(titleLabel, BorderLayout.NORTH);
-        feesPanel.add(wrapperPanel, BorderLayout.CENTER);
-
-        contentPanel.add(feesPanel);
+    
+        historyPanel.add(titleLabel, BorderLayout.NORTH);
+        historyPanel.add(wrapperPanel, BorderLayout.CENTER);
+    
+        contentPanel.add(historyPanel);
         contentPanel.revalidate();
         contentPanel.repaint();
-    }*/
+        
+        // Đặt nút xem hồ sơ bệnh án làm nút được chọn
+        setSelectedButton(btnViewMedicalHistory);
+    }
 
     public void showPayFees() {
         contentPanel.removeAll();

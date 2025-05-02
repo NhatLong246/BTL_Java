@@ -3,11 +3,8 @@ package controller;
 import model.entity.Patient;
 import model.repository.PatientRepository;
 import model.repository.UserRepository;
-import view.DoctorView;
-import view.LoginView;
-import view.PatientView;
-import view.RequestResetView;
-import view.SignUpView; 
+import view.*;
+
 import javax.swing.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement; 
@@ -68,7 +65,7 @@ public class LoginController {
             JOptionPane.showMessageDialog(view, "Đăng nhập thành công!");
 
             String role = UserRepository.getUserRole(username);
-            String userId = UserRepository.getPatientIdByUsername(username); // Lấy UserID để sử dụng cho getDoctorID
+            String userId = UserRepository.getUserIdByUsername(username); // Lấy UserID để sử dụng cho getDoctorID
 
             if (role == null) {
                 view.showError("Không thể xác định vai trò người dùng!");
@@ -78,18 +75,25 @@ public class LoginController {
             // Điều hướng dựa trên vai trò
             switch (role) {
                 case "Quản lí":
-                    // Placeholder từ nhánh 3f457736d1bb724311adaa4fc92302c9e9dc98cb vì AdminView chưa triển khai
-                    JOptionPane.showMessageDialog(view, "Đăng nhập với vai trò Quản lí thành công! (Admin View chưa triển khai)");
-                    break;
+                    String adminId = UserRepository.getUserIdByUsername(username);
+                    if (adminId != null) {
+                        new AdminView(adminId).setVisible(true);
+                        view.dispose();
+                        return true;
+                    } else {
+                        view.showError("Không tìm thấy thông tin quản lý!");
+                        return false;
+                    }
                 case "Bác sĩ":
                     String doctorId = getDoctorID(userId); // Sử dụng getDoctorID từ nhánh 3f457736d1bb724311adaa4fc92302c9e9dc98cb
                     if (doctorId != null) {
                         new DoctorView(doctorId).setVisible(true);
+                        view.dispose();
+                        return true;
                     } else {
                         view.showError("Không tìm thấy thông tin bác sĩ!");
                         return false;
                     }
-                    break;
                 case "Bệnh nhân":
                     String patientID = UserRepository.getPatientIdByUsername(username);
                     if (patientID != null) {
@@ -132,8 +136,8 @@ public class LoginController {
                     view.showError("Vai trò không xác định: " + role);
                     return false;
             }
-            view.dispose();
-            return true;
+            // view.dispose();
+            // return true;
         } else {
             view.showError("Tên đăng nhập hoặc mật khẩu không đúng");
             return false;

@@ -82,24 +82,32 @@ public class PatientRepository {
 
     public List<String[]> getMedicalHistory(String patientID) {
         List<String[]> medicalHistory = new ArrayList<>();
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String query = "SELECT mr.RecordDate, mr.Diagnosis, mr.TreatmentPlan, ua.FullName " +
-                           "FROM MedicalRecords mr " +
-                           "LEFT JOIN Doctors d ON mr.DoctorID = d.DoctorID " +
-                           "LEFT JOIN UserAccounts ua ON d.UserID = ua.UserID " +
-                           "WHERE mr.PatientID = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                medicalHistory.add(new String[]{
-                    rs.getString("RecordDate"),
-                    rs.getString("Diagnosis"),
-                    rs.getString("TreatmentPlan"),
-                    rs.getString("FullName") != null ? rs.getString("FullName") : "N/A"
-                });
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT mr.RecordID, mr.RecordDate, ua.FullName as DoctorName, " +
+                          "mr.Diagnosis, mr.TreatmentPlan, " +
+                          "CASE WHEN mr.IsHistory = 1 THEN 'Lịch sử' ELSE 'Hiện tại' END as Status " +
+                          "FROM MedicalRecords mr " +
+                          "LEFT JOIN Doctors d ON mr.DoctorID = d.DoctorID " +
+                          "LEFT JOIN UserAccounts ua ON d.UserID = ua.UserID " +
+                          "WHERE mr.PatientID = ? " +
+                          "ORDER BY mr.RecordDate DESC";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, patientID);
+                ResultSet rs = stmt.executeQuery();
+                while (rs.next()) {
+                    String[] record = new String[6];
+                    record[0] = rs.getString("RecordID");                     // ID
+                    record[1] = rs.getDate("RecordDate").toString();          // Ngày khám
+                    record[2] = rs.getString("DoctorName");                   // Bác sĩ
+                    record[3] = rs.getString("Diagnosis");                    // Chẩn đoán
+                    record[4] = rs.getString("TreatmentPlan");                // Điều trị
+                    record[5] = ""; // Ghi chú (có thể để trống)
+                    medicalHistory.add(record);
+                }
             }
         } catch (SQLException e) {
+            System.err.println("Lỗi khi lấy lịch sử khám bệnh: " + e.getMessage());
             e.printStackTrace();
         }
         return medicalHistory;

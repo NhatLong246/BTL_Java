@@ -12,23 +12,11 @@ CREATE TABLE UserAccounts (
     PhoneNumber VARCHAR(15) UNIQUE,
     PasswordHash VARCHAR(255) NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PasswordChangeRequired BOOLEAN DEFAULT 1,
+    IsLocked TINYINT(1) NOT NULL DEFAULT 0,
     INDEX idx_role (Role)
 );
-ALTER TABLE UserAccounts ADD COLUMN PasswordChangeRequired BOOLEAN DEFAULT 1;
 
--- Thêm cột IsLocked với giá trị mặc định là 0 (không khóa)
-ALTER TABLE UserAccounts
-ADD IsLocked TINYINT(1) NOT NULL DEFAULT 0;
-
--- Cập nhật dữ liệu hiện có: nếu PasswordHash là NULL, đặt IsLocked = 1
-UPDATE UserAccounts
-SET IsLocked = 1
-WHERE PasswordHash IS NULL;
-
--- Đảm bảo PasswordHash không NULL cho các tài khoản hiện có
-UPDATE UserAccounts
-SET PasswordHash = SHA2('default_password', 256)
-WHERE PasswordHash IS NULL;
 -- Bảng Chuyên Khoa
 CREATE TABLE Specialties (
     SpecialtyID VARCHAR(50) PRIMARY KEY,
@@ -41,14 +29,16 @@ CREATE TABLE Doctors (
     UserID VARCHAR(50) UNIQUE NOT NULL,
     DateOfBirth DATE NOT NULL,
     Gender ENUM('Nam', 'Nữ') NOT NULL,
+    FullName NVARCHAR(100) NOT NULL,
+    PhoneNumber VARCHAR(20),
+    Email VARCHAR(100),
     Address TEXT,
     SpecialtyID VARCHAR(50),
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (UserID) REFERENCES UserAccounts(UserID) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (SpecialtyID) REFERENCES Specialties(SpecialtyID) 
-        ON DELETE SET NULL ON UPDATE CASCADE,
-    INDEX idx_specialty (SpecialtyID)
+        ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- Bảng lịch làm việc cho bác sĩ
@@ -191,12 +181,11 @@ CREATE TABLE Medications (
 
 -- Bảng Chi tiết Đơn thuốc
 CREATE TABLE PrescriptionDetails (
-    PrescriptionDetailID VARCHAR(50) PRIMARY KEY,
-    PrescriptionID VARCHAR(50) NOT NULL,
-    MedicationID VARCHAR(50) NOT NULL,
-    Dosage VARCHAR(50) NOT NULL,
+    PrescriptionID VARCHAR(50),
+    MedicationID VARCHAR(50),
+    Dosage VARCHAR(50),
     Instructions TEXT,
-    UNIQUE KEY unique_prescription_medication (PrescriptionID, MedicationID),
+    PRIMARY KEY (PrescriptionID, MedicationID),
     FOREIGN KEY (PrescriptionID) REFERENCES Prescriptions(PrescriptionID)
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (MedicationID) REFERENCES Medications(MedicationID)

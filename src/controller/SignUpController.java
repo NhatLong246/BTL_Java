@@ -20,7 +20,7 @@ public class SignUpController {
         this.patientService = new PatientService();
 
         // Thêm FocusListener cho các ô text
-        addFocusListeners();
+        // addFocusListeners();
 
         // Thêm ActionListener cho các nút
         view.getSignInButtonNav().addActionListener(e -> navigateToLogin());

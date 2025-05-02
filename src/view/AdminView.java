@@ -12,10 +12,23 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.io.File;
 import java.awt.image.BufferedImage;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
+import javax.swing.text.DefaultFormatter;
+import javax.swing.JFormattedTextField.AbstractFormatter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Properties;
 
 public class AdminView extends JFrame {
     private AdminController controller;
@@ -23,6 +36,49 @@ public class AdminView extends JFrame {
     private JButton btnHome, btnCreateDoctor, btnManageDoctor, btnViewLockedDoctors, btnScheduleDoctor, btnViewDoctorInfo, btnLogout;
     private JButton currentSelectedButton;
     private ImageIcon workingIcon, finishedIcon, notWorkingIcon;
+
+    // Lớp để lưu trữ và hiển thị chuyên khoa trong ComboBox
+    private class SpecialtyItem {
+        private String id;
+        private String name;
+        
+        public SpecialtyItem(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+        
+        public String getId() {
+            return id;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        @Override
+        public String toString() {
+            return name; // Để hiển thị tên trong ComboBox
+        }
+    }
+
+    private class DateLabelFormatter extends AbstractFormatter {
+        private String datePattern = "yyyy-MM-dd";
+        private SimpleDateFormat dateFormatter = new SimpleDateFormat(datePattern);
+    
+        @Override
+        public Object stringToValue(String text) throws ParseException {
+            return dateFormatter.parse(text);
+        }
+    
+        @Override
+        public String valueToString(Object value) throws ParseException {
+            if (value != null) {
+                Calendar cal = (Calendar) value;
+                return dateFormatter.format(cal.getTime());
+            }
+            return "";
+        }
+    }
 
     public AdminView(String adminId) {
         this.controller = new AdminController(this, adminId);
@@ -443,37 +499,50 @@ public class AdminView extends JFrame {
         contentPanel.repaint();
     }
 
-    public void showCreateDoctorForm() {
+    /*public void showCreateDoctorForm() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
-
+    
         JLabel titleLabel = new JLabel("Tạo tài khoản bác sĩ", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
+    
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(Color.WHITE);
         formPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(30, 50, 30, 50)
         ));
-
+    
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 10, 15, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-
-        JTextField txtUsername = new JTextField(40);
+    
+        // Loại bỏ trường txtUsername
+        // JTextField txtUsername = new JTextField(40);
         JTextField txtFullName = new JTextField(40);
         JTextField txtEmail = new JTextField(40);
         JTextField txtPhone = new JTextField(40);
         JTextField txtAddress = new JTextField(40);
         JTextField txtBirthDate = new JTextField(40);
         JComboBox<Gender> cbGender = new JComboBox<>(Gender.values());
-        JComboBox<Specialization> cbSpecialty = new JComboBox<>(Specialization.values());
-
+        
+        // Tạo model cho JComboBox chuyên khoa từ database
+        DefaultComboBoxModel<SpecialtyItem> specialtyModel = new DefaultComboBoxModel<>();
+        List<Map<String, String>> specialties = controller.getAllSpecialties();
+        
+        for (Map<String, String> specialty : specialties) {
+            specialtyModel.addElement(new SpecialtyItem(
+                specialty.get("id"),
+                specialty.get("name")
+            ));
+        }
+        
+        JComboBox<SpecialtyItem> cbSpecialty = new JComboBox<>(specialtyModel);
+    
         Font fieldFont = new Font("Arial", Font.PLAIN, 16);
-        txtUsername.setFont(fieldFont);
+        // txtUsername.setFont(fieldFont); // Loại bỏ
         txtFullName.setFont(fieldFont);
         txtEmail.setFont(fieldFont);
         txtPhone.setFont(fieldFont);
@@ -481,16 +550,19 @@ public class AdminView extends JFrame {
         txtBirthDate.setFont(fieldFont);
         cbGender.setFont(fieldFont);
         cbSpecialty.setFont(fieldFont);
-
-        addFormField(formPanel, gbc, "Tên đăng nhập:", txtUsername, 0);
-        addFormField(formPanel, gbc, "Họ và tên:", txtFullName, 1);
-        addFormField(formPanel, gbc, "Email:", txtEmail, 2);
-        addFormField(formPanel, gbc, "Số điện thoại:", txtPhone, 3);
-        addFormField(formPanel, gbc, "Địa chỉ:", txtAddress, 4);
-        addFormField(formPanel, gbc, "Ngày sinh (yyyy-MM-dd):", txtBirthDate, 5);
-        addFormField(formPanel, gbc, "Giới tính:", cbGender, 6);
-        addFormField(formPanel, gbc, "Chuyên khoa:", cbSpecialty, 7);
-
+    
+        // Loại bỏ dòng này
+        // addFormField(formPanel, gbc, "Tên đăng nhập:", txtUsername, 0);
+        
+        // Cập nhật lại chỉ số row cho các trường
+        addFormField(formPanel, gbc, "Họ và tên:", txtFullName, 0);
+        addFormField(formPanel, gbc, "Email:", txtEmail, 1);
+        addFormField(formPanel, gbc, "Số điện thoại:", txtPhone, 2);
+        addFormField(formPanel, gbc, "Địa chỉ:", txtAddress, 3);
+        addFormField(formPanel, gbc, "Ngày sinh (yyyy-MM-dd):", txtBirthDate, 4);
+        addFormField(formPanel, gbc, "Giới tính:", cbGender, 5);
+        addFormField(formPanel, gbc, "Chuyên khoa:", cbSpecialty, 6);
+    
         JButton btnSubmit = new JButton("Tạo bác sĩ");
         btnSubmit.setFont(new Font("Arial", Font.BOLD, 16));
         btnSubmit.setBackground(new Color(0, 123, 255));
@@ -498,31 +570,227 @@ public class AdminView extends JFrame {
         btnSubmit.setFocusPainted(false);
         btnSubmit.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSubmit.setPreferredSize(new Dimension(200, 45));
-
+    
         gbc.gridx = 0;
-        gbc.gridy = 8;
+        gbc.gridy = 7; // Giảm xuống 1 vì đã bỏ 1 trường
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.insets = new Insets(30, 10, 10, 10);
         formPanel.add(btnSubmit, gbc);
-
-        btnSubmit.addActionListener(e -> controller.createDoctor(
-            txtUsername.getText(), txtFullName.getText(), txtEmail.getText(), txtPhone.getText(),
-            txtAddress.getText(), txtBirthDate.getText(), (Gender) cbGender.getSelectedItem(),
-            (Specialization) cbSpecialty.getSelectedItem()
-        ));
-
+    
+        btnSubmit.addActionListener(e -> {
+            // Kiểm tra trường Họ và tên
+            if (txtFullName.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Họ và tên không được để trống!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                txtFullName.requestFocus();
+                return;
+            }
+            
+            // Kiểm tra định dạng ngày sinh và tuổi
+            String birthDateText = txtBirthDate.getText().trim();
+            try {
+                LocalDate birthDate = LocalDate.parse(birthDateText);
+                
+                // Tính tuổi
+                int age = LocalDate.now().getYear() - birthDate.getYear();
+                if (birthDate.plusYears(age).isAfter(LocalDate.now())) {
+                    age--; // Điều chỉnh nếu sinh nhật trong năm nay chưa đến
+                }
+                
+                // Kiểm tra điều kiện tuổi
+                if (age < 22 || age > 70) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Tuổi của bác sĩ phải từ 22 đến 70!\nTuổi hiện tại: " + age, 
+                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    txtBirthDate.requestFocus();
+                    return;
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, 
+                    "Ngày sinh không hợp lệ! Vui lòng nhập định dạng yyyy-MM-dd.", 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                txtBirthDate.requestFocus();
+                return;
+            }
+            
+            SpecialtyItem selectedSpecialty = (SpecialtyItem) cbSpecialty.getSelectedItem();
+            controller.createDoctor(
+                "", // Truyền chuỗi rỗng cho username, sẽ được tạo tự động trong repository
+                txtFullName.getText(), 
+                txtEmail.getText(), 
+                txtPhone.getText(),
+                txtAddress.getText(), 
+                txtBirthDate.getText(), 
+                (Gender) cbGender.getSelectedItem(),
+                selectedSpecialty != null ? selectedSpecialty.getId() : null
+            );
+        });
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(formPanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
+    
+        contentPanel.add(titleLabel, BorderLayout.NORTH);
+        contentPanel.add(wrapperPanel, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }*/
 
+    public void showCreateDoctorForm() {
+        contentPanel.removeAll();
+        contentPanel.setLayout(new BorderLayout());
+    
+        JLabel titleLabel = new JLabel("Tạo tài khoản bác sĩ", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
+    
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(30, 50, 30, 50)
+        ));
+    
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 10, 15, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+    
+        JTextField txtFullName = new JTextField(40);
+        JTextField txtEmail = new JTextField(40);
+        JTextField txtPhone = new JTextField(40);
+        JTextField txtAddress = new JTextField(40);
+        // Loại bỏ JTextField cho ngày sinh
+        // JTextField txtBirthDate = new JTextField(40);
+        JComboBox<Gender> cbGender = new JComboBox<>(Gender.values());
+        
+        // Tạo model cho JComboBox chuyên khoa từ database
+        DefaultComboBoxModel<SpecialtyItem> specialtyModel = new DefaultComboBoxModel<>();
+        List<Map<String, String>> specialties = controller.getAllSpecialties();
+        
+        for (Map<String, String> specialty : specialties) {
+            specialtyModel.addElement(new SpecialtyItem(
+                specialty.get("id"),
+                specialty.get("name")
+            ));
+        }
+        
+        JComboBox<SpecialtyItem> cbSpecialty = new JComboBox<>(specialtyModel);
+    
+        Font fieldFont = new Font("Arial", Font.PLAIN, 16);
+        txtFullName.setFont(fieldFont);
+        txtEmail.setFont(fieldFont);
+        txtPhone.setFont(fieldFont);
+        txtAddress.setFont(fieldFont);
+        cbGender.setFont(fieldFont);
+        cbSpecialty.setFont(fieldFont);
+        
+        // Thiết lập DatePicker cho ngày sinh
+        UtilDateModel dateModel = new UtilDateModel();
+        
+        // Tính toán ngày cho phép: tuổi 22-70
+        Calendar minAgeCalendar = Calendar.getInstance();
+        minAgeCalendar.add(Calendar.YEAR, -70); // Tuổi tối đa là 70
+        
+        Calendar maxAgeCalendar = Calendar.getInstance();
+        maxAgeCalendar.add(Calendar.YEAR, -22); // Tuổi tối thiểu là 22
+        
+        // Chọn giá trị mặc định là 30 tuổi
+        Calendar defaultAgeCalendar = Calendar.getInstance(); 
+        defaultAgeCalendar.add(Calendar.YEAR, -30);
+        dateModel.setValue(defaultAgeCalendar.getTime());
+        
+        Properties properties = new Properties();
+        properties.put("text.today", "Hôm nay");
+        properties.put("text.month", "Tháng");
+        properties.put("text.year", "Năm");
+        
+        JDatePanelImpl datePanel = new JDatePanelImpl(dateModel, properties);
+        JDatePickerImpl datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
+        datePicker.getJFormattedTextField().setFont(fieldFont);
+        datePicker.setToolTipText("Tuổi của bác sĩ phải từ 22 đến 70 tuổi");
+        
+        addFormField(formPanel, gbc, "Họ và tên:", txtFullName, 0);
+        addFormField(formPanel, gbc, "Email:", txtEmail, 1);
+        addFormField(formPanel, gbc, "Số điện thoại:", txtPhone, 2);
+        addFormField(formPanel, gbc, "Địa chỉ:", txtAddress, 3);
+        addFormField(formPanel, gbc, "Ngày sinh:", datePicker, 4); // Thay thế bằng DatePicker
+        addFormField(formPanel, gbc, "Giới tính:", cbGender, 5);
+        addFormField(formPanel, gbc, "Chuyên khoa:", cbSpecialty, 6);
+    
+        JButton btnSubmit = new JButton("Tạo bác sĩ");
+        btnSubmit.setFont(new Font("Arial", Font.BOLD, 16));
+        btnSubmit.setBackground(new Color(0, 123, 255));
+        btnSubmit.setForeground(Color.WHITE);
+        btnSubmit.setFocusPainted(false);
+        btnSubmit.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnSubmit.setPreferredSize(new Dimension(200, 45));
+    
+        gbc.gridx = 0;
+        gbc.gridy = 7;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(30, 10, 10, 10);
+        formPanel.add(btnSubmit, gbc);
+    
+        btnSubmit.addActionListener(e -> {
+            // Kiểm tra trường Họ và tên
+            if (txtFullName.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Họ và tên không được để trống!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                txtFullName.requestFocus();
+                return;
+            }
+            
+            // Lấy giá trị ngày sinh từ JDatePicker
+            Date selectedDate = (Date) datePicker.getModel().getValue();
+            if (selectedDate == null) {
+                JOptionPane.showMessageDialog(this, "Vui lòng chọn ngày sinh!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                datePicker.requestFocus();
+                return;
+            }
+            
+            // Chuyển đổi sang LocalDate để tính tuổi
+            LocalDate birthDate = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            
+            // Tính tuổi
+            int age = LocalDate.now().getYear() - birthDate.getYear();
+            if (birthDate.plusYears(age).isAfter(LocalDate.now())) {
+                age--; // Điều chỉnh nếu sinh nhật trong năm nay chưa đến
+            }
+            
+            // Kiểm tra điều kiện tuổi
+            if (age < 22 || age > 70) {
+                JOptionPane.showMessageDialog(this, 
+                    "Tuổi của bác sĩ phải từ 22 đến 70!\nTuổi hiện tại: " + age, 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            SpecialtyItem selectedSpecialty = (SpecialtyItem) cbSpecialty.getSelectedItem();
+            controller.createDoctor(
+                "", // Truyền chuỗi rỗng cho username, sẽ được tạo tự động trong repository
+                txtFullName.getText(), 
+                txtEmail.getText(), 
+                txtPhone.getText(),
+                txtAddress.getText(), 
+                birthDate.toString(), // Chuyển Date thành String định dạng yyyy-MM-dd
+                (Gender) cbGender.getSelectedItem(),
+                selectedSpecialty != null ? selectedSpecialty.getId() : null
+            );
+        });
+    
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setOpaque(false);
+        wrapperPanel.add(formPanel, BorderLayout.CENTER);
+        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
+    
         contentPanel.add(titleLabel, BorderLayout.NORTH);
         contentPanel.add(wrapperPanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
     }
-
+    
     public void showManageDoctorForm(List<Doctor> doctors) {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());

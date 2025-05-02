@@ -313,7 +313,7 @@ public class DoctorController {
         }
     }
 
-        private void savePrintableCredentials(Patient patient) {
+    private void savePrintableCredentials(Patient patient) {
         // Tạo thư mục để lưu thông tin đăng nhập
         String directory = "credentials";
         File dir = new File(directory);
@@ -429,9 +429,16 @@ public class DoctorController {
             JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bệnh nhân và ngày hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+    
         try {
             LocalDate appointmentDate = LocalDate.parse(dateStr);
+            
+            // Kiểm tra ngày hẹn phải sau ngày hiện tại
+            if (appointmentDate.isBefore(LocalDate.now()) || appointmentDate.isEqual(LocalDate.now())) {
+                JOptionPane.showMessageDialog(view, "Ngày hẹn phải sau ngày hiện tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
             if (repository.bookAppointment(patientId, appointmentDate, doctorId)) {
                 JOptionPane.showMessageDialog(view, "Đặt lịch hẹn thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
                 showHome();
@@ -854,5 +861,50 @@ public class DoctorController {
         } else {
             return "Ngoài giờ làm việc";
         }
+    }
+
+    // Thêm vào DoctorController
+    public void showExamination() {
+        view.setSelectedButton(view.getBtnExamination());
+        view.showExamination();
+    }
+    
+    /**
+     * Lấy danh sách bệnh nhân chờ khám
+     */
+    public List<Object[]> getPatientsForExamination() {
+        // Gọi repository để lấy danh sách bệnh nhân chờ khám
+        return repository.getPatientsForExamination(doctorId);
+    }
+    
+    /**
+     * Tìm kiếm bệnh nhân chờ khám theo từ khóa
+     */
+    public List<Object[]> searchPatientsForExamination(String keyword) {
+        // Gọi repository để tìm kiếm bệnh nhân
+        return repository.searchPatientsForExamination(doctorId, keyword);
+    }
+    
+    /**
+     * Cập nhật trạng thái hoàn thành khám cho bệnh nhân
+     */
+    public void completeExamination(String patientId) {
+        // Gọi repository để cập nhật trạng thái
+        repository.completePatientExamination(patientId, doctorId);
+    }
+    
+    /**
+     * Sinh ID mới cho đơn thuốc
+     */
+    public String generateNewPrescriptionId() {
+        // Gọi repository để tạo ID mới
+        return repository.generateNewPrescriptionId();
+    }
+    
+    /**
+     * Lấy ID của bác sĩ hiện tại
+     */
+    public String getDoctorId() {
+        return doctorId;
     }
 }
