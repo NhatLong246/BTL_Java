@@ -658,26 +658,40 @@ public class DoctorRepository {
 
     // Thêm vào DoctorRepository
     public void checkDoctorScheduleTable() {
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement()) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
             // Kiểm tra xem bảng có tồn tại không
             DatabaseMetaData meta = conn.getMetaData();
             ResultSet tables = meta.getTables(null, null, "DoctorSchedule", null);
             if (!tables.next()) {
                 System.out.println("CẢNH BÁO: Bảng DoctorSchedule không tồn tại!");
+                // Tạo bảng nếu không tồn tại
+                createDoctorScheduleTable(conn);
                 return;
             }
             
             // Kiểm tra cấu trúc bảng
             ResultSet columns = meta.getColumns(null, null, "DoctorSchedule", null);
             System.out.println("Cấu trúc bảng DoctorSchedule:");
+            boolean hasScheduleIDColumn = false;
+            
             while (columns.next()) {
-                System.out.println(columns.getString("COLUMN_NAME") + " - " + columns.getString("TYPE_NAME"));
+                String columnName = columns.getString("COLUMN_NAME");
+                String typeName = columns.getString("TYPE_NAME");
+                System.out.println(columnName + " - " + typeName);
+                
+                if ("ScheduleID".equalsIgnoreCase(columnName)) {
+                    hasScheduleIDColumn = true;
+                }
+            }
+            
+            if (hasScheduleIDColumn) {
+                System.out.println("CẢNH BÁO: Bảng DoctorSchedule có cột ScheduleID không được dùng trong code hiện tại!");
             }
         } catch (SQLException e) {
             System.out.println("Lỗi kiểm tra bảng: " + e.getMessage());
         }
     }
+    
 
     /**
      * Lấy danh sách bệnh nhân đang chờ khám bệnh

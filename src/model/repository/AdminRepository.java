@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.DatabaseMetaData;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -103,81 +104,8 @@ public class AdminRepository {
         return doctors;
     }
 
-    // public boolean createDoctor(String userId, String fullName, LocalDate dateOfBirth, String address, Gender gender,
-    //                             String phoneNumber, String specialtyId, String email) {
-    //     Connection conn = null;
-    //     try {
-    //         conn = DatabaseConnection.getConnection();
-    //         if (conn == null) {
-    //             System.err.println("Không thể kết nối đến cơ sở dữ liệu!");
-    //             return false;
-    //         }
-    //         conn.setAutoCommit(false);
-
-    //         String doctorId = Doctor.generateNewDoctorID(conn);
-
-    //         String userSql = "INSERT INTO UserAccounts (UserID, UserName, FullName, Role, Email, PhoneNumber, PasswordHash, IsLocked) " +
-    //                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    //         try (PreparedStatement pstmt = conn.prepareStatement(userSql)) {
-    //             String username = email.split("@")[0];
-    //             pstmt.setString(1, userId);
-    //             pstmt.setString(2, username);
-    //             pstmt.setString(3, fullName);
-    //             pstmt.setString(4, "Bác sĩ");
-    //             pstmt.setString(5, email);
-    //             pstmt.setString(6, phoneNumber);
-    //             pstmt.setString(7, hashPassword("Doctor@123"));
-    //             pstmt.setBoolean(8, false); // Mặc định không khóa
-    //             pstmt.executeUpdate();
-    //         }
-
-    //         String doctorSql = "INSERT INTO Doctors (DoctorID, UserID, DateOfBirth, Gender, Address, SpecialtyID, CreatedAt) " +
-    //                           "VALUES (?, ?, ?, ?, ?, ?, ?)";
-    //         try (PreparedStatement pstmt = conn.prepareStatement(doctorSql)) {
-    //             pstmt.setString(1, doctorId);
-    //             pstmt.setString(2, userId);
-    //             pstmt.setDate(3, java.sql.Date.valueOf(dateOfBirth));
-    //             pstmt.setString(4, gender != null ? gender.getVietnamese() : null);
-    //             pstmt.setString(5, address);
-    //             pstmt.setString(6, specialtyId);
-    //             pstmt.setDate(7, java.sql.Date.valueOf(LocalDate.now()));
-    //             pstmt.executeUpdate();
-    //         }
-
-    //         conn.commit();
-    //         System.out.println("Đã tạo bác sĩ mới với DoctorID: " + doctorId);
-    //         return true;
-    //     } catch (SQLException e) {
-    //         if (conn != null) {
-    //             try {
-    //                 conn.rollback();
-    //             } catch (SQLException ex) {
-    //                 System.err.println("Lỗi khi rollback giao dịch: " + ex.getMessage());
-    //                 ex.printStackTrace();
-    //             }
-    //         }
-    //         System.err.println("Lỗi SQL khi tạo bác sĩ: " + e.getMessage());
-    //         e.printStackTrace();
-    //         return false;
-    //     } catch (Exception e) {
-    //         System.err.println("Lỗi không xác định khi tạo bác sĩ: " + e.getMessage());
-    //         e.printStackTrace();
-    //         return false;
-    //     } finally {
-    //         if (conn != null) {
-    //             try {
-    //                 conn.setAutoCommit(true);
-    //                 conn.close();
-    //             } catch (SQLException e) {
-    //                 System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
-    //                 e.printStackTrace();
-    //             }
-    //         }
-    //     }
-    // }
-
     public boolean createDoctor(String userId, String fullName, LocalDate dateOfBirth, String address, Gender gender,
-                                String phoneNumber, String specialtyId, String email) {
+                               String phoneNumber, String specialtyId, String email) {
         Connection conn = null;
         String username = "";
         String defaultPassword = "";
@@ -200,6 +128,21 @@ public class AdminRepository {
             this.lastCreatedUsername = username;
             this.lastCreatedPassword = defaultPassword;
     
+            // Xử lý null hoặc rỗng cho phoneNumber và email
+            if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+                phoneNumber = "Chưa cập nhật"; // Giá trị mặc định thay vì rỗng
+                System.out.println("Phone number trống, đã gán giá trị mặc định");
+            }
+            
+            if (email == null || email.trim().isEmpty()) {
+                email = username + "@example.com"; // Giá trị mặc định
+                System.out.println("Email trống, đã gán giá trị mặc định");
+            }
+    
+            // Debug để kiểm tra giá trị
+            System.out.println("Phone number trước khi chèn vào DB: '" + phoneNumber + "'");
+            System.out.println("Email trước khi chèn vào DB: '" + email + "'");
+    
             // Không sử dụng hashPassword() nữa, sử dụng SHA2() trong SQL như trong PatientRepository
             String userSql = "INSERT INTO UserAccounts (UserID, UserName, FullName, Role, Email, PhoneNumber, PasswordHash, IsLocked, PasswordChangeRequired) " +
                             "VALUES (?, ?, ?, ?, ?, ?, SHA2(?, 256), ?, ?)";
@@ -216,29 +159,28 @@ public class AdminRepository {
                 pstmt.executeUpdate();
             }
     
-            // Sửa câu lệnh SQL thêm trường FullName vào danh sách cột
-            String doctorSql = "INSERT INTO Doctors (DoctorID, UserID, DateOfBirth, Gender, Address, SpecialtyID, CreatedAt, FullName) " +
-                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // Sửa câu lệnh SQL thêm trường PhoneNumber và Email vào danh sách cột
+            String doctorSql = "INSERT INTO Doctors (DoctorID, UserID, DateOfBirth, Gender, Address, SpecialtyID, CreatedAt, FullName, PhoneNumber, Email) " +
+                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             try (PreparedStatement pstmt = conn.prepareStatement(doctorSql)) {
                 pstmt.setString(1, doctorId);
                 pstmt.setString(2, newUserId);
                 pstmt.setDate(3, java.sql.Date.valueOf(dateOfBirth));
-                pstmt.setString(4, gender != null ? gender.getVietnamese() : null);
-                pstmt.setString(5, address);
+                pstmt.setString(4, gender != null ? gender.getVietnamese() : "Nam"); // Giá trị mặc định nếu null
+                pstmt.setString(5, address != null ? address : "Chưa cập nhật");
                 pstmt.setString(6, specialtyId);
                 pstmt.setDate(7, java.sql.Date.valueOf(LocalDate.now()));
-                pstmt.setString(8, fullName); // Thêm giá trị cho trường FullName
+                pstmt.setString(8, fullName);
+                pstmt.setString(9, phoneNumber); // Thêm số điện thoại vào bảng Doctors
+                pstmt.setString(10, email);      // Thêm email vào bảng Doctors
                 pstmt.executeUpdate();
             }
     
             conn.commit();
             System.out.println("Đã tạo bác sĩ mới với DoctorID: " + doctorId);
             
-            // Lưu thông tin đăng nhập vào Doctor để hiển thị
-            Doctor createdDoctor = new Doctor();
-            createdDoctor.setDoctorId(doctorId);
-            createdDoctor.setTempUsername(username);
-            createdDoctor.setTempPassword(defaultPassword);
+            // Kiểm tra dữ liệu sau khi thêm
+            verifyDoctorData(conn, doctorId);
             
             return true;
         } catch (SQLException e) {
@@ -273,6 +215,36 @@ public class AdminRepository {
                 } catch (SQLException e) {
                     System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
                     e.printStackTrace();
+                }
+            }
+        }
+    }
+    
+    /**
+     * Kiểm tra dữ liệu bác sĩ sau khi thêm vào cơ sở dữ liệu
+     * @param conn Connection đến cơ sở dữ liệu
+     * @param doctorId ID của bác sĩ cần kiểm tra
+     * @throws SQLException nếu có lỗi SQL
+     */
+    private void verifyDoctorData(Connection conn, String doctorId) throws SQLException {
+        String sql = "SELECT d.DoctorID, d.FullName, d.PhoneNumber, d.Email, u.PhoneNumber as UserPhone, u.Email as UserEmail " +
+                     "FROM Doctors d " +
+                     "JOIN UserAccounts u ON d.UserID = u.UserID " +
+                     "WHERE d.DoctorID = ?";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, doctorId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    System.out.println("Kiểm tra dữ liệu sau khi thêm bác sĩ:");
+                    System.out.println("DoctorID: " + rs.getString("DoctorID"));
+                    System.out.println("FullName: " + rs.getString("FullName"));
+                    System.out.println("PhoneNumber trong bảng Doctors: " + rs.getString("PhoneNumber"));
+                    System.out.println("PhoneNumber trong bảng UserAccounts: " + rs.getString("UserPhone"));
+                    System.out.println("Email trong bảng Doctors: " + rs.getString("Email"));
+                    System.out.println("Email trong bảng UserAccounts: " + rs.getString("UserEmail"));
+                } else {
+                    System.out.println("Không tìm thấy bác sĩ với ID: " + doctorId);
                 }
             }
         }
@@ -642,6 +614,12 @@ public class AdminRepository {
         return lockedDoctors;
     }
 
+    /**
+     * Lưu lịch làm việc của bác sĩ
+     * @param doctorId ID của bác sĩ
+     * @param schedule Mảng 2 chiều boolean chứa trạng thái làm việc
+     * @return true nếu lưu thành công, false nếu có lỗi
+     */
     public boolean saveDoctorSchedule(String doctorId, boolean[][] schedule) {
         Connection conn = null;
         try {
@@ -651,7 +629,8 @@ public class AdminRepository {
                 return false;
             }
             conn.setAutoCommit(false);
-
+    
+            // Kiểm tra bác sĩ tồn tại
             String checkSql = "SELECT COUNT(*) FROM Doctors WHERE DoctorID = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(checkSql)) {
                 pstmt.setString(1, doctorId);
@@ -661,35 +640,39 @@ public class AdminRepository {
                     return false;
                 }
             }
-
+    
+            // Xóa lịch cũ
             String deleteSql = "DELETE FROM DoctorSchedule WHERE DoctorID = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(deleteSql)) {
                 pstmt.setString(1, doctorId);
                 pstmt.executeUpdate();
             }
-
-            String insertSql = "INSERT INTO DoctorSchedule (ScheduleID, DoctorID, DayOfWeek, ShiftType, Status) VALUES (?, ?, ?, ?, ?)";
+    
+            // Kiểm tra cấu trúc bảng DoctorSchedule
             String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
             String[] shifts = {"Sáng", "Chiều", "Tối"};
+            
+            // Sử dụng câu lệnh SQL đúng với cấu trúc bảng
+            String insertSql = "INSERT INTO DoctorSchedule (DoctorID, DayOfWeek, ShiftType, Status) VALUES (?, ?, ?, ?)";
+            
             try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
-                for (int shift = 0; shift < 3; shift++) {
-                    for (int day = 0; day < 7; day++) {
+                for (int shift = 0; shift < shifts.length; shift++) {
+                    for (int day = 0; day < days.length; day++) {
                         if (schedule[shift][day]) {
-                            String scheduleId = "SCH-" + UUID.randomUUID().toString().substring(0, 8);
-                            pstmt.setString(1, scheduleId);
-                            pstmt.setString(2, doctorId);
-                            pstmt.setString(3, days[day]);
-                            pstmt.setString(4, shifts[shift]);
-                            pstmt.setString(5, "Đang làm việc");
+                            pstmt.setString(1, doctorId);
+                            pstmt.setString(2, days[day]);
+                            pstmt.setString(3, shifts[shift]);
+                            pstmt.setString(4, "Đang làm việc");
                             pstmt.addBatch();
                         }
                     }
                 }
-                pstmt.executeBatch();
+                // Thực hiện batch update
+                int[] result = pstmt.executeBatch();
+                System.out.println("Đã cập nhật " + result.length + " ca làm việc cho bác sĩ ID: " + doctorId);
             }
-
+    
             conn.commit();
-            System.out.println("Đã lưu lịch làm việc cho bác sĩ với DoctorID: " + doctorId);
             return true;
         } catch (SQLException e) {
             System.err.println("Lỗi SQL khi lưu lịch làm việc: " + e.getMessage());
@@ -697,8 +680,7 @@ public class AdminRepository {
                 try {
                     conn.rollback();
                 } catch (SQLException ex) {
-                    System.err.println("Lỗi khi rollback giao dịch: " + ex.getMessage());
-                    ex.printStackTrace();
+                    System.err.println("Lỗi khi rollback: " + ex.getMessage());
                 }
             }
             e.printStackTrace();
@@ -708,14 +690,12 @@ public class AdminRepository {
                 try {
                     conn.setAutoCommit(true);
                     conn.close();
-                    System.out.println("Đã đóng kết nối cơ sở dữ liệu");
                 } catch (SQLException e) {
                     System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
-                    e.printStackTrace();
                 }
             }
         }
-    } 
+    }
 
     public Doctor getDoctorInfo(String doctorId) {
         String sql = "SELECT d.DoctorID, u.UserID, u.FullName, u.Email, u.PhoneNumber, d.Address, d.DateOfBirth, d.Gender, " +
@@ -800,5 +780,193 @@ public class AdminRepository {
         }
         
         return specialties;
+    }
+
+    /**
+     * Lấy tóm tắt lịch làm việc của tất cả bác sĩ
+     * @return Mảng 2 chiều chứa trạng thái làm việc theo ca và ngày trong tuần
+     */
+    public String[][] getDoctorScheduleSummary() {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                System.err.println("Không thể kết nối đến cơ sở dữ liệu!");
+                return null;
+            }
+            
+            String[][] scheduleData = new String[3][7]; // 3 ca x 7 ngày
+            
+            // Mặc định tất cả là "Không làm việc"
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 7; j++) {
+                    scheduleData[i][j] = "Không làm việc";
+                }
+            }
+            
+            // Lấy danh sách các ca làm việc từ database
+            String sql = "SELECT DayOfWeek, ShiftType, Status, COUNT(*) as DoctorCount " +
+                         "FROM DoctorSchedule " +
+                         "GROUP BY DayOfWeek, ShiftType, Status";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+                
+                while (rs.next()) {
+                    String dayOfWeek = rs.getString("DayOfWeek");
+                    String shiftType = rs.getString("ShiftType");
+                    String status = rs.getString("Status");
+                    int doctorCount = rs.getInt("DoctorCount");
+                    
+                    // Chuyển đổi tên ngày sang index (0-6)
+                    int dayIndex;
+                    switch (dayOfWeek) {
+                        case "Thứ Hai": dayIndex = 0; break;
+                        case "Thứ Ba": dayIndex = 1; break;
+                        case "Thứ Tư": dayIndex = 2; break;
+                        case "Thứ Năm": dayIndex = 3; break;
+                        case "Thứ Sáu": dayIndex = 4; break;
+                        case "Thứ Bảy": dayIndex = 5; break;
+                        case "Chủ Nhật": dayIndex = 6; break;
+                        default: continue;
+                    }
+                    
+                    // Chuyển đổi ca làm việc sang index (0-2)
+                    int shiftIndex;
+                    switch (shiftType) {
+                        case "Sáng": shiftIndex = 0; break;
+                        case "Chiều": shiftIndex = 1; break;
+                        case "Tối": shiftIndex = 2; break;
+                        default: continue;
+                    }
+                    
+                    // Nếu có bác sĩ đang làm việc, đánh dấu ca đó là "Đang làm việc"
+                    if (status.equals("Đang làm việc") && doctorCount > 0) {
+                        scheduleData[shiftIndex][dayIndex] = "Đang làm việc";
+                    }
+                    // Nếu có ca "Hết ca làm việc" và không có ca "Đang làm việc"
+                    else if (status.equals("Hết ca làm việc") && 
+                            !scheduleData[shiftIndex][dayIndex].equals("Đang làm việc")) {
+                        scheduleData[shiftIndex][dayIndex] = "Hết ca làm việc";
+                    }
+                }
+                
+                // Xử lý thêm: cập nhật trạng thái dựa trên thời gian hiện tại
+                LocalDate today = LocalDate.now();
+                LocalTime now = LocalTime.now();
+                int todayIndex = today.getDayOfWeek().getValue() - 1; // 0 = Thứ Hai
+                
+                // Kiểm tra và cập nhật trạng thái các ca đã qua trong ngày hôm nay
+                if (now.isAfter(LocalTime.of(11, 30)) && scheduleData[0][todayIndex].equals("Đang làm việc")) {
+                    scheduleData[0][todayIndex] = "Hết ca làm việc";
+                }
+                if (now.isAfter(LocalTime.of(17, 0)) && scheduleData[1][todayIndex].equals("Đang làm việc")) {
+                    scheduleData[1][todayIndex] = "Hết ca làm việc";
+                }
+                
+                // Kiểm tra và cập nhật trạng thái các ngày đã qua trong tuần
+                for (int day = 0; day < todayIndex; day++) {
+                    for (int shift = 0; shift < 3; shift++) {
+                        if (scheduleData[shift][day].equals("Đang làm việc")) {
+                            scheduleData[shift][day] = "Hết ca làm việc";
+                        }
+                    }
+                }
+                
+                return scheduleData;
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi SQL khi lấy thông tin lịch làm việc: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    /**
+     * Lấy lịch làm việc của bác sĩ theo ID
+     * @param doctorId ID của bác sĩ
+     * @return Mảng 2 chiều boolean[3][7] chứa trạng thái làm việc (true = làm việc)
+     */
+    public boolean[][] getDoctorSchedule(String doctorId) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                System.err.println("Không thể kết nối đến cơ sở dữ liệu!");
+                return null;
+            }
+            
+            boolean[][] schedule = new boolean[3][7]; // 3 ca x 7 ngày, mặc định là false (không làm việc)
+            
+            // Kiểm tra xem bảng DoctorSchedule có tồn tại không
+            try {
+                // Lấy thông tin ca làm việc từ database
+                String sql = "SELECT DayOfWeek, ShiftType FROM DoctorSchedule WHERE DoctorID = ? AND Status = 'Đang làm việc'";
+                
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, doctorId);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        while (rs.next()) {
+                            String dayOfWeek = rs.getString("DayOfWeek");
+                            String shiftType = rs.getString("ShiftType");
+                            
+                            int dayIndex;
+                            switch (dayOfWeek) {
+                                case "Thứ Hai": dayIndex = 0; break;
+                                case "Thứ Ba": dayIndex = 1; break;
+                                case "Thứ Tư": dayIndex = 2; break;
+                                case "Thứ Năm": dayIndex = 3; break;
+                                case "Thứ Sáu": dayIndex = 4; break;
+                                case "Thứ Bảy": dayIndex = 5; break;
+                                case "Chủ Nhật": dayIndex = 6; break;
+                                default: continue;
+                            }
+                            
+                            int shiftIndex;
+                            switch (shiftType) {
+                                case "Sáng": shiftIndex = 0; break;
+                                case "Chiều": shiftIndex = 1; break;
+                                case "Tối": shiftIndex = 2; break;
+                                default: continue;
+                            }
+                            
+                            // Đánh dấu ca làm việc
+                            schedule[shiftIndex][dayIndex] = true;
+                        }
+                    }
+                    
+                    return schedule;
+                }
+            } catch (SQLException e) {
+                System.err.println("Lỗi SQL khi tải lịch làm việc: " + e.getMessage());
+                // Nếu có lỗi, có thể là do bảng chưa được tạo hoặc cấu trúc không đúng
+                System.err.println("Chi tiết lỗi: " + e.getMessage());
+                return null;
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Lỗi không xác định khi tải lịch làm việc: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                    System.out.println("Đã đóng kết nối cơ sở dữ liệu");
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }

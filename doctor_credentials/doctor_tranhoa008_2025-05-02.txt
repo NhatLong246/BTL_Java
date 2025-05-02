@@ -1,0 +1,11 @@
+THÔNG TIN ĐĂNG NHẬP HỆ THỐNG QUẢN LÝ BỆNH NHÂN
+-----------------------------------------------
+Họ và tên: Trần Hòa
+Email: tranhoa@gmail.com
+
+Tên đăng nhập: tranhoa008
+Mật khẩu: %&Umh%w2
+
+Vui lòng đổi mật khẩu khi đăng nhập lần đầu tiên.
+-----------------------------------------------
+Ngày tạo: 2025-05-02

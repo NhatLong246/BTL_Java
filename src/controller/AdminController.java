@@ -10,6 +10,7 @@ import view.AdminView;
 import javax.swing.*;
 
 import database.DatabaseConnection;
+import view.LoginView;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -67,54 +68,6 @@ public class AdminController {
     public List<Map<String, String>> getAllSpecialties() {
         return adminRepository.getAllSpecialties();
     }
-
-    // public void createDoctor(String username, String fullName, String email, String phone, String address,
-    //                          String birthDate, Gender gender, String specialtyId) {
-    //     try {
-    //         if (username.isEmpty() || fullName.isEmpty() || email.isEmpty() || phone.isEmpty() ||
-    //             address.isEmpty() || birthDate.isEmpty()) {
-    //             JOptionPane.showMessageDialog(view, "Vui lòng điền đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //             return;
-    //         }
-    
-    //         LocalDate dateOfBirth;
-    //         try {
-    //             dateOfBirth = LocalDate.parse(birthDate);
-    //         } catch (Exception e) {
-    //             JOptionPane.showMessageDialog(view, "Ngày sinh không hợp lệ! Vui lòng nhập định dạng yyyy-MM-dd.", 
-    //                 "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //             return;
-    //         }
-    
-    //         String userId = "USR-" + UUID.randomUUID().toString().substring(0, 8);
-    //         String defaultPassword = "Doctor@123";
-    //         String passwordHash = hashPassword(defaultPassword);
-    
-    //         boolean userCreated = userRepository.registerUser(
-    //             userId, username, fullName, "Bác sĩ", email, phone, passwordHash
-    //         );
-    
-    //         if (!userCreated) {
-    //             JOptionPane.showMessageDialog(view, "Không thể tạo tài khoản người dùng!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //             return;
-    //         }
-    
-    //         boolean doctorCreated = adminRepository.createDoctor(
-    //             userId, fullName, dateOfBirth, address, gender, phone, specialtyId, email
-    //         );
-    
-    //         if (doctorCreated) {
-    //             JOptionPane.showMessageDialog(view, "Tạo tài khoản bác sĩ thành công!\nMật khẩu mặc định: " + defaultPassword,
-    //                 "Thành công", JOptionPane.INFORMATION_MESSAGE);
-    //         } else {
-    //             userRepository.deleteUser(userId);
-    //             JOptionPane.showMessageDialog(view, "Không thể tạo bác sĩ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //         }
-    //     } catch (Exception e) {
-    //         JOptionPane.showMessageDialog(view, "Lỗi: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //         e.printStackTrace();
-    //     }
-    // }
 
     public void createDoctor(String username, String fullName, String email, String phone, String address,
                              String birthDate, Gender gender, String specialtyId) {
@@ -321,22 +274,43 @@ public class AdminController {
         view.showScheduleDoctorForm();
     }
 
-    public void saveDoctorSchedule(String doctorId, boolean[][] schedule) {
+    /**
+     * Lưu lịch làm việc của bác sĩ
+     * @param doctorId ID của bác sĩ
+     * @param schedule Mảng 2 chiều boolean chứa trạng thái làm việc theo ca và ngày
+     * @return true nếu lưu thành công, false nếu có lỗi
+     */
+    public boolean saveDoctorSchedule(String doctorId, boolean[][] schedule) {
         try {
-            if (doctorId.isEmpty()) {
-                JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bác sĩ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                return;
+            // Kiểm tra bác sĩ có tồn tại
+            Doctor doctor = adminRepository.getDoctorInfo(doctorId);
+            if (doctor == null) {
+                JOptionPane.showMessageDialog(view, 
+                    "Không tìm thấy bác sĩ với ID: " + doctorId, 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return false;
             }
-
-            boolean success = adminRepository.saveDoctorSchedule(doctorId, schedule);
-            if (success) {
-                JOptionPane.showMessageDialog(view, "Lưu lịch làm việc thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            
+            // Gọi phương thức lưu lịch trong repository
+            boolean result = adminRepository.saveDoctorSchedule(doctorId, schedule);
+            
+            if (result) {
+                JOptionPane.showMessageDialog(view, 
+                    "Đã lưu lịch làm việc cho bác sĩ " + doctor.getFullName() + " thành công!", 
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(view, "Không tìm thấy bác sĩ hoặc lỗi khi lưu lịch!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(view, 
+                    "Không thể lưu lịch làm việc! Vui lòng thử lại sau.", 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
+            
+            return result;
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(view, "Lỗi: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(view, 
+                "Lỗi khi lưu lịch làm việc: " + e.getMessage(), 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
+            return false;
         }
     }
 
@@ -374,10 +348,45 @@ public class AdminController {
         );
         if (confirm == JOptionPane.YES_OPTION) {
             view.dispose();
+            new LoginView().setVisible(true);
         }
     }
 
     private String hashPassword(String password) {
         return password; // Thay bằng BCrypt.hashpw(password, BCrypt.gensalt());
+    }
+
+    /**
+     * Lấy tóm tắt lịch làm việc của tất cả bác sĩ
+     * @return Mảng 2 chiều chứa trạng thái làm việc theo ca và ngày
+     */
+    public String[][] getDoctorScheduleSummary() {
+        return adminRepository.getDoctorScheduleSummary();
+    }
+
+        /**
+     * Lấy lịch làm việc của bác sĩ theo ID
+     * @param doctorId ID của bác sĩ
+     * @return Mảng 2 chiều boolean chứa trạng thái làm việc theo ca và ngày trong tuần
+     */
+    public boolean[][] getDoctorSchedule(String doctorId) {
+        try {
+            // Kiểm tra xem bác sĩ có tồn tại không
+            Doctor doctor = adminRepository.getDoctorInfo(doctorId);
+            if (doctor == null) {
+                JOptionPane.showMessageDialog(view, 
+                    "Không tìm thấy bác sĩ với ID: " + doctorId, 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
+            
+            return adminRepository.getDoctorSchedule(doctorId);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(view, 
+                "Lỗi khi tải lịch làm việc: " + e.getMessage(), 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            return null;
+        }
     }
 }
