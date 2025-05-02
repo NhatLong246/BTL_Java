@@ -1,12 +1,14 @@
 package view;
 
 import controller.DoctorController;
+import model.entity.MedicalRecord;
 import model.entity.Patient;
 import model.enums.Gender;
 
 import javax.swing.*;
 import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -40,6 +42,7 @@ public class DoctorView extends JFrame {
     private JComboBox<Gender> cbGender;
     private DefaultTableModel tableModel;
     private JTable table;
+    private JButton btnExamination;
 
     private ImageIcon workingIcon;
     private ImageIcon finishedIcon;
@@ -61,6 +64,74 @@ public class DoctorView extends JFrame {
                 return dateFormatter.format(cal.getTime());
             }
             return "";
+        }
+    }
+
+        /**
+     * Renderer cho nút trong JTable
+     */
+    class ButtonRenderer extends JButton implements TableCellRenderer {
+        public ButtonRenderer() {
+            setOpaque(true);
+            setForeground(Color.WHITE);
+            setBackground(new Color(0, 123, 255));
+            setFocusPainted(false);
+        }
+    
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            setText("Chọn");
+            return this;
+        }
+    }
+    
+    /**
+     * Editor cho nút trong JTable
+     */
+    class ButtonEditor extends DefaultCellEditor {
+        protected JButton button;
+        private String label;
+        private boolean isPushed;
+        private int selectedRow;
+        private JTable table;
+        
+        public ButtonEditor(JCheckBox checkBox) {
+            super(checkBox);
+            button = new JButton();
+            button.setOpaque(true);
+            button.setForeground(Color.WHITE);
+            button.setBackground(new Color(0, 123, 255));
+            button.setFocusPainted(false);
+            
+            button.addActionListener(e -> fireEditingStopped());
+        }
+        
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            this.table = table;
+            this.selectedRow = row;
+            label = "Chọn";
+            button.setText(label);
+            isPushed = true;
+            return button;
+        }
+        
+        @Override
+        public Object getCellEditorValue() {
+            if (isPushed) {
+                // Chọn hàng khi nhấn nút
+                table.setRowSelectionInterval(selectedRow, selectedRow);
+            }
+            isPushed = false;
+            return label;
+        }
+        
+        @Override
+        public boolean stopCellEditing() {
+            isPushed = false;
+            return super.stopCellEditing();
         }
     }
 
@@ -123,6 +194,7 @@ public class DoctorView extends JFrame {
         btnView = createButton("Xem danh sách bệnh nhân");
         btnBook = createButton("Đặt lịch hẹn");
         btnDel = createButton("Xóa bệnh nhân");
+        btnExamination = createButton("Khám bệnh");
         btnLogout = createButton("Đăng xuất");
 
         setSelectedButton(btnHome);
@@ -139,13 +211,15 @@ public class DoctorView extends JFrame {
         gbc.gridy = 4;
         leftPanel.add(btnBook, gbc);
         gbc.gridy = 5;
+        leftPanel.add(btnExamination, gbc);
+        gbc.gridy = 6;
         leftPanel.add(btnDel, gbc);
         
-        gbc.gridy = 6;
+        gbc.gridy = 7;
         gbc.weighty = 0.0;
         leftPanel.add(btnLogout, gbc);
 
-        gbc.gridy = 7;
+        gbc.gridy = 8;
         gbc.weighty = 1.0;
         leftPanel.add(new JLabel(), gbc);
 
@@ -160,6 +234,7 @@ public class DoctorView extends JFrame {
         btnAdd.addActionListener(e -> controller.showAddPatientForm());
         btnView.addActionListener(e -> controller.showPatientList());
         btnBook.addActionListener(e -> controller.showBookAppointment());
+        btnExamination.addActionListener(e -> controller.showExamination());
         btnDel.addActionListener(e -> controller.showDeletePatientForm());
         btnLogout.addActionListener(e -> logout());
     }
@@ -168,6 +243,10 @@ public class DoctorView extends JFrame {
         JButton button = new JButton(text);
         styleButton(button);
         return button;
+    }
+
+    public JButton getBtnExamination() {
+        return btnExamination;
     }
 
     private void styleButton(JButton button) {
@@ -1308,4 +1387,495 @@ public class DoctorView extends JFrame {
             }
         }
     }
+
+    /**
+     * Hiển thị giao diện khám bệnh, cho phép bác sĩ xem danh sách bệnh nhân chờ khám
+     * và kê đơn thuốc cho họ
+     */
+    /* public void showExamination() {
+        contentPanel.removeAll();
+        contentPanel.setLayout(new BorderLayout());
+    
+        JLabel titleLabel = new JLabel("Khám bệnh", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 20, 0));
+    
+        // Panel tìm kiếm
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        searchPanel.setBackground(Color.WHITE);
+        searchPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+    
+        JLabel searchLabel = new JLabel("Tìm kiếm bệnh nhân:");
+        JTextField searchField = new JTextField(20);
+        JButton searchButton = new JButton("Tìm kiếm");
+        searchButton.setBackground(new Color(0, 123, 255));
+        searchButton.setForeground(Color.WHITE);
+        searchButton.setFocusPainted(false);
+    
+        searchPanel.add(searchLabel);
+        searchPanel.add(searchField);
+        searchPanel.add(searchButton);
+    
+        // Panel danh sách bệnh nhân
+        JPanel patientListPanel = new JPanel(new BorderLayout());
+        patientListPanel.setBackground(Color.WHITE);
+        patientListPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+    
+        // Tạo bảng danh sách bệnh nhân
+        String[] columnNames = {"ID", "Họ và tên", "Ngày sinh", "Số điện thoại", "Bệnh chính", "Trạng thái", "Chọn"};
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 6; // Chỉ cho phép chỉnh sửa cột "Chọn"
+            }
+            
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 6) {
+                    return Boolean.class; // Cột checkbox
+                }
+                return String.class;
+            }
+        };
+        
+        JTable patientTable = new JTable(tableModel);
+        patientTable.setRowHeight(35);
+        patientTable.setFont(new Font("Arial", Font.PLAIN, 14));
+        patientTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+        
+        // Load dữ liệu bệnh nhân từ controller
+        List<Object[]> patientRecords = controller.getPatientsForExamination();
+        if (patientRecords != null && !patientRecords.isEmpty()) {
+            for (Object[] record : patientRecords) {
+                Patient patient = (Patient) record[0];
+                MedicalRecord medicalRecord = (MedicalRecord) record[1];
+                String email = (String) record[2];
+                
+                // Lấy thông tin bệnh lý từ MedicalRecord nếu có
+                String diagnosis = "";
+                if (medicalRecord != null) {
+                    diagnosis = medicalRecord.getDiagnosis();
+                }
+                
+                tableModel.addRow(new Object[]{
+                    patient.getPatientID(),
+                    patient.getFullName(),
+                    patient.getDateOfBirth().toString(),
+                    patient.getPhoneNumber(),
+                    diagnosis,
+                    "Chờ khám",
+                    Boolean.FALSE
+                });
+            }
+        }
+    
+        JScrollPane scrollPane = new JScrollPane(patientTable);
+        patientListPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Panel chứa các nút chức năng
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        buttonPanel.setOpaque(false);
+        
+        JButton prescriptionButton = createQuickButton("Kê đơn thuốc", new Color(40, 167, 69));
+        JButton completeButton = createQuickButton("Hoàn thành khám", new Color(0, 123, 255));
+        
+        buttonPanel.add(prescriptionButton);
+        buttonPanel.add(completeButton);
+        
+        // Xử lý sự kiện khi nhấn nút kê đơn thuốc
+        prescriptionButton.addActionListener(e -> {
+            // Kiểm tra xem có bệnh nhân nào được chọn không
+            boolean hasSelection = false;
+            String selectedPatientId = null;
+            String patientName = null;
+            
+            for (int i = 0; i < tableModel.getRowCount(); i++) {
+                Boolean isSelected = (Boolean) tableModel.getValueAt(i, 6);
+                if (isSelected) {
+                    hasSelection = true;
+                    selectedPatientId = (String) tableModel.getValueAt(i, 0);
+                    patientName = (String) tableModel.getValueAt(i, 1);
+                    break;
+                }
+            }
+            
+            if (!hasSelection) {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng chọn bệnh nhân cần kê đơn", 
+                    "Thông báo", 
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Mở giao diện kê đơn thuốc
+            openPrescriptionView(selectedPatientId, patientName);
+        });
+        
+        // Xử lý sự kiện khi nhấn nút hoàn thành khám
+        completeButton.addActionListener(e -> {
+            int selectedCount = 0;
+            for (int i = 0; i < tableModel.getRowCount(); i++) {
+                Boolean isSelected = (Boolean) tableModel.getValueAt(i, 6);
+                if (isSelected) {
+                    selectedCount++;
+                    String patientId = (String) tableModel.getValueAt(i, 0);
+                    tableModel.setValueAt("Đã khám xong", i, 5);
+                    controller.completeExamination(patientId);
+                }
+            }
+            
+            if (selectedCount == 0) {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng chọn bệnh nhân đã hoàn thành khám", 
+                    "Thông báo", 
+                    JOptionPane.WARNING_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    "Đã cập nhật " + selectedCount + " bệnh nhân hoàn thành khám", 
+                    "Thành công", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        
+        // Xử lý tìm kiếm bệnh nhân
+        searchButton.addActionListener(e -> {
+            String keyword = searchField.getText().trim();
+            if (keyword.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng nhập từ khóa tìm kiếm", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            // Gọi controller để tìm kiếm
+            List<Object[]> searchResults = controller.searchPatientsForExamination(keyword);
+            
+            // Cập nhật bảng
+            tableModel.setRowCount(0);
+            
+            if (searchResults.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không tìm thấy bệnh nhân nào phù hợp", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                for (Object[] record : searchResults) {
+                    Patient patient = (Patient) record[0];
+                    MedicalRecord medicalRecord = (MedicalRecord) record[1];
+                    String email = (String) record[2];
+                    
+                    String diagnosis = "";
+                    if (medicalRecord != null) {
+                        diagnosis = medicalRecord.getDiagnosis();
+                    }
+                    
+                    tableModel.addRow(new Object[]{
+                        patient.getPatientID(),
+                        patient.getFullName(),
+                        patient.getDateOfBirth().toString(),
+                        patient.getPhoneNumber(),
+                        diagnosis,
+                        "Chờ khám",
+                        Boolean.FALSE
+                    });
+                }
+            }
+        });
+    
+        // Tạo layout chính
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setOpaque(false);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
+        
+        mainPanel.add(searchPanel, BorderLayout.NORTH);
+        mainPanel.add(patientListPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        contentPanel.add(titleLabel, BorderLayout.NORTH);
+        contentPanel.add(mainPanel, BorderLayout.CENTER);
+    
+        setSelectedButton(btnExamination);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    } */
+
+    /**
+     * Hiển thị giao diện khám bệnh, cho phép bác sĩ xem danh sách bệnh nhân chờ khám
+     * và kê đơn thuốc cho họ
+     */
+    public void showExamination() {
+        contentPanel.removeAll();
+        contentPanel.setLayout(new BorderLayout());
+    
+        // Tiêu đề
+        JLabel titleLabel = new JLabel("Khám bệnh", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 20, 0));
+    
+        // Panel tìm kiếm
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        searchPanel.setBackground(Color.WHITE);
+        searchPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+    
+        JLabel searchLabel = new JLabel("Tìm kiếm bệnh nhân:");
+        JTextField searchField = new JTextField(20);
+        JButton searchButton = new JButton("Tìm kiếm");
+        searchButton.setBackground(new Color(0, 123, 255));
+        searchButton.setForeground(Color.WHITE);
+        searchButton.setFocusPainted(false);
+    
+        searchPanel.add(searchLabel);
+        searchPanel.add(searchField);
+        searchPanel.add(searchButton);
+    
+        // Panel danh sách bệnh nhân
+        JPanel patientListPanel = new JPanel(new BorderLayout());
+        patientListPanel.setBackground(Color.WHITE);
+        patientListPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+    
+        // Tạo bảng danh sách bệnh nhân
+        String[] columnNames = {"ID", "Họ và tên", "Ngày sinh", "Số điện thoại", "Bệnh chính", "Trạng thái", "Chọn"};
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
+        JTable patientTable = new JTable(tableModel);
+        patientTable.setRowHeight(35);
+        patientTable.setFont(new Font("Arial", Font.PLAIN, 14));
+        patientTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+        
+        // Load dữ liệu bệnh nhân từ controller
+        List<Object[]> patientRecords = controller.getPatientsForExamination();
+        
+        if (patientRecords == null || patientRecords.isEmpty()) {
+            System.out.println("Không tìm thấy bệnh nhân chờ khám");
+        } else {
+            for (Object[] record : patientRecords) {
+                try {
+                    Patient patient = (Patient) record[0];
+                    MedicalRecord medicalRecord = (MedicalRecord) record[1];
+                    String email = (String) record[2];
+                    String appointmentStatus = record.length > 3 ? (String) record[3] : "Chờ khám";
+                    
+                    // Lấy thông tin bệnh lý từ MedicalRecord nếu có
+                    String diagnosis = "";
+                    if (medicalRecord != null && medicalRecord.getDiagnosis() != null) {
+                        diagnosis = medicalRecord.getDiagnosis();
+                    }
+                    
+                    // Format lại ngày sinh
+                    String birthDateStr = "";
+                    if (patient.getDateOfBirth() != null) {
+                        birthDateStr = patient.getDateOfBirth().toString();
+                    }
+                    
+                    tableModel.addRow(new Object[]{
+                        patient.getPatientID(),
+                        patient.getFullName(),
+                        birthDateStr,
+                        patient.getPhoneNumber(),
+                        diagnosis,
+                        appointmentStatus,
+                        new JButton("Chọn")
+                    });
+                } catch (Exception e) {
+                    System.out.println("Lỗi khi xử lý bản ghi: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        // Thiết lập renderer cho cột "Chọn"
+        patientTable.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
+        patientTable.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox()));
+    
+        JScrollPane scrollPane = new JScrollPane(patientTable);
+        patientListPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Panel chứa các nút chức năng
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        buttonPanel.setOpaque(false);
+        
+        JButton prescriptionButton = createQuickButton("Kê đơn thuốc", new Color(40, 167, 69));
+        JButton completeButton = createQuickButton("Hoàn thành khám", new Color(0, 123, 255));
+        
+        buttonPanel.add(prescriptionButton);
+        buttonPanel.add(completeButton);
+        
+        // Xử lý sự kiện khi nhấn nút kê đơn thuốc
+        prescriptionButton.addActionListener(e -> prescribeForSelectedPatient(patientTable));
+        
+        // Xử lý sự kiện khi nhấn nút hoàn thành khám
+        completeButton.addActionListener(e -> {
+            int selectedRow = patientTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng chọn bệnh nhân để hoàn thành khám", 
+                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            String patientId = patientTable.getValueAt(selectedRow, 0).toString();
+            controller.completeExamination(patientId);
+            
+            // Cập nhật trạng thái trong bảng
+            tableModel.setValueAt("Đã hoàn thành", selectedRow, 5);
+            JOptionPane.showMessageDialog(this, "Đã hoàn thành khám", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+        });
+        
+        // Xử lý tìm kiếm bệnh nhân
+        searchButton.addActionListener(e -> {
+            String keyword = searchField.getText().trim();
+            if (keyword.isEmpty()) {
+                // Nếu từ khóa trống, hiển thị lại tất cả bệnh nhân
+                tableModel.setRowCount(0);
+                List<Object[]> allPatients = controller.getPatientsForExamination();
+                populateTable(tableModel, allPatients);
+                return;
+            }
+            
+            // Gọi controller để tìm kiếm
+            List<Object[]> searchResults = controller.searchPatientsForExamination(keyword);
+            
+            // Cập nhật bảng
+            tableModel.setRowCount(0);
+            
+            if (searchResults == null || searchResults.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không tìm thấy bệnh nhân nào phù hợp", 
+                    "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                populateTable(tableModel, searchResults);
+            }
+        });
+    
+        // Tạo layout chính
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setOpaque(false);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
+        
+        mainPanel.add(searchPanel, BorderLayout.NORTH);
+        mainPanel.add(patientListPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        contentPanel.add(titleLabel, BorderLayout.NORTH);
+        contentPanel.add(mainPanel, BorderLayout.CENTER);
+    
+        setSelectedButton(btnExamination);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }
+
+        /**
+     * Mở giao diện kê đơn thuốc cho bệnh nhân đã chọn
+     * @param patientTable Bảng chứa danh sách bệnh nhân
+     */
+    private void prescribeForSelectedPatient(JTable patientTable) {
+        int selectedRow = patientTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, 
+                "Vui lòng chọn bệnh nhân để kê đơn thuốc", 
+                "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        String patientId = patientTable.getValueAt(selectedRow, 0).toString();
+        String patientName = patientTable.getValueAt(selectedRow, 1).toString();
+        
+        // Kiểm tra xem có phải cuộc hẹn quá hạn không
+        String appointmentStatus = patientTable.getValueAt(selectedRow, 5).toString();
+        if (appointmentStatus.startsWith("Quá hạn")) {
+            int option = JOptionPane.showConfirmDialog(this,
+                "Bệnh nhân này có lịch hẹn đã quá hạn. Bạn vẫn muốn kê đơn thuốc?",
+                "Xác nhận", JOptionPane.YES_NO_OPTION);
+            
+            if (option != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+        
+        // Mở giao diện kê đơn thuốc
+        openPrescriptionView(patientId, patientName);
+    }
+    
+    /**
+     * Điền dữ liệu vào bảng từ danh sách kết quả
+     */
+    private void populateTable(DefaultTableModel model, List<Object[]> records) {
+        if (records != null) {
+            for (Object[] record : records) {
+                try {
+                    Patient patient = (Patient) record[0];
+                    MedicalRecord medicalRecord = (MedicalRecord) record[1];
+                    String email = (String) record[2];
+                    String appointmentStatus = record.length > 3 ? (String) record[3] : "Chờ khám";
+                    
+                    String diagnosis = "";
+                    if (medicalRecord != null && medicalRecord.getDiagnosis() != null) {
+                        diagnosis = medicalRecord.getDiagnosis();
+                    }
+                    
+                    String birthDateStr = "";
+                    if (patient.getDateOfBirth() != null) {
+                        birthDateStr = patient.getDateOfBirth().toString();
+                    }
+                    
+                    model.addRow(new Object[]{
+                        patient.getPatientID(),
+                        patient.getFullName(),
+                        birthDateStr,
+                        patient.getPhoneNumber(),
+                        diagnosis,
+                        appointmentStatus,
+                        new JButton("Chọn")
+                    });
+                } catch (Exception e) {
+                    System.out.println("Lỗi khi xử lý bản ghi: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    /**
+     * Mở giao diện kê đơn thuốc từ PrescriptionDetailsDoctorView với thông tin bệnh nhân đã chọn
+     * @param patientId ID của bệnh nhân
+     * @param patientName Tên của bệnh nhân
+     */
+    private void openPrescriptionView(String patientId, String patientName) {
+        // Tạo một ID đơn thuốc mới
+        String newPrescriptionId = controller.generateNewPrescriptionId();
+        
+        // Tạo một instance của PrescriptionDetailsDoctorView
+        PrescriptionDetailsDoctorView prescriptionView = new PrescriptionDetailsDoctorView(
+            controller.getDoctorId(),     // ID của bác sĩ
+            patientId,                    // ID của bệnh nhân
+            patientName,                  // Tên của bệnh nhân
+            newPrescriptionId,            // ID đơn thuốc mới
+            true                          // Chế độ tạo mới
+        );
+        
+        // Hiển thị cửa sổ mới
+        prescriptionView.setVisible(true);
+        
+        // Thêm listener để cập nhật lại danh sách khi đóng cửa sổ kê đơn
+        prescriptionView.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent windowEvent) {
+                // Làm mới giao diện khám bệnh
+                controller.showExamination();
+            }
+        });
+    }
+
 }

@@ -12,23 +12,11 @@ CREATE TABLE UserAccounts (
     PhoneNumber VARCHAR(15) UNIQUE,
     PasswordHash VARCHAR(255) NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PasswordChangeRequired BOOLEAN DEFAULT 1,
+    IsLocked TINYINT(1) NOT NULL DEFAULT 0,
     INDEX idx_role (Role)
 );
-ALTER TABLE UserAccounts ADD COLUMN PasswordChangeRequired BOOLEAN DEFAULT 1;
 
--- Thêm cột IsLocked với giá trị mặc định là 0 (không khóa)
-ALTER TABLE UserAccounts
-ADD IsLocked TINYINT(1) NOT NULL DEFAULT 0;
-
--- Cập nhật dữ liệu hiện có: nếu PasswordHash là NULL, đặt IsLocked = 1
-UPDATE UserAccounts
-SET IsLocked = 1
-WHERE PasswordHash IS NULL;
-
--- Đảm bảo PasswordHash không NULL cho các tài khoản hiện có
-UPDATE UserAccounts
-SET PasswordHash = SHA2('default_password', 256)
-WHERE PasswordHash IS NULL;
 -- Bảng Chuyên Khoa
 CREATE TABLE Specialties (
     SpecialtyID VARCHAR(50) PRIMARY KEY,
