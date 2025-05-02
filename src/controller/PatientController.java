@@ -13,6 +13,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JOptionPane;
+
+import utils.ReportExporter;
+
 import database.DatabaseConnection;
 
 public class PatientController {
@@ -226,5 +230,34 @@ public class PatientController {
         }
         
         return prescriptions;
+    }
+    
+    // Thêm các phương thức sau vào lớp PatientController
+    public boolean exportMedicalHistoryToExcel(List<String[]> medicalHistory, String filePath, String patientName) {
+        try {
+            // Cần thêm phương thức này vào ReportExporter
+            // return ReportExporter.exportMedicalHistoryToExcel(medicalHistory, filePath, patientName);
+            JOptionPane.showMessageDialog(view, 
+                "Chức năng xuất Excel đang được phát triển!", 
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    public boolean exportMedicalHistoryToPdf(List<String[]> medicalHistory, String filePath, String patientName) {
+        try {
+            // Cần thêm phương thức này vào ReportExporter
+            // return ReportExporter.exportMedicalHistoryToPdf(medicalHistory, filePath, patientName);
+            JOptionPane.showMessageDialog(view, 
+                "Chức năng xuất PDF đang được phát triển!", 
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

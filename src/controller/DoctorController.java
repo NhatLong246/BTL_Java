@@ -1,6 +1,7 @@
 package controller;
 
 import model.entity.Patient;
+import model.entity.Appointment;
 import model.entity.Doctor;
 import model.enums.Gender;
 import model.repository.DoctorRepository;
@@ -25,6 +26,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import utils.ReportExporter;
 
 public class DoctorController {
     private final DoctorView view;
@@ -907,4 +909,59 @@ public class DoctorController {
     public String getDoctorId() {
         return doctorId;
     }
+    
+    // Thêm các phương thức sau vào lớp DoctorController
+    public boolean exportPatientsToExcel(List<Patient> patients, String filePath) {
+        try {
+            return ReportExporter.exportPatientsToExcel(patients, filePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    public boolean exportPatientsToPdf(List<Patient> patients, String filePath) {
+        try {
+            // Lưu ý: Bạn cần thêm phương thức này vào class ReportExporter
+            // return ReportExporter.exportPatientsToPdf(patients, filePath);
+            JOptionPane.showMessageDialog(view, 
+                "Chức năng xuất PDF đang được phát triển!", 
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    // Thêm phương thức xuất lịch làm việc
+    public boolean exportScheduleToExcel(String doctorId, String doctorName, boolean[][] schedule, String filePath) {
+        try {
+            return ReportExporter.exportScheduleToExcel(doctorId, doctorName, schedule, filePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    public boolean exportScheduleToPdf(String doctorId, String doctorName, boolean[][] schedule, String filePath) {
+        try {
+            return ReportExporter.exportScheduleToPdf(doctorId, doctorName, schedule, filePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    // Thêm phương thức xuất danh sách cuộc hẹn
+    public boolean exportAppointmentsToExcel(List<Appointment> appointments, String filePath) {
+        try {
+            return ReportExporter.exportAppointmentsToExcel(appointments, filePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    
 }

@@ -582,6 +582,76 @@ public class DoctorView extends JFrame {
         updateBtnPanel.setOpaque(false);
         updateBtnPanel.add(updateAllBtn);
         
+        // Thêm nút xuất lịch làm việc
+        JButton exportScheduleBtn = new JButton("Xuất lịch làm việc");
+        exportScheduleBtn.setFont(new Font("Arial", Font.BOLD, 12));
+        exportScheduleBtn.setForeground(Color.WHITE);
+        exportScheduleBtn.setBackground(new Color(23, 162, 184));
+        exportScheduleBtn.setFocusPainted(false);
+        exportScheduleBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        exportScheduleBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Xuất lịch làm việc");
+            
+            // Tạo filter cho file Excel và PDF
+            javax.swing.filechooser.FileNameExtensionFilter excelFilter = 
+                new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx");
+            javax.swing.filechooser.FileNameExtensionFilter pdfFilter = 
+                new javax.swing.filechooser.FileNameExtensionFilter("PDF Files (*.pdf)", "pdf");
+            
+            fileChooser.addChoosableFileFilter(excelFilter);
+            fileChooser.addChoosableFileFilter(pdfFilter);
+            fileChooser.setFileFilter(excelFilter); // Mặc định là Excel
+            
+            fileChooser.setSelectedFile(new File("LichLamViec_" + controller.getDoctorId() + ".xlsx"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                boolean success = false;
+                
+                // Lấy boolean[][] schedule từ controller
+                boolean[][] schedule = convertScheduleToBoolean(controller.getWeeklySchedule());
+                
+                if (fileChooser.getFileFilter().equals(excelFilter)) {
+                    if (!filePath.toLowerCase().endsWith(".xlsx")) {
+                        filePath += ".xlsx";
+                    }
+                    success = controller.exportScheduleToExcel(
+                        controller.getDoctorId(), 
+                        controller.getDoctorName(), 
+                        schedule, 
+                        filePath
+                    );
+                } else {
+                    if (!filePath.toLowerCase().endsWith(".pdf")) {
+                        filePath += ".pdf";
+                    }
+                    success = controller.exportScheduleToPdf(
+                        controller.getDoctorId(), 
+                        controller.getDoctorName(), 
+                        schedule, 
+                        filePath
+                    );
+                }
+                
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất lịch làm việc thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất lịch làm việc thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // Thêm nút vào updateBtnPanel
+        updateBtnPanel.add(exportScheduleBtn);
+
         // Thêm các thành phần vào bottomPanel
         bottomPanel.add(legendPanel, BorderLayout.WEST);
         bottomPanel.add(currentShiftPanel, BorderLayout.CENTER);
@@ -676,7 +746,7 @@ public class DoctorView extends JFrame {
         contentPanel.repaint();
     }
 
-    private JButton createQuickButton(String text, Color bgColor) {
+    /* private JButton createQuickButton(String text, Color bgColor) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.BOLD, 14));
         button.setBackground(bgColor);
@@ -686,7 +756,7 @@ public class DoctorView extends JFrame {
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setPreferredSize(new Dimension(150, 40));
         return button;
-    }
+    } */
 
     private JPanel createDashboardCard(String title, String value, Color color) {
         JPanel card = new JPanel(new BorderLayout());
@@ -710,82 +780,6 @@ public class DoctorView extends JFrame {
 
         return card;
     }
-
-    /*public void showAddPatientForm() {
-        contentPanel.removeAll();
-        contentPanel.setLayout(new BorderLayout());
-
-        JLabel titleLabel = new JLabel("Thêm bệnh nhân mới", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(Color.WHITE);
-        formPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-                BorderFactory.createEmptyBorder(30, 50, 30, 50)
-        ));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        txtName = new JTextField(40);
-        txtBirthDate = new JTextField(40);
-        txtAddress = new JTextField(40);
-        txtPhone = new JTextField(40);
-        txtDisease = new JTextField(40);
-        txtEmail = new JTextField(40);
-        cbGender = new JComboBox<>(Gender.values());
-
-        Font fieldFont = new Font("Arial", Font.PLAIN, 16);
-        txtName.setFont(fieldFont);
-        txtBirthDate.setFont(fieldFont);
-        txtAddress.setFont(fieldFont);
-        txtPhone.setFont(fieldFont);
-        txtDisease.setFont(fieldFont);
-        txtEmail.setFont(fieldFont);
-        cbGender.setFont(fieldFont);
-
-        addFormField(formPanel, gbc, "Họ và tên:", txtName, 0);
-        addFormField(formPanel, gbc, "Ngày sinh (YYYY-MM-DD):", txtBirthDate, 1);
-        addFormField(formPanel, gbc, "Địa chỉ:", txtAddress, 2);
-        addFormField(formPanel, gbc, "Giới tính:", cbGender, 3);
-        addFormField(formPanel, gbc, "Số điện thoại:", txtPhone, 4);
-        addFormField(formPanel, gbc, "Email:", txtEmail, 5);
-        addFormField(formPanel, gbc, "Bệnh:", txtDisease, 6);
-
-        JButton btnSave = new JButton("Lưu");
-        btnSave.setFont(new Font("Arial", Font.BOLD, 16));
-        btnSave.setBackground(new Color(0, 123, 255));
-        btnSave.setForeground(Color.WHITE);
-        btnSave.setFocusPainted(false);
-        btnSave.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnSave.setPreferredSize(new Dimension(200, 45));
-
-        gbc.gridx = 0;
-        gbc.gridy = 7;
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(30, 10, 10, 10);
-        formPanel.add(btnSave, gbc);
-
-        btnSave.addActionListener(e -> controller.addPatient(txtName.getText(), txtBirthDate.getText(), 
-                                                          txtAddress.getText(), txtPhone.getText(), 
-                                                          (Gender) cbGender.getSelectedItem(), 
-                                                          txtDisease.getText(), txtEmail.getText()));
-
-        JPanel wrapperPanel = new JPanel(new BorderLayout());
-        wrapperPanel.setOpaque(false);
-        wrapperPanel.add(formPanel, BorderLayout.CENTER);
-        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
-
-        contentPanel.add(titleLabel, BorderLayout.NORTH);
-        contentPanel.add(wrapperPanel, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
-    }*/
 
     public void showAddPatientForm() {
         contentPanel.removeAll();
@@ -916,7 +910,7 @@ public class DoctorView extends JFrame {
     public void showPatientList(java.util.List<Patient> patients) {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
-
+    
         JLabel titleLabel = new JLabel("Danh sách bệnh nhân", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
@@ -929,7 +923,7 @@ public class DoctorView extends JFrame {
         table.setFont(new Font("Arial", Font.PLAIN, 14));
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
         table.setSelectionBackground(new Color(173, 216, 230));
-
+    
         if (patients.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Không tìm thấy bệnh nhân nào!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
         } else {
@@ -944,27 +938,107 @@ public class DoctorView extends JFrame {
                 });
             }
         }
-
+    
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
+    
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+        
+        JButton exportExcelBtn = createQuickButton("Xuất Excel", new Color(40, 167, 69));
+        JButton exportPdfBtn = createQuickButton("Xuất PDF", new Color(220, 53, 69));
+        
+        buttonPanel.add(exportExcelBtn);
+        buttonPanel.add(exportPdfBtn);
+        
+        // Thêm sự kiện cho nút xuất Excel
+        exportExcelBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu danh sách bệnh nhân");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+            fileChooser.setSelectedFile(new File("DanhSachBenhNhan.xlsx"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".xlsx")) {
+                    filePath += ".xlsx";
+                }
+                
+                boolean success = controller.exportPatientsToExcel(patients, filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file Excel thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file Excel thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        
+        // Thêm sự kiện cho nút xuất PDF
+        exportPdfBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu danh sách bệnh nhân");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("PDF Files (*.pdf)", "pdf"));
+            fileChooser.setSelectedFile(new File("DanhSachBenhNhan.pdf"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".pdf")) {
+                    filePath += ".pdf";
+                }
+                
+                boolean success = controller.exportPatientsToPdf(patients, filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file PDF thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file PDF thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+    
+        // Tạo tablePanel và thêm các thành phần
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setBackground(Color.WHITE);
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
+        
         tablePanel.add(scrollPane, BorderLayout.CENTER);
-
+        tablePanel.add(buttonPanel, BorderLayout.SOUTH);
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(tablePanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
-
+    
         contentPanel.add(titleLabel, BorderLayout.NORTH);
         contentPanel.add(wrapperPanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
+    }
+
+    private JButton createQuickButton(String text, Color bgColor) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Arial", Font.BOLD, 14));
+        button.setBackground(bgColor);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setPreferredSize(new Dimension(120, 35));
+        return button;
     }
 
     // public void showBookAppointment() {
@@ -1776,7 +1850,7 @@ public class DoctorView extends JFrame {
         contentPanel.repaint();
     }
 
-        /**
+    /**
      * Mở giao diện kê đơn thuốc cho bệnh nhân đã chọn
      * @param patientTable Bảng chứa danh sách bệnh nhân
      */
@@ -1878,4 +1952,14 @@ public class DoctorView extends JFrame {
         });
     }
 
+    // Thêm phương thức helper để chuyển đổi từ String[][] sang boolean[][]
+    private boolean[][] convertScheduleToBoolean(String[][] scheduleData) {
+        boolean[][] schedule = new boolean[3][7];
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 7; j++) {
+                schedule[i][j] = "Đang làm việc".equals(scheduleData[i][j]);
+            }
+        }
+        return schedule;
+    }
 }

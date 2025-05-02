@@ -15,6 +15,7 @@ import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -362,57 +363,6 @@ public class PatientView extends JFrame {
         contentPanel.repaint();
     }
 
-    /*public void showMedicalHistory(List<String[]> medicalHistory) {
-        contentPanel.removeAll();
-
-        JPanel historyPanel = new JPanel(new BorderLayout());
-        historyPanel.setBackground(new Color(245, 245, 245));
-
-        JLabel titleLabel = new JLabel("Lịch sử khám bệnh", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
-        String[] columnNames = {"ID", "Ngày khám", "Bác sĩ", "Chẩn đoán", "Điều trị", "Ghi chú"};
-
-        DefaultTableModel model = new DefaultTableModel();
-        model.setColumnIdentifiers(columnNames);
-
-        if (medicalHistory != null) {
-            for (String[] record : medicalHistory) {
-                model.addRow(record);
-            }
-        }
-
-        JTable table = new JTable(model);
-        table.setRowHeight(40);
-        table.setFont(new Font("Arial", Font.PLAIN, 14));
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-        table.setSelectionBackground(new Color(173, 216, 230));
-
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
-        JPanel tablePanel = new JPanel(new BorderLayout());
-        tablePanel.setBackground(Color.WHITE);
-        tablePanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-                BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
-        tablePanel.add(scrollPane, BorderLayout.CENTER);
-
-        JPanel wrapperPanel = new JPanel(new BorderLayout());
-        wrapperPanel.setOpaque(false);
-        wrapperPanel.add(tablePanel, BorderLayout.CENTER);
-        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
-
-        historyPanel.add(titleLabel, BorderLayout.NORTH);
-        historyPanel.add(wrapperPanel, BorderLayout.CENTER);
-
-        contentPanel.add(historyPanel);
-        contentPanel.revalidate();
-        contentPanel.repaint();
-    }*/
-
     public void showMedicalHistory(List<String[]> medicalHistory) {
         contentPanel.removeAll();
     
@@ -423,7 +373,6 @@ public class PatientView extends JFrame {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
     
-        // Sửa tên các cột để đúng với cấu trúc dữ liệu từ DB
         String[] columnNames = {"ID", "Ngày khám", "Bác sĩ", "Chẩn đoán", "Điều trị", "Ghi chú"};
     
         DefaultTableModel model = new DefaultTableModel() {
@@ -468,8 +417,77 @@ public class PatientView extends JFrame {
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
+         ));
+
+        // Thêm nút xuất báo cáo
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+        
+        JButton exportBtn = new JButton("Xuất hồ sơ bệnh án");
+        exportBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        exportBtn.setBackground(new Color(0, 123, 255));
+        exportBtn.setForeground(Color.WHITE);
+        exportBtn.setFocusPainted(false);
+        exportBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        buttonPanel.add(exportBtn);
+        
+        exportBtn.addActionListener(e -> {
+            if (medicalHistory == null || medicalHistory.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không có dữ liệu để xuất!", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu hồ sơ bệnh án");
+            
+            // Tạo filter cho file Excel và PDF
+            javax.swing.filechooser.FileNameExtensionFilter excelFilter = 
+                new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx");
+            javax.swing.filechooser.FileNameExtensionFilter pdfFilter = 
+                new javax.swing.filechooser.FileNameExtensionFilter("PDF Files (*.pdf)", "pdf");
+            
+            fileChooser.addChoosableFileFilter(excelFilter);
+            fileChooser.addChoosableFileFilter(pdfFilter);
+            fileChooser.setFileFilter(excelFilter); // Mặc định là Excel
+            
+            fileChooser.setSelectedFile(new File("HoSoBenhAn_" + patient.getPatientID() + ".xlsx"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                boolean success = false;
+                
+                if (fileChooser.getFileFilter().equals(excelFilter)) {
+                    if (!filePath.toLowerCase().endsWith(".xlsx")) {
+                        filePath += ".xlsx";
+                    }
+                    success = controller.exportMedicalHistoryToExcel(medicalHistory, filePath, patient.getFullName());
+                } else {
+                    if (!filePath.toLowerCase().endsWith(".pdf")) {
+                        filePath += ".pdf";
+                    }
+                    success = controller.exportMedicalHistoryToPdf(medicalHistory, filePath, patient.getFullName());
+                }
+                
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất hồ sơ bệnh án thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất hồ sơ bệnh án thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        
         tablePanel.add(scrollPane, BorderLayout.CENTER);
+        tablePanel.add(buttonPanel, BorderLayout.SOUTH);
     
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
@@ -1187,128 +1205,7 @@ public class PatientView extends JFrame {
 
 
     // Add new method to show prescription details
-    /*public void showPrescriptionDetails() {
-        contentPanel.removeAll();
-
-        JPanel prescriptionPanel = new JPanel(new BorderLayout());
-        prescriptionPanel.setBackground(new Color(245, 245, 245));
-
-        // Title
-        JLabel titleLabel = new JLabel("Chi tiết đơn thuốc", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
-        // Disease Filter Panel
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        filterPanel.setBackground(Color.WHITE);
-        filterPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-                BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
-
-        JLabel filterLabel = new JLabel("Chọn loại bệnh:");
-        filterLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        JComboBox<String> diseaseComboBox = new JComboBox<>(new String[]{
-            "Tất cả",
-            "Viêm họng",
-            "Cảm cúm",
-            "Đau dạ dày",
-            "Đau đầu",
-            "Viêm xoang"
-        });
-        diseaseComboBox.setPreferredSize(new Dimension(200, 30));
-
-        filterPanel.add(filterLabel);
-        filterPanel.add(Box.createHorizontalStrut(10));
-        filterPanel.add(diseaseComboBox);
-
-        // Prescription Details Panel
-        JPanel detailsPanel = new JPanel(new BorderLayout(0, 20));
-        detailsPanel.setBackground(Color.WHITE);
-        detailsPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-                BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
-
-        // Info Panel
-        JPanel infoPanel = new JPanel(new GridBagLayout());
-        infoPanel.setOpaque(false);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 5, 5, 5);
-
-        // Add prescription information fields
-        JLabel lblPrescriptionId = createInfoLabel("Mã đơn thuốc: DT001");
-        JLabel lblDiagnosis = createInfoLabel("Chẩn đoán: Viêm họng cấp");
-        JLabel lblDate = createInfoLabel("Ngày kê đơn: " + LocalDate.now().toString());
-        JLabel lblDoctor = createInfoLabel("Bác sĩ: Dr. Nguyễn Văn A");
-
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        infoPanel.add(lblPrescriptionId, gbc);
-        gbc.gridy = 1;
-        infoPanel.add(lblDiagnosis, gbc);
-        gbc.gridy = 2;
-        infoPanel.add(lblDate, gbc);
-        gbc.gridy = 3;
-        infoPanel.add(lblDoctor, gbc);
-
-        // Medicine Table
-        String[] columns = {"STT", "Tên thuốc", "Đơn vị", "Số lượng", "Liều dùng", "Cách dùng"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-
-        JTable medicineTable = new JTable(model);
-        medicineTable.setRowHeight(30);
-        medicineTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        JScrollPane scrollPane = new JScrollPane(medicineTable);
-
-        // Notes Panel
-        JPanel notesPanel = new JPanel(new BorderLayout());
-        notesPanel.setBorder(BorderFactory.createTitledBorder("Ghi chú"));
-        JTextArea txtNotes = new JTextArea(4, 40);
-        txtNotes.setEditable(false);
-        txtNotes.setFont(new Font("Arial", Font.PLAIN, 14));
-        txtNotes.setLineWrap(true);
-        txtNotes.setWrapStyleWord(true);
-        JScrollPane notesScroll = new JScrollPane(txtNotes);
-        notesPanel.add(notesScroll);
-
-        // Add components to details panel
-        detailsPanel.add(infoPanel, BorderLayout.NORTH);
-        detailsPanel.add(scrollPane, BorderLayout.CENTER);
-        detailsPanel.add(notesPanel, BorderLayout.SOUTH);
-
-        // Add action listener for disease filter
-        diseaseComboBox.addActionListener(e -> {
-            String selectedDisease = (String) diseaseComboBox.getSelectedItem();
-            // TODO: Load prescription data based on selected disease
-            updatePrescriptionDetails(model, txtNotes, selectedDisease);
-        });
-
-        // Main layout
-        JPanel mainPanel = new JPanel(new BorderLayout(0, 20));
-        mainPanel.setOpaque(false);
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
-        mainPanel.add(filterPanel, BorderLayout.NORTH);
-        mainPanel.add(detailsPanel, BorderLayout.CENTER);
-
-        prescriptionPanel.add(titleLabel, BorderLayout.NORTH);
-        prescriptionPanel.add(mainPanel, BorderLayout.CENTER);
-
-        contentPanel.add(prescriptionPanel);
-        contentPanel.revalidate();
-        contentPanel.repaint();
-
-        // Set the selected button
-        setSelectedButton(btnViewPrescriptions);
-    }*/
-
-        public void showPrescriptionDetails() {
+    public void showPrescriptionDetails() {
         contentPanel.removeAll();
     
         JPanel prescriptionPanel = new JPanel(new BorderLayout());
@@ -1613,20 +1510,4 @@ public class PatientView extends JFrame {
         prescriptionButtonsPanel.revalidate();
         prescriptionButtonsPanel.repaint();
     }
-
-    
-
-    /*private void updatePrescriptionDetails(DefaultTableModel model, JTextArea txtNotes, String disease) {
-        // Clear existing data
-        model.setRowCount(0);
-        txtNotes.setText("");
-
-        // TODO: Load prescription data from database based on selected disease
-        // This is sample data
-        if ("Viêm họng".equals(disease) || "Tất cả".equals(disease)) {
-            model.addRow(new Object[]{1, "Paracetamol", "Viên", "20", "2 viên/lần", "Ngày uống 3 lần sau ăn"});
-            model.addRow(new Object[]{2, "Vitamin C", "Viên", "10", "1 viên/lần", "Ngày uống 1 lần sau ăn sáng"});
-            txtNotes.setText("Uống thuốc đều đặn, nghỉ ngơi nhiều");
-        }
-    }*/
 }
