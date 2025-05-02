@@ -1,5 +1,6 @@
 package view;
 
+import controller.BillingController;
 import controller.PatientController;
 import database.DatabaseConnection;
 import model.entity.Patient;
@@ -7,8 +8,13 @@ import model.enums.Gender;
 import model.repository.PatientRepository;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -122,7 +128,7 @@ public class PatientView extends JFrame {
             btnViewAppointments.addActionListener(e -> controller.showAppointments());
             btnViewMedicalHistory.addActionListener(e -> controller.showMedicalHistory());
             btnViewPrescriptions.addActionListener(e -> showPrescriptionDetails());
-            btnPayFees.addActionListener(e -> controller.showPayFees());
+            btnPayFees.addActionListener(e -> showPayFees());
             btnPaymentHistory.addActionListener(e -> controller.showPaymentHistory());
             btnLogout.addActionListener(e -> logout());
 
@@ -233,7 +239,7 @@ public class PatientView extends JFrame {
         card.add(valueLabel, BorderLayout.CENTER);
 
         panel.add(card);
-    }
+    }	
 
     public void showPatientInfo() {
         contentPanel.removeAll();
@@ -487,9 +493,44 @@ public class PatientView extends JFrame {
         JPanel feesPanel = new JPanel(new BorderLayout());
         feesPanel.setBackground(new Color(245, 245, 245));
     
-        JLabel titleLabel = new JLabel("Thanh toán viện phí", SwingConstants.CENTER);
+        // Title Panel
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setBackground(new Color(34, 45, 65));
+        titlePanel.setPreferredSize(new Dimension(getWidth(), 60));
+        
+        JLabel titleLabel = new JLabel("Danh sách hóa đơn", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        titlePanel.add(titleLabel, BorderLayout.CENTER);
+
+        // Summary Panel
+        JPanel summaryPanel = new JPanel();
+        summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.X_AXIS));
+        summaryPanel.setBackground(Color.WHITE);
+        summaryPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+
+        // Lấy thông tin tổng quan từ BillingController
+        BillingController billingController = new BillingController(null, patient);
+        
+        // Tạo các panel con cho mỗi thông tin
+        JPanel totalPanel = createInfoPanel("Tổng hóa đơn", 
+            billingController.getTotalBills(patient.getPatientID()));
+        JPanel paidPanel = createInfoPanel("Đã thanh toán", 
+            billingController.getPaidBills(patient.getPatientID()));
+        JPanel pendingPanel = createInfoPanel("Chưa thanh toán", 
+            billingController.getPendingBillsTotal(patient.getPatientID()));
+
+        // Thêm khoảng cách giữa các panel
+        summaryPanel.add(totalPanel);
+        summaryPanel.add(Box.createHorizontalStrut(30));
+        summaryPanel.add(paidPanel);
+        summaryPanel.add(Box.createHorizontalStrut(30));
+        summaryPanel.add(pendingPanel);
+        summaryPanel.add(Box.createHorizontalGlue());
         
         List<Object[]> bills = controller.getBills();
         System.out.println("Số lượng hóa đơn từ controller: " + (bills == null ? "null" : bills.size()));
@@ -515,40 +556,240 @@ public class PatientView extends JFrame {
                 public boolean isCellEditable(int row, int column) {
                     return column == 5; // Chỉ cho phép chỉnh sửa cột "Thanh toán"
                 }
+
+                @Override
+                public Class<?> getColumnClass(int columnIndex) {
+                    return columnIndex == 5 ? JButton.class : Object.class;
+                }
             };
             model.setColumnIdentifiers(columnNames);
     
             for (Object[] bill : bills) {
-                Object[] rowData = new Object[6];
-                System.arraycopy(bill, 0, rowData, 0, 5);
-                rowData[5] = "Thanh toán";
-                model.addRow(rowData);
+                if ("Chưa thanh toán".equals(bill[4])) { // Chỉ hiển thị hóa đơn chưa thanh toán
+                    model.addRow(bill);
+                }
             }
     
             JTable table = new JTable(model);
             table.setRowHeight(40);
             table.setFont(new Font("Arial", Font.PLAIN, 14));
             table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-    
+            
+            // Set column widths
+            table.getColumnModel().getColumn(0).setPreferredWidth(100); // ID
+            table.getColumnModel().getColumn(1).setPreferredWidth(100); // Ngày
+            table.getColumnModel().getColumn(2).setPreferredWidth(200); // Dịch vụ
+            table.getColumnModel().getColumn(3).setPreferredWidth(100); // Số tiền
+            table.getColumnModel().getColumn(4).setPreferredWidth(100); // Trạng thái
+            table.getColumnModel().getColumn(5).setPreferredWidth(100); // Nút thanh toán
+
+            // Custom renderer cho nút thanh toán
             table.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
-            table.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox(), table));
+            table.getColumnModel().getColumn(5).setCellEditor(
+                new ButtonEditor(new JCheckBox(), table, patient, this));
     
+            // Add mouse listener for hover effect
+            table.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseEntered(java.awt.event.MouseEvent e) {
+                    int column = table.columnAtPoint(e.getPoint());
+                    if (column == 5) {
+                        table.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                    }
+                }
+
+                @Override
+                public void mouseExited(java.awt.event.MouseEvent e) {
+                    table.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                }
+            });
+
+            // Format các cột
+            table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                        boolean isSelected, boolean hasFocus, int row, int column) {
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                    if (column == 4) { // Cột trạng thái
+                        if ("Chưa thanh toán".equals(value)) {
+                            setForeground(new Color(220, 53, 69)); // Màu đỏ
+                        } else {
+                            setForeground(new Color(40, 167, 69)); // Màu xanh
+                        }
+                        setFont(new Font("Arial", Font.BOLD, 12));
+                    } else {
+                        setForeground(table.getForeground());
+                        setFont(table.getFont());
+                    }
+                    return c;
+                }
+            });
+
             JScrollPane scrollPane = new JScrollPane(table);
             scrollPane.setBorder(BorderFactory.createEmptyBorder());
             tablePanel.add(scrollPane, BorderLayout.CENTER);
         }
     
-        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        JPanel wrapperPanel = new JPanel(new BorderLayout(0, 20));
         wrapperPanel.setOpaque(false);
-        wrapperPanel.add(tablePanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
+        wrapperPanel.add(summaryPanel, BorderLayout.NORTH);
+        wrapperPanel.add(tablePanel, BorderLayout.CENTER);
     
-        feesPanel.add(titleLabel, BorderLayout.NORTH);
+        feesPanel.add(titlePanel, BorderLayout.NORTH);
         feesPanel.add(wrapperPanel, BorderLayout.CENTER);
     
         contentPanel.add(feesPanel);
         contentPanel.revalidate();
         contentPanel.repaint();
+        
+        setSelectedButton(btnPayFees);
+    }
+
+    private JPanel createInfoPanel(String title, String value) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        titleLabel.setForeground(new Color(100, 100, 100));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        if (title.equals("Chưa thanh toán")) {
+            valueLabel.setForeground(new Color(220, 53, 69)); // Màu đỏ cho số tiền chưa thanh toán
+        } else if (title.equals("Đã thanh toán")) {
+            valueLabel.setForeground(new Color(40, 167, 69)); // Màu xanh cho số tiền đã thanh toán
+        }
+        valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(5));
+        panel.add(valueLabel);
+        
+        return panel;
+    }
+
+    private class ButtonRenderer extends JButton implements TableCellRenderer {
+        public ButtonRenderer() {
+            setOpaque(true);
+            setBackground(new Color(52, 152, 219));
+            setForeground(Color.WHITE);
+            setFocusPainted(false);
+            setBorderPainted(false);
+            setFont(new Font("Arial", Font.BOLD, 12));
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            setText("Thanh toán");
+            return this;
+        }
+    }
+
+    private class ButtonEditor extends DefaultCellEditor {
+        protected JButton button;
+        private String label;
+        private boolean isPushed;
+        private final JTable table;
+        private final Patient patient;
+        private final PatientView parentView;
+
+        public ButtonEditor(JCheckBox checkBox, JTable table, Patient patient, PatientView parentView) {
+            super(checkBox);
+            this.table = table;
+            this.patient = patient;
+            this.parentView = parentView;
+            
+            button = new JButton();
+            button.setOpaque(true);
+            button.setBackground(new Color(52, 152, 219));
+            button.setForeground(Color.WHITE);
+            button.setFocusPainted(false);
+            button.setBorderPainted(false);
+            button.setFont(new Font("Arial", Font.BOLD, 12));
+            
+            // Thêm ActionListener cho button
+            button.addActionListener(e -> {
+                fireEditingStopped();
+                processPayment();
+            });
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            label = "Thanh toán";
+            button.setText(label);
+            isPushed = true;
+            return button;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            isPushed = false;
+            return label;
+        }
+
+        private void processPayment() {
+            try {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow != -1) {
+                    String billId = table.getValueAt(selectedRow, 0).toString();
+                    String service = table.getValueAt(selectedRow, 2).toString();
+                    String amountStr = table.getValueAt(selectedRow, 3).toString()
+                            .replace("VND", "").replace(",", "").trim();
+                    double amount = Double.parseDouble(amountStr);
+
+                    System.out.println("Processing payment for bill: " + billId);
+                    System.out.println("Service: " + service);
+                    System.out.println("Amount: " + amount);
+                    
+                    // Mở cửa sổ thanh toán
+                    BillingView billingView = new BillingView(patient, billId, service, amount);
+                    billingView.setLocationRelativeTo(parentView);
+                    
+                    // Thêm window listener để cập nhật danh sách sau khi đóng cửa sổ thanh toán
+                    billingView.addWindowListener(new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent e) {
+                            if (billingView.isPaymentSuccessful()) {
+                                // Cập nhật lại danh sách hóa đơn
+                                parentView.showPayFees();
+                            }
+                        }
+                    });
+                    
+                    billingView.setVisible(true);
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(parentView,
+                    "Lỗi định dạng số tiền: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(parentView,
+                    "Có lỗi xảy ra: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        }
+
+        @Override
+        public boolean stopCellEditing() {
+            isPushed = false;
+            return super.stopCellEditing();
+        }
+
+        @Override
+        public boolean shouldSelectCell(java.util.EventObject anEvent) {
+            return true;
+        }
     }
 
     public void showPaymentHistory(Object[][] paymentHistory) {
@@ -796,65 +1037,6 @@ public class PatientView extends JFrame {
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-    }
-
-    private class ButtonRenderer extends JButton implements javax.swing.table.TableCellRenderer {
-        public ButtonRenderer() {
-            setOpaque(true);
-        }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText((value == null) ? "" : value.toString());
-            setBackground(new Color(0, 123, 255));
-            setForeground(Color.WHITE);
-            return this;
-        }
-    }
-
-    private class ButtonEditor extends DefaultCellEditor {
-        private JButton button;
-        private String label;
-        private boolean isPushed;
-        private JTable table;
-
-        public ButtonEditor(JCheckBox checkBox, JTable table) {
-            super(checkBox);
-            this.table = table;
-            button = new JButton();
-            button.setOpaque(true);
-            button.addActionListener(e -> fireEditingStopped());
-        }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-            label = (value == null) ? "" : value.toString();
-            button.setText(label);
-            button.setBackground(new Color(0, 123, 255));
-            button.setForeground(Color.WHITE);
-            isPushed = true;
-            return button;
-        }
-
-        @Override
-        public Object getCellEditorValue() {
-            isPushed = false;
-            return label;
-        }
-
-        @Override
-        public boolean stopCellEditing() {
-            isPushed = false;
-
-            if ("Thanh toán".equals(label)) {
-                String billID = table.getValueAt(table.getSelectedRow(), 0).toString();
-                double amount = Double.parseDouble(table.getValueAt(table.getSelectedRow(), 3).toString()
-                        .replace("VND", "").replace(",", "").trim());
-                showPaymentForm(billID, amount);
-            }
-
-            return super.stopCellEditing();
-        }
     }
 
     public JPanel getContentPanel() {
@@ -1227,8 +1409,12 @@ public class PatientView extends JFrame {
             JLabel noDataLabel = new JLabel("Không có đơn thuốc nào!", SwingConstants.CENTER);
             noDataLabel.setFont(new Font("Arial", Font.ITALIC, 14));
             prescriptionButtonsPanel.add(noDataLabel);
+            
+            // Hiển thị panel rỗng
+            CardLayout cardLayout = (CardLayout) detailsContainer.getLayout();
+            cardLayout.show(detailsContainer, "EMPTY");
         }
-    
+        
         JScrollPane prescriptionScroll = new JScrollPane(prescriptionButtonsPanel);
         prescriptionScroll.setPreferredSize(new Dimension(300, 300));
         prescriptionScroll.setBorder(BorderFactory.createEmptyBorder());
