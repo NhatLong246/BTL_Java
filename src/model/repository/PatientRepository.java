@@ -6,6 +6,7 @@ import model.enums.Gender;
 
 import java.security.SecureRandom;
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -200,34 +201,6 @@ public class PatientRepository {
             return false;
         }
     }
-
-    // public Object[][] getPaymentHistory(String patientID) {
-    //     try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-    //         String query = "SELECT BillID, CreatedAt, TotalAmount, PaymentMethod, Status FROM Billing WHERE PatientID = ? AND Status = 'Đã thanh toán'";
-    //         PreparedStatement stmt = conn.prepareStatement(query);
-    //         stmt.setString(1, patientID);
-    //         ResultSet rs = stmt.executeQuery();
-
-    //         rs.last();
-    //         int rowCount = rs.getRow();
-    //         rs.beforeFirst();
-
-    //         Object[][] data = new Object[rowCount][5];
-    //         int rowIndex = 0;
-    //         while (rs.next()) {
-    //             data[rowIndex][0] = rs.getString("BillID");
-    //             data[rowIndex][1] = rs.getTimestamp("CreatedAt");
-    //             data[rowIndex][2] = rs.getDouble("TotalAmount");
-    //             data[rowIndex][3] = rs.getString("PaymentMethod");
-    //             data[rowIndex][4] = rs.getString("Status");
-    //             rowIndex++;
-    //         }
-    //         return data;
-    //     } catch (SQLException e) {
-    //         e.printStackTrace();
-    //     }
-    //     return new Object[0][0];
-    // }
 
     public Object[][] getPaymentHistory(String patientID) {
         List<Object[]> paymentList = new ArrayList<>();
@@ -514,5 +487,151 @@ public class PatientRepository {
             idSuffix = patientID.substring(4);
         }
         return normalized + idSuffix;
+    }
+
+    /**
+     * Lấy thông tin bệnh nhân dựa trên ID
+     * @param patientId ID bệnh nhân cần tìm
+     * @return Đối tượng Patient nếu tìm thấy, null nếu không tìm thấy
+     */
+    public Patient getPatientById(String patientId) throws SQLException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT * FROM Patients WHERE PatientID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, patientId);
+                ResultSet rs = stmt.executeQuery();
+                
+                if (rs.next()) {
+                    return extractPatientFromResultSet(rs);
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Tìm kiếm bệnh nhân theo từ khóa
+     * @param keyword Từ khóa tìm kiếm
+     * @return Danh sách bệnh nhân tìm thấy
+     */
+    public List<Patient> searchPatients(String keyword) throws SQLException {
+        List<Patient> patients = new ArrayList<>();
+        String searchPattern = "%" + keyword + "%";
+        
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT * FROM Patients WHERE PatientID LIKE ? OR FullName LIKE ? OR PhoneNumber LIKE ?";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, searchPattern);
+                stmt.setString(2, searchPattern);
+                stmt.setString(3, searchPattern);
+                
+                ResultSet rs = stmt.executeQuery();
+                while (rs.next()) {
+                    patients.add(extractPatientFromResultSet(rs));
+                }
+            }
+        }
+        return patients;
+    }
+    
+    // Helper method để trích xuất thông tin bệnh nhân từ ResultSet
+        private Patient extractPatientFromResultSet(ResultSet rs) throws SQLException {
+        String patientId = rs.getString("PatientID");
+        String userId = rs.getString("UserID");
+        String fullName = rs.getString("FullName");
+        LocalDate dateOfBirth = rs.getDate("DateOfBirth").toLocalDate();
+        String address = rs.getString("Address");
+        Gender gender = Gender.fromDatabase(rs.getString("Gender"));
+        String phoneNumber = rs.getString("PhoneNumber");
+        
+        // Sửa từ RegistrationDate sang CreatedAt
+        LocalDate registrationDate = rs.getDate("CreatedAt") != null ? 
+                                    rs.getDate("CreatedAt").toLocalDate() : 
+                                    LocalDate.now();
+        
+        return new Patient(userId, patientId, fullName, dateOfBirth, address, gender, phoneNumber, registrationDate);
+    }
+
+    /**
+     * Kiểm tra xem bệnh nhân có cuộc hẹn đang chờ không
+     * @param patientId ID của bệnh nhân
+     * @return true nếu có cuộc hẹn đang chờ, ngược lại false
+     * @throws SQLException khi có lỗi truy vấn cơ sở dữ liệu
+     */
+    public boolean hasActiveAppointments(String patientId) throws SQLException {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT COUNT(*) FROM Appointments WHERE PatientID = ? AND Status = 'Chờ xác nhận'";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, patientId);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Xóa bệnh nhân khỏi hệ thống
+     * @param patientId ID của bệnh nhân cần xóa
+     * @return true nếu xóa thành công, ngược lại false
+     * @throws SQLException khi có lỗi truy vấn cơ sở dữ liệu
+     */
+    public boolean deletePatient(String patientId) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false); // Bắt đầu transaction
+            
+            // 1. Xóa tất cả các cuộc hẹn của bệnh nhân
+            String deleteAppointmentsQuery = "DELETE FROM Appointments WHERE PatientID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteAppointmentsQuery)) {
+                stmt.setString(1, patientId);
+                stmt.executeUpdate();
+            }
+            
+            // 2. Xóa tất cả các hồ sơ y tế của bệnh nhân
+            String deleteMedicalRecordsQuery = "DELETE FROM MedicalRecords WHERE PatientID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteMedicalRecordsQuery)) {
+                stmt.setString(1, patientId);
+                stmt.executeUpdate();
+            }
+            
+            // 3. Xóa tất cả các đơn thuốc của bệnh nhân
+            String deletePrescriptionsQuery = "DELETE FROM Prescriptions WHERE PatientID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(deletePrescriptionsQuery)) {
+                stmt.setString(1, patientId);
+                stmt.executeUpdate();
+            }
+            
+            // 4. Xóa bệnh nhân
+            String deletePatientQuery = "DELETE FROM Patients WHERE PatientID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(deletePatientQuery)) {
+                stmt.setString(1, patientId);
+                int rowsAffected = stmt.executeUpdate();
+                
+                conn.commit(); // Commit transaction
+                return rowsAffected > 0;
+            }
+        } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback(); // Rollback transaction nếu có lỗi
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            throw e;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true); // Đặt lại auto-commit
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }
