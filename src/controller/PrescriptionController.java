@@ -53,18 +53,4 @@ public class PrescriptionController {
     public List<Map<String, Object>> searchMedications(String keyword) {
         return repository.searchMedications(keyword);
     }
-
-    /* public String generatePrescriptionId() {
-        // Thêm thử kiểm tra ID đã tồn tại hay chưa và tạo ID mới nếu cần
-        String prescriptionId = repository.generateNewPrescriptionId();
-        
-        // Kiểm tra xem ID này đã tồn tại chưa (gọi phương thức mới trong repository)
-        while (repository.isPrescriptionIdExist(prescriptionId)) {
-            // Nếu đã tồn tại, tăng số và thử lại
-            int number = Integer.parseInt(prescriptionId.substring(4)) + 1;
-            prescriptionId = String.format("PRE-%03d", number);
-        }
-        
-        return prescriptionId;
-    } */
 }

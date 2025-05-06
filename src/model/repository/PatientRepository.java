@@ -16,14 +16,14 @@ public class PatientRepository {
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "2005";
     
-    public Patient getPatientByUserId(int userId) {
+    public Patient getPatientByUserId(String userId) {
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             String query = "SELECT p.*, ua.FullName, ua.PhoneNumber, ua.Email " +
                           "FROM Patients p " +
                           "JOIN UserAccounts ua ON p.UserID = ua.UserID " +
                           "WHERE p.UserID = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setInt(1, userId);
+            stmt.setString(1, userId); // Sử dụng setString thay vì setInt
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
@@ -115,23 +115,34 @@ public class PatientRepository {
 
     public List<String[]> getAppointments(String patientID) {
         List<String[]> appointments = new ArrayList<>();
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String query = "SELECT ua.FullName, a.AppointmentDate, a.Status " +
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String query = "SELECT a.AppointmentID, DATE_FORMAT(a.AppointmentDate, '%Y-%m-%d') as AppDate, " +
+                           "TIME_FORMAT(a.AppointmentDate, '%H:%i:%s') as AppTime, " +
+                           "d.FullName as DoctorName, " +
+                           "CONCAT('P', FLOOR(RAND() * 100) + 100) as RoomNumber, " +  // Tạm thời tạo số phòng ngẫu nhiên
+                           "a.Status " +
                            "FROM Appointments a " +
                            "LEFT JOIN Doctors d ON a.DoctorID = d.DoctorID " +
-                           "LEFT JOIN UserAccounts ua ON d.UserID = ua.UserID " +
-                           "WHERE a.PatientID = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, patientID);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                appointments.add(new String[]{
-                    rs.getString("FullName") != null ? rs.getString("FullName") : "N/A",
-                    rs.getString("AppointmentDate"),
-                    rs.getString("Status")
-                });
+                           "WHERE a.PatientID = ? " +
+                           "ORDER BY a.AppointmentDate DESC";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, patientID);
+                ResultSet rs = stmt.executeQuery();
+                while (rs.next()) {
+                    appointments.add(new String[]{
+                        rs.getString("AppointmentID"),               // ID Lịch hẹn
+                        rs.getString("AppDate"),                     // Ngày hẹn
+                        rs.getString("AppTime"),                     // Thời gian
+                        rs.getString("DoctorName") != null ? 
+                            rs.getString("DoctorName") : "N/A",      // Bác sĩ
+                        rs.getString("RoomNumber"),                  // Phòng
+                        rs.getString("Status")                       // Trạng thái
+                    });
+                }
             }
         } catch (SQLException e) {
+            System.err.println("Lỗi khi lấy danh sách lịch hẹn: " + e.getMessage());
             e.printStackTrace();
         }
         return appointments;

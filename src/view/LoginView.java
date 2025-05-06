@@ -29,41 +29,34 @@ public class LoginView extends JFrame {
         if (!imageFile.exists()) {
             System.err.println("ERROR: Image not found: " + imageFile.getAbsolutePath());
             System.out.println("Current directory: " + new File(".").getAbsolutePath());
-            // Fallback to alternative path
-            imagePath = "resource/img/file_background.png";
-            imageFile = new File(imagePath);
-            if (!imageFile.exists()) {
-                System.err.println("ERROR: Second path also failed: " + imageFile.getAbsolutePath());
-                getContentPane().setBackground(new Color(41, 128, 185));
-            }
-        }
-
-        // Load image if found
-        try {
-            ImageIcon originalIcon = new ImageIcon(imagePath);
-            if (originalIcon.getIconWidth() <= 0) {
-                System.err.println("ERROR: Failed to load image or invalid image");
-                getContentPane().setBackground(new Color(41, 128, 185));
-                return;
-            }
-
-            Image scaledImage = originalIcon.getImage().getScaledInstance(
-                    Toolkit.getDefaultToolkit().getScreenSize().width,
-                    Toolkit.getDefaultToolkit().getScreenSize().height,
-                    Image.SCALE_SMOOTH
-            );
-            ImageIcon bgImage = new ImageIcon(scaledImage);
-
-            JLabel background = new JLabel(bgImage);
-            background.setBounds(0, 0,
-                    Toolkit.getDefaultToolkit().getScreenSize().width,
-                    Toolkit.getDefaultToolkit().getScreenSize().height);
-
-            setContentPane(background);
-        } catch (Exception e) {
-            System.err.println("ERROR loading background image: " + e.getMessage());
-            e.printStackTrace();
             getContentPane().setBackground(new Color(41, 128, 185));
+        } else {
+            try {
+                ImageIcon originalIcon = new ImageIcon(imagePath);
+                if (originalIcon.getIconWidth() <= 0) {
+                    System.err.println("ERROR: Failed to load image or invalid image");
+                    getContentPane().setBackground(new Color(41, 128, 185));
+                    return;
+                }
+
+                Image scaledImage = originalIcon.getImage().getScaledInstance(
+                        Toolkit.getDefaultToolkit().getScreenSize().width,
+                        Toolkit.getDefaultToolkit().getScreenSize().height,
+                        Image.SCALE_SMOOTH
+                );
+                ImageIcon bgImage = new ImageIcon(scaledImage);
+
+                JLabel background = new JLabel(bgImage);
+                background.setBounds(0, 0,
+                        Toolkit.getDefaultToolkit().getScreenSize().width,
+                        Toolkit.getDefaultToolkit().getScreenSize().height);
+
+                setContentPane(background);
+            } catch (Exception e) {
+                System.err.println("ERROR loading background image: " + e.getMessage());
+                e.printStackTrace();
+                getContentPane().setBackground(new Color(41, 128, 185));
+            }
         }
 
         // Login panel
@@ -210,6 +203,7 @@ public class LoginView extends JFrame {
             public TransparentLabel(String text, int alignment) {
                 super(text, alignment);
                 setOpaque(false);
+                setFocusable(true); // Đảm bảo label nhận sự kiện
             }
 
             @Override
@@ -223,14 +217,11 @@ public class LoginView extends JFrame {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setColor(getForeground());
                 FontMetrics fm = g2d.getFontMetrics();
-                String text = getText().replaceAll("<html>|</html>|<u>|</u>", "");
+                String text = getText();
                 int x = getWidth() - fm.stringWidth(text) - 5;
                 int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
                 g2d.drawString(text, x, y);
-
-                if (getText().contains("<u>")) {
-                    g2d.drawLine(x, y + 2, x + fm.stringWidth(text), y + 2);
-                }
+                g2d.drawLine(x, y + 2, x + fm.stringWidth(text), y + 2); // Gạch chân tĩnh
                 g2d.dispose();
             }
         }
@@ -241,27 +232,13 @@ public class LoginView extends JFrame {
         forgotPasswordLabel.setForeground(Color.WHITE);
         forgotPasswordLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
         forgotPasswordLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-            private boolean isHovered = false;
-
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                isHovered = true;
-                forgotPasswordLabel.setText("<html><u>Forgot Password?</u></html>");
-                forgotPasswordLabel.repaint();
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                isHovered = false;
-                forgotPasswordLabel.setText("Forgot Password?");
-                forgotPasswordLabel.repaint();
-            }
-
             @Override
             public void mouseClicked(java.awt.event.MouseEvent evt) {
+                System.out.println("Forgot Password clicked!"); // Debug
                 controller.navigateToRequestReset();
             }
         });
+        forgotPasswordLabel.setComponentPopupMenu(null); // Loại bỏ menu popup nếu có
 
         // Panel for LOGIN button and Sign Up link
         JPanel buttonPanel = new JPanel();
@@ -374,6 +351,9 @@ public class LoginView extends JFrame {
         panel.add(errorLabel);
         panel.add(forgotPasswordLabel);
         panel.add(buttonPanel);
+
+        // Ensure forgotPasswordLabel is on top
+        panel.setComponentZOrder(forgotPasswordLabel, 0);
 
         // Add to frame
         add(panel);

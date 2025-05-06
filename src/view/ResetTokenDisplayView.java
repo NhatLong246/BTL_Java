@@ -5,51 +5,60 @@ import controller.ResetTokenController;
 import javax.swing.*;
 import java.awt.*;
 
-public class ResetTokenDisplayView extends JPanel {
-    public JTextField tokenField;
-    public JButton copyButton;
-    public JButton proceedButton;
+public class ResetTokenDisplayView extends JFrame {
+    private JTextField tokenField;
+    private JPasswordField newPasswordField;
+    private JButton confirmButton;
+    private ResetTokenController controller;
 
-    public ResetTokenDisplayView() {
+    public ResetTokenDisplayView(String token) {
+        this.controller = new ResetTokenController(this);
+        setTitle("Reset Password");
+        setSize(400, 300);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
         setLayout(null);
-        setOpaque(false);
-        setSize(400, 200);
-        setBounds(50, 50, 400, 200);
 
-        JLabel titleLabel = new JLabel("Your Reset Token", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBounds(0, 20, 400, 30);
-        add(titleLabel);
+        // Panel chính
+        JPanel panel = new JPanel();
+        panel.setLayout(null);
+        panel.setBackground(new Color(200, 200, 200));
+        panel.setBounds(0, 0, 400, 300);
 
-        tokenField = new JTextField();
-        tokenField.setBounds(50, 70, 300, 40);
+        // Nhãn và trường Token
+        JLabel tokenLabel = new JLabel("Token:");
+        tokenLabel.setBounds(50, 50, 100, 30);
+        tokenLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(tokenLabel);
+
+        tokenField = new JTextField(token);
+        tokenField.setBounds(150, 50, 200, 30);
         tokenField.setFont(new Font("Arial", Font.PLAIN, 16));
-        tokenField.setEditable(false);
-        add(tokenField);
+        panel.add(tokenField);
 
-        copyButton = new JButton("Copy");
-        copyButton.setBounds(50, 130, 120, 40);
-        copyButton.setFont(new Font("Arial", Font.BOLD, 16));
-        copyButton.setBackground(Color.WHITE);
-        copyButton.setForeground(Color.BLACK);
-        add(copyButton);
+        // Nhãn và trường New Password
+        JLabel newPasswordLabel = new JLabel("New Password:");
+        newPasswordLabel.setBounds(50, 100, 150, 30);
+        newPasswordLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(newPasswordLabel);
 
-        proceedButton = new JButton("Proceed");
-        proceedButton.setBounds(230, 130, 120, 40);
-        proceedButton.setFont(new Font("Arial", Font.BOLD, 16));
-        proceedButton.setBackground(Color.WHITE);
-        proceedButton.setForeground(Color.BLACK);
-        add(proceedButton);
+        newPasswordField = new JPasswordField();
+        newPasswordField.setBounds(150, 100, 200, 30);
+        newPasswordField.setFont(new Font("Arial", Font.PLAIN, 16));
+        panel.add(newPasswordField);
+
+        // Nút Confirm
+        confirmButton = new JButton("Confirm");
+        confirmButton.setBounds(150, 160, 150, 40);
+        confirmButton.setFont(new Font("Arial", Font.BOLD, 16));
+        confirmButton.addActionListener(e -> controller.confirmReset(tokenField.getText(), new String(newPasswordField.getPassword())));
+        panel.add(confirmButton);
+
+        add(panel);
+        setVisible(true);
     }
 
-    public void setToken(String token) {
-        tokenField.setText(token);
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new ResetTokenController("123e4567-e89b-12d3-a456-426614174000"));
+    public void showMessage(String message) {
+        JOptionPane.showMessageDialog(this, message);
     }
 }
-
-

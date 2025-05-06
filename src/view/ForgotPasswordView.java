@@ -1,47 +1,58 @@
-package view; 
+package view;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 
 public class ForgotPasswordView extends JPanel {
     public JTextField tokenText;
     public JPasswordField newPassText;
     public JButton submitButton;
     public JButton backButton;
+    private JLabel errorLabel;
 
     public ForgotPasswordView() {
         setLayout(null);
         setOpaque(false);
+        setSize(900, 500);
+        setBackground(new Color(0, 0, 0, 150));
+        setBounds((Toolkit.getDefaultToolkit().getScreenSize().width - 900) / 2,
+                (Toolkit.getDefaultToolkit().getScreenSize().height - 500) / 2,
+                900, 500);
 
-        int panelWidth = 900;
-        int panelHeight = 700;
-        setSize(panelWidth, panelHeight);
-        setBounds((Toolkit.getDefaultToolkit().getScreenSize().width - panelWidth) / 2,
-                (Toolkit.getDefaultToolkit().getScreenSize().height - panelHeight) / 2,
-                panelWidth, panelHeight);
-
-        // Tiêu đề
+        // Title
         JLabel titleLabel = new JLabel("RESET PASSWORD", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 36));
         titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBounds(0, 80, panelWidth, 50);
+        titleLabel.setBounds(0, 80, 900, 50);
         add(titleLabel);
 
-        // Token input
+        // Back Button
+        backButton = new JButton(" BACK");
+        backButton.setBounds(450, 80, 200, 60);
+        backButton.setBackground(Color.GRAY);
+        backButton.setForeground(Color.WHITE);
+        backButton.setFont(new Font("Arial", Font.BOLD, 20));
+        add(backButton);
+
+        // Token Label
         JLabel tokenLabel = new JLabel("Reset Token:");
         tokenLabel.setBounds(250, 160, 200, 40);
         tokenLabel.setForeground(Color.WHITE);
         tokenLabel.setFont(new Font("Arial", Font.BOLD, 20));
         add(tokenLabel);
 
+        // Token Text
         tokenText = new JTextField("ENTER TOKEN");
         tokenText.setBounds(250, 200, 400, 50);
         tokenText.setFont(new Font("Arial", Font.PLAIN, 20));
         tokenText.setForeground(Color.GRAY);
+        tokenText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)));
         add(tokenText);
-        tokenText.addFocusListener(new FocusListener() {
+        tokenText.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
                 if (tokenText.getText().equals("ENTER TOKEN")) {
@@ -49,7 +60,6 @@ public class ForgotPasswordView extends JPanel {
                     tokenText.setForeground(Color.BLACK);
                 }
             }
-            
             @Override
             public void focusLost(FocusEvent e) {
                 if (tokenText.getText().isEmpty()) {
@@ -59,20 +69,24 @@ public class ForgotPasswordView extends JPanel {
             }
         });
 
-        // Password input
+        // New Password Label
         JLabel newPassLabel = new JLabel("New Password:");
         newPassLabel.setBounds(250, 260, 200, 40);
         newPassLabel.setForeground(Color.WHITE);
         newPassLabel.setFont(new Font("Arial", Font.BOLD, 20));
         add(newPassLabel);
 
+        // New Password Text
         newPassText = new JPasswordField("NEW PASSWORD");
         newPassText.setBounds(250, 300, 400, 50);
         newPassText.setFont(new Font("Arial", Font.PLAIN, 20));
         newPassText.setForeground(Color.GRAY);
         newPassText.setEchoChar((char) 0);
+        newPassText.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)));
         add(newPassText);
-        newPassText.addFocusListener(new FocusListener() {
+        newPassText.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
                 if (new String(newPassText.getPassword()).equals("NEW PASSWORD")) {
@@ -81,7 +95,6 @@ public class ForgotPasswordView extends JPanel {
                     newPassText.setEchoChar('●');
                 }
             }
-            
             @Override
             public void focusLost(FocusEvent e) {
                 if (newPassText.getPassword().length == 0) {
@@ -92,58 +105,29 @@ public class ForgotPasswordView extends JPanel {
             }
         });
 
-        // Submit
-        submitButton = new JButton(" SUBMIT");
+        // Submit Button
+        submitButton = new JButton("SUBMIT");
         submitButton.setBounds(250, 400, 400, 60);
         submitButton.setFont(new Font("Arial", Font.BOLD, 22));
         submitButton.setBackground(Color.WHITE);
         submitButton.setForeground(Color.BLACK);
         add(submitButton);
 
-        // Back
-        backButton = new JButton(" BACK");
-        backButton.setBounds(250, 480, 400, 60);
-        backButton.setFont(new Font("Arial", Font.BOLD, 22));
-        backButton.setBackground(Color.WHITE);
-        backButton.setForeground(Color.BLACK);
-        add(backButton);
+        // Error Label
+        errorLabel = new JLabel("");
+        errorLabel.setBounds(250, 370, 400, 30);
+        errorLabel.setForeground(Color.RED);
+        errorLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        errorLabel.setVisible(false);
+        add(errorLabel);
     }
 
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Reset Password");
-            frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            
-            // Thiết lập nền
-            try {
-                String imagePath = "resources/img/file_background.png";
-                ImageIcon bgIcon = new ImageIcon(imagePath);
-                if (bgIcon.getIconWidth() > 0) {
-                    Image scaledImage = bgIcon.getImage().getScaledInstance(
-                            Toolkit.getDefaultToolkit().getScreenSize().width,
-                            Toolkit.getDefaultToolkit().getScreenSize().height,
-                            Image.SCALE_SMOOTH);
-                    JLabel background = new JLabel(new ImageIcon(scaledImage));
-                    background.setBounds(0, 0, 
-                                       Toolkit.getDefaultToolkit().getScreenSize().width, 
-                                       Toolkit.getDefaultToolkit().getScreenSize().height);
-                    frame.setContentPane(background);
-                } else {
-                    frame.getContentPane().setBackground(new Color(41, 128, 185));
-                }
-            } catch (Exception e) {
-                frame.getContentPane().setBackground(new Color(41, 128, 185));
-            }
-            
-            frame.setLayout(null);
-            frame.add(new ForgotPasswordView());
-            frame.setVisible(true);
-        });
+    public void showError(String message) {
+        errorLabel.setText(message);
+        errorLabel.setVisible(true);
+    }
+
+    public void hideError() {
+        errorLabel.setVisible(false);
     }
 }

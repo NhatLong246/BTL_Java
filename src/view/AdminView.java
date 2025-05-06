@@ -132,7 +132,7 @@ public class AdminView extends JFrame {
         leftPanel.add(menuTitle, gbc);
 
         btnHome = createButton("Trang chủ");
-        btnCreateDoctor = createButton("Tạo tài khoản bác sĩ");
+        btnCreateDoctor = createButton("Thêm bác sĩ");
         btnManageDoctor = createButton("Quản lý bác sĩ");
         btnViewLockedDoctors = createButton("Xem bác sĩ bị khóa");
         btnScheduleDoctor = createButton("Lịch làm việc bác sĩ");
@@ -233,26 +233,26 @@ public class AdminView extends JFrame {
 
     public void showHome() {
         contentPanel.removeAll();
-
+    
         JPanel homePanel = new JPanel(new BorderLayout());
         homePanel.setBackground(new Color(245, 245, 245));
-
+    
         // Header section - Welcome message and date
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 20, 30));
-
+    
         JLabel welcomeLabel = new JLabel("Chào mừng, Quản trị viên " + controller.getAdminName(), SwingConstants.LEFT);
         welcomeLabel.setFont(new Font("Arial", Font.BOLD, 28));
         welcomeLabel.setForeground(new Color(34, 45, 65));
-
+    
         JLabel dateLabel = new JLabel(LocalDate.now().toString(), SwingConstants.RIGHT);
         dateLabel.setFont(new Font("Arial", Font.PLAIN, 16));
         dateLabel.setForeground(new Color(100, 100, 100));
-
+    
         headerPanel.add(welcomeLabel, BorderLayout.WEST);
         headerPanel.add(dateLabel, BorderLayout.EAST);
-
+    
         // Admin Info Panel
         JPanel adminInfoPanel = new JPanel(new BorderLayout());
         adminInfoPanel.setBackground(Color.WHITE);
@@ -260,10 +260,10 @@ public class AdminView extends JFrame {
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(25, 25, 25, 25)
         ));
-
+    
         JPanel personalPanel = new JPanel(new BorderLayout(20, 0));
         personalPanel.setOpaque(false);
-
+    
         JPanel avatarPanel = new JPanel();
         avatarPanel.setPreferredSize(new Dimension(150, 150));
         avatarPanel.setBackground(new Color(41, 128, 185));
@@ -271,73 +271,73 @@ public class AdminView extends JFrame {
         avatarLabel.setFont(new Font("Arial", Font.BOLD, 48));
         avatarLabel.setForeground(Color.WHITE);
         avatarPanel.add(avatarLabel);
-
+    
         JPanel infoPanel = new JPanel(new GridLayout(3, 1, 0, 10));
         infoPanel.setOpaque(false);
-
+    
         JLabel nameLabel = new JLabel("Quản trị viên: " + controller.getAdminName());
         nameLabel.setFont(new Font("Arial", Font.BOLD, 18));
-
+    
         JLabel emailLabel = new JLabel("Email: " + controller.getAdminEmail());
         emailLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-
+    
         JLabel phoneLabel = new JLabel("Điện thoại: " + controller.getAdminPhone());
         phoneLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-
+    
         infoPanel.add(nameLabel);
         infoPanel.add(emailLabel);
         infoPanel.add(phoneLabel);
-
+    
         personalPanel.add(avatarPanel, BorderLayout.WEST);
         personalPanel.add(infoPanel, BorderLayout.CENTER);
-
+    
         adminInfoPanel.add(personalPanel, BorderLayout.NORTH);
-
+    
         // Dashboard - Statistics
         JPanel dashboardPanel = new JPanel(new GridLayout(1, 3, 20, 0));
         dashboardPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 0, 30));
         dashboardPanel.setOpaque(false);
-
+    
         // Placeholder statistics (you can fetch real data from the controller if available)
         int totalDoctors = 10; // Replace with controller method if available
         int lockedDoctors = 2; // Replace with controller method if available
         int scheduledDoctors = 5; // Replace with controller method if available
-
+    
         JPanel doctorsCard = createDashboardCard("Tổng số bác sĩ", String.valueOf(totalDoctors), new Color(41, 128, 185));
         JPanel lockedCard = createDashboardCard("Bác sĩ bị khóa", String.valueOf(lockedDoctors), new Color(230, 126, 34));
         JPanel scheduledCard = createDashboardCard("Bác sĩ có lịch", String.valueOf(scheduledDoctors), new Color(39, 174, 96));
-
+    
         dashboardPanel.add(doctorsCard);
         dashboardPanel.add(lockedCard);
         dashboardPanel.add(scheduledCard);
-
-        // Sample Schedule Panel (Placeholder)
+    
+        // Schedule Panel
         JPanel schedulePanel = new JPanel(new BorderLayout());
         schedulePanel.setBackground(Color.WHITE);
         schedulePanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
-
+    
         JPanel scheduleHeader = new JPanel(new BorderLayout());
         scheduleHeader.setOpaque(false);
         scheduleHeader.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-
+    
         JLabel scheduleLabel = new JLabel("Lịch làm việc bác sĩ", SwingConstants.LEFT);
         scheduleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-
+    
         LocalDate today = LocalDate.now();
         String dayOfWeek = getDayOfWeekInVietnamese(today.getDayOfWeek());
         LocalTime now = LocalTime.now();
         JLabel todayLabel = new JLabel("Hôm nay: " + dayOfWeek + ", " + today + " - " + now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")), SwingConstants.RIGHT);
         todayLabel.setFont(new Font("Arial", Font.ITALIC, 14));
-
+    
         scheduleHeader.add(scheduleLabel, BorderLayout.WEST);
         scheduleHeader.add(todayLabel, BorderLayout.EAST);
-
+    
         JPanel calendarPanel = new JPanel(new GridLayout(4, 8));
         calendarPanel.setBackground(Color.WHITE);
-
+    
         calendarPanel.add(createHeaderCell("Ca / Ngày"));
         calendarPanel.add(createHeaderCell("Thứ Hai"));
         calendarPanel.add(createHeaderCell("Thứ Ba"));
@@ -346,18 +346,23 @@ public class AdminView extends JFrame {
         calendarPanel.add(createHeaderCell("Thứ Sáu"));
         calendarPanel.add(createHeaderCell("Thứ Bảy"));
         calendarPanel.add(createHeaderCell("Chủ Nhật"));
-
+    
         String[] shifts = {"Sáng (7:00-11:30)", "Chiều (13:30-17:00)", "Tối (17:00-7:00)"};
         LocalTime[] shiftStartTimes = {LocalTime.of(7, 0), LocalTime.of(13, 30), LocalTime.of(17, 0)};
         LocalTime[] shiftEndTimes = {LocalTime.of(11, 30), LocalTime.of(17, 0), LocalTime.of(7, 0)};
-
-        // Placeholder schedule data (you can fetch real data from the controller)
-        String[][] scheduleData = new String[][]{
-            {"Đang làm việc", "Không làm việc", "Hết ca làm việc", "Đang làm việc", "Không làm việc", "Hết ca làm việc", "Không làm việc"},
-            {"Không làm việc", "Đang làm việc", "Không làm việc", "Hết ca làm việc", "Đang làm việc", "Không làm việc", "Hết ca làm việc"},
-            {"Hết ca làm việc", "Không làm việc", "Đang làm việc", "Không làm việc", "Hết ca làm việc", "Đang làm việc", "Không làm việc"}
-        };
-
+    
+        // Lấy dữ liệu lịch làm việc từ database
+        String[][] scheduleData = controller.getDoctorScheduleSummary();
+    
+        // Nếu không có dữ liệu hoặc lỗi, sử dụng dữ liệu mặc định
+        if (scheduleData == null || scheduleData.length == 0) {
+            scheduleData = new String[][]{
+                {"Đang làm việc", "Không làm việc", "Hết ca làm việc", "Đang làm việc", "Không làm việc", "Hết ca làm việc", "Không làm việc"},
+                {"Không làm việc", "Đang làm việc", "Không làm việc", "Hết ca làm việc", "Đang làm việc", "Không làm việc", "Hết ca làm việc"},
+                {"Hết ca làm việc", "Không làm việc", "Đang làm việc", "Không làm việc", "Hết ca làm việc", "Đang làm việc", "Không làm việc"}
+            };
+        }
+    
         String currentShift = getCurrentShift(now);
         for (int i = 0; i < shifts.length; i++) {
             calendarPanel.add(createHeaderCell(shifts[i]));
@@ -365,7 +370,7 @@ public class AdminView extends JFrame {
                 String initialStatus = scheduleData[i][j];
                 String displayStatus;
                 Color bgColor;
-
+    
                 if (j == today.getDayOfWeek().getValue() - 1) {
                     if (initialStatus.equals("Đang làm việc")) {
                         LocalTime startTime = shiftStartTimes[i];
@@ -414,76 +419,76 @@ public class AdminView extends JFrame {
                         bgColor = new Color(240, 240, 240);
                     }
                 }
-
+    
                 boolean isCurrentShift = j == today.getDayOfWeek().getValue() - 1 && shifts[i].startsWith(currentShift);
                 JPanel cell = createScheduleCell(displayStatus, bgColor, isCurrentShift);
                 calendarPanel.add(cell);
             }
         }
-
+    
         schedulePanel.add(scheduleHeader, BorderLayout.NORTH);
         schedulePanel.add(calendarPanel, BorderLayout.CENTER);
-
+    
         // Legend for Schedule
         JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         legendPanel.setOpaque(false);
         legendPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-
+    
         JPanel workingLegend = createLegendItemWithIcon("Ca làm việc", new Color(40, 167, 69, 60), workingIcon);
         JPanel finishedLegend = createLegendItemWithIcon("Hết ca làm việc", new Color(255, 193, 7, 100), finishedIcon);
         JPanel notWorkingLegend = createLegendItemWithIcon("Không làm việc", new Color(240, 240, 240), notWorkingIcon);
-
+    
         legendPanel.add(workingLegend);
         legendPanel.add(finishedLegend);
         legendPanel.add(notWorkingLegend);
-
+    
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setOpaque(false);
         bottomPanel.add(legendPanel, BorderLayout.CENTER);
-
+    
         schedulePanel.add(bottomPanel, BorderLayout.SOUTH);
-
+    
         // Quick Access Buttons
         JPanel quickAccessPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
         quickAccessPanel.setOpaque(false);
         quickAccessPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
-
+    
         JButton createDoctorBtn = createQuickButton("Tạo bác sĩ mới", new Color(0, 123, 255));
         JButton manageDoctorBtn = createQuickButton("Quản lý bác sĩ", new Color(23, 162, 184));
         JButton scheduleBtn = createQuickButton("Lịch làm việc", new Color(40, 167, 69));
-
+    
         createDoctorBtn.addActionListener(e -> controller.showCreateDoctorForm());
         manageDoctorBtn.addActionListener(e -> controller.showManageDoctorForm());
         scheduleBtn.addActionListener(e -> controller.showScheduleDoctorForm());
-
+    
         quickAccessPanel.add(createDoctorBtn);
         quickAccessPanel.add(manageDoctorBtn);
         quickAccessPanel.add(scheduleBtn);
-
+    
         // Layout Assembly
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setOpaque(false);
         topPanel.add(adminInfoPanel, BorderLayout.CENTER);
-
+    
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setOpaque(false);
         centerPanel.add(dashboardPanel, BorderLayout.NORTH);
-
+    
         JPanel mainBottomPanel = new JPanel(new GridLayout(1, 1, 20, 0));
         mainBottomPanel.setOpaque(false);
         mainBottomPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 30, 30));
         mainBottomPanel.add(schedulePanel);
-
+    
         JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.setOpaque(false);
         southPanel.add(quickAccessPanel, BorderLayout.NORTH);
         southPanel.add(mainBottomPanel, BorderLayout.CENTER);
-
+    
         homePanel.add(headerPanel, BorderLayout.NORTH);
         homePanel.add(topPanel, BorderLayout.CENTER);
         homePanel.add(centerPanel, BorderLayout.SOUTH);
         homePanel.add(southPanel, BorderLayout.SOUTH);
-
+    
         contentPanel.add(homePanel);
         contentPanel.revalidate();
         contentPanel.repaint();
@@ -498,144 +503,6 @@ public class AdminView extends JFrame {
         contentPanel.revalidate();
         contentPanel.repaint();
     }
-
-    /*public void showCreateDoctorForm() {
-        contentPanel.removeAll();
-        contentPanel.setLayout(new BorderLayout());
-    
-        JLabel titleLabel = new JLabel("Tạo tài khoản bác sĩ", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-    
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(Color.WHITE);
-        formPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-                BorderFactory.createEmptyBorder(30, 50, 30, 50)
-        ));
-    
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(15, 10, 15, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-    
-        // Loại bỏ trường txtUsername
-        // JTextField txtUsername = new JTextField(40);
-        JTextField txtFullName = new JTextField(40);
-        JTextField txtEmail = new JTextField(40);
-        JTextField txtPhone = new JTextField(40);
-        JTextField txtAddress = new JTextField(40);
-        JTextField txtBirthDate = new JTextField(40);
-        JComboBox<Gender> cbGender = new JComboBox<>(Gender.values());
-        
-        // Tạo model cho JComboBox chuyên khoa từ database
-        DefaultComboBoxModel<SpecialtyItem> specialtyModel = new DefaultComboBoxModel<>();
-        List<Map<String, String>> specialties = controller.getAllSpecialties();
-        
-        for (Map<String, String> specialty : specialties) {
-            specialtyModel.addElement(new SpecialtyItem(
-                specialty.get("id"),
-                specialty.get("name")
-            ));
-        }
-        
-        JComboBox<SpecialtyItem> cbSpecialty = new JComboBox<>(specialtyModel);
-    
-        Font fieldFont = new Font("Arial", Font.PLAIN, 16);
-        // txtUsername.setFont(fieldFont); // Loại bỏ
-        txtFullName.setFont(fieldFont);
-        txtEmail.setFont(fieldFont);
-        txtPhone.setFont(fieldFont);
-        txtAddress.setFont(fieldFont);
-        txtBirthDate.setFont(fieldFont);
-        cbGender.setFont(fieldFont);
-        cbSpecialty.setFont(fieldFont);
-    
-        // Loại bỏ dòng này
-        // addFormField(formPanel, gbc, "Tên đăng nhập:", txtUsername, 0);
-        
-        // Cập nhật lại chỉ số row cho các trường
-        addFormField(formPanel, gbc, "Họ và tên:", txtFullName, 0);
-        addFormField(formPanel, gbc, "Email:", txtEmail, 1);
-        addFormField(formPanel, gbc, "Số điện thoại:", txtPhone, 2);
-        addFormField(formPanel, gbc, "Địa chỉ:", txtAddress, 3);
-        addFormField(formPanel, gbc, "Ngày sinh (yyyy-MM-dd):", txtBirthDate, 4);
-        addFormField(formPanel, gbc, "Giới tính:", cbGender, 5);
-        addFormField(formPanel, gbc, "Chuyên khoa:", cbSpecialty, 6);
-    
-        JButton btnSubmit = new JButton("Tạo bác sĩ");
-        btnSubmit.setFont(new Font("Arial", Font.BOLD, 16));
-        btnSubmit.setBackground(new Color(0, 123, 255));
-        btnSubmit.setForeground(Color.WHITE);
-        btnSubmit.setFocusPainted(false);
-        btnSubmit.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnSubmit.setPreferredSize(new Dimension(200, 45));
-    
-        gbc.gridx = 0;
-        gbc.gridy = 7; // Giảm xuống 1 vì đã bỏ 1 trường
-        gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(30, 10, 10, 10);
-        formPanel.add(btnSubmit, gbc);
-    
-        btnSubmit.addActionListener(e -> {
-            // Kiểm tra trường Họ và tên
-            if (txtFullName.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Họ và tên không được để trống!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                txtFullName.requestFocus();
-                return;
-            }
-            
-            // Kiểm tra định dạng ngày sinh và tuổi
-            String birthDateText = txtBirthDate.getText().trim();
-            try {
-                LocalDate birthDate = LocalDate.parse(birthDateText);
-                
-                // Tính tuổi
-                int age = LocalDate.now().getYear() - birthDate.getYear();
-                if (birthDate.plusYears(age).isAfter(LocalDate.now())) {
-                    age--; // Điều chỉnh nếu sinh nhật trong năm nay chưa đến
-                }
-                
-                // Kiểm tra điều kiện tuổi
-                if (age < 22 || age > 70) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Tuổi của bác sĩ phải từ 22 đến 70!\nTuổi hiện tại: " + age, 
-                        "Lỗi", JOptionPane.ERROR_MESSAGE);
-                    txtBirthDate.requestFocus();
-                    return;
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, 
-                    "Ngày sinh không hợp lệ! Vui lòng nhập định dạng yyyy-MM-dd.", 
-                    "Lỗi", JOptionPane.ERROR_MESSAGE);
-                txtBirthDate.requestFocus();
-                return;
-            }
-            
-            SpecialtyItem selectedSpecialty = (SpecialtyItem) cbSpecialty.getSelectedItem();
-            controller.createDoctor(
-                "", // Truyền chuỗi rỗng cho username, sẽ được tạo tự động trong repository
-                txtFullName.getText(), 
-                txtEmail.getText(), 
-                txtPhone.getText(),
-                txtAddress.getText(), 
-                txtBirthDate.getText(), 
-                (Gender) cbGender.getSelectedItem(),
-                selectedSpecialty != null ? selectedSpecialty.getId() : null
-            );
-        });
-    
-        JPanel wrapperPanel = new JPanel(new BorderLayout());
-        wrapperPanel.setOpaque(false);
-        wrapperPanel.add(formPanel, BorderLayout.CENTER);
-        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
-    
-        contentPanel.add(titleLabel, BorderLayout.NORTH);
-        contentPanel.add(wrapperPanel, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
-    }*/
 
     public void showCreateDoctorForm() {
         contentPanel.removeAll();
@@ -1007,18 +874,18 @@ public class AdminView extends JFrame {
     public void showScheduleDoctorForm() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
-
+    
         JLabel titleLabel = new JLabel("Lịch làm việc bác sĩ", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
+    
         JPanel formPanel = new JPanel(new BorderLayout());
         formPanel.setBackground(Color.WHITE);
         formPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
-
+    
         // Doctor ID Input
         JPanel inputPanel = new JPanel(new GridBagLayout());
         inputPanel.setOpaque(false);
@@ -1026,35 +893,51 @@ public class AdminView extends JFrame {
         gbc.insets = new Insets(15, 10, 15, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-
+    
         JTextField txtDoctorId = new JTextField(40);
         txtDoctorId.setFont(new Font("Arial", Font.PLAIN, 16));
-        addFormField(inputPanel, gbc, "ID Bác sĩ:", txtDoctorId, 0);
-
+        
+        // Tạo nút tìm kiếm RIÊNG chỉ dùng trong formPanel
+        JButton btnSearch = new JButton("Tìm kiếm");
+        btnSearch.setFont(new Font("Arial", Font.PLAIN, 14));
+        btnSearch.setBackground(new Color(0, 123, 255));
+        btnSearch.setForeground(Color.WHITE);
+        btnSearch.setFocusPainted(false);
+        btnSearch.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    
+        // Tạo JPanel riêng cho nút tìm kiếm và trường nhập liệu
+        JPanel searchPanel = new JPanel(new BorderLayout(10, 0));
+        searchPanel.setOpaque(false);
+        searchPanel.add(txtDoctorId, BorderLayout.CENTER);
+        searchPanel.add(btnSearch, BorderLayout.EAST);
+        
+        addFormField(inputPanel, gbc, "ID Bác sĩ:", searchPanel, 0);
+    
         // Schedule Grid
         JPanel schedulePanel = new JPanel(new BorderLayout());
         schedulePanel.setOpaque(false);
         schedulePanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-
+    
         JPanel scheduleHeader = new JPanel(new BorderLayout());
         scheduleHeader.setOpaque(false);
         scheduleHeader.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-
+    
         JLabel scheduleLabel = new JLabel("Sắp xếp lịch làm việc", SwingConstants.LEFT);
         scheduleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-
+    
         LocalDate today = LocalDate.now();
         String dayOfWeek = getDayOfWeekInVietnamese(today.getDayOfWeek());
         LocalTime now = LocalTime.now();
         JLabel todayLabel = new JLabel("Hôm nay: " + dayOfWeek + ", " + today + " - " + now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")), SwingConstants.RIGHT);
         todayLabel.setFont(new Font("Arial", Font.ITALIC, 14));
-
+    
         scheduleHeader.add(scheduleLabel, BorderLayout.WEST);
         scheduleHeader.add(todayLabel, BorderLayout.EAST);
-
+    
         JPanel calendarPanel = new JPanel(new GridLayout(4, 8));
         calendarPanel.setBackground(Color.WHITE);
-
+    
+        // Tạo các tiêu đề cho bảng lịch
         calendarPanel.add(createHeaderCell("Ca / Ngày"));
         calendarPanel.add(createHeaderCell("Thứ Hai"));
         calendarPanel.add(createHeaderCell("Thứ Ba"));
@@ -1063,49 +946,71 @@ public class AdminView extends JFrame {
         calendarPanel.add(createHeaderCell("Thứ Sáu"));
         calendarPanel.add(createHeaderCell("Thứ Bảy"));
         calendarPanel.add(createHeaderCell("Chủ Nhật"));
-
+    
         String[] shifts = {"Sáng (7:00-11:30)", "Chiều (13:30-17:00)", "Tối (17:00-7:00)"};
         boolean[][] schedule = new boolean[3][7]; // Tracks working/not working status
-
-        // Initialize schedule grid with clickable cells
+    
+        // QUAN TRỌNG: Tạo mảng để lưu trữ các cell panel và icon
+        final JPanel[][] cellPanels = new JPanel[3][7];
+        final JLabel[][] iconLabels = new JLabel[3][7];
+    
+        // Initialize schedule grid with clickable cells - initially all not working
         for (int i = 0; i < shifts.length; i++) {
             calendarPanel.add(createHeaderCell(shifts[i]));
             for (int j = 0; j < 7; j++) {
                 final int shiftIndex = i;
                 final int dayIndex = j;
-                schedule[i][j] = false; // Default to "Không làm việc"
-                String status = schedule[i][j] ? "Đang làm việc" : "Không làm việc";
-                Color bgColor = schedule[i][j] ? new Color(40, 167, 69, 80) : new Color(240, 240, 240);
-                JPanel cell = createScheduleCell(status, bgColor, false);
-
-                cell.addMouseListener(new MouseAdapter() {
+                
+                // Create cell panel
+                JPanel cellPanel = new JPanel(new BorderLayout());
+                cellPanel.setBackground(new Color(240, 240, 240));
+                cellPanel.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
+                
+                // Create icon label
+                JLabel iconLabel = new JLabel(notWorkingIcon);
+                iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                
+                cellPanel.add(iconLabel, BorderLayout.CENTER);
+                schedule[i][j] = false; // Not working by default
+                
+                // Lưu tham chiếu vào mảng
+                cellPanels[i][j] = cellPanel;
+                iconLabels[i][j] = iconLabel;
+                
+                // Add click listener to toggle status
+                cellPanel.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
                         schedule[shiftIndex][dayIndex] = !schedule[shiftIndex][dayIndex];
-                        String newStatus = schedule[shiftIndex][dayIndex] ? "Đang làm việc" : "Không làm việc";
-                        Color newBgColor = schedule[shiftIndex][dayIndex] ? new Color(40, 167, 69, 80) : new Color(240, 240, 240);
-                        updateScheduleCell(cell, newStatus, newBgColor);
+                        if (schedule[shiftIndex][dayIndex]) {
+                            cellPanel.setBackground(new Color(40, 167, 69, 60));
+                            iconLabel.setIcon(workingIcon);
+                        } else {
+                            cellPanel.setBackground(new Color(240, 240, 240));
+                            iconLabel.setIcon(notWorkingIcon);
+                        }
                     }
                 });
-
-                calendarPanel.add(cell);
+                
+                // Thêm cell vào bảng lịch
+                calendarPanel.add(cellPanel);
             }
         }
-
+    
         schedulePanel.add(scheduleHeader, BorderLayout.NORTH);
         schedulePanel.add(calendarPanel, BorderLayout.CENTER);
-
+    
         // Legend for Schedule
         JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         legendPanel.setOpaque(false);
         legendPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-
+    
         JPanel workingLegend = createLegendItemWithIcon("Ca làm việc", new Color(40, 167, 69, 60), workingIcon);
         JPanel notWorkingLegend = createLegendItemWithIcon("Không làm việc", new Color(240, 240, 240), notWorkingIcon);
-
+    
         legendPanel.add(workingLegend);
         legendPanel.add(notWorkingLegend);
-
+    
         // Save Button
         JButton btnSave = new JButton("Lưu lịch");
         btnSave.setFont(new Font("Arial", Font.BOLD, 16));
@@ -1114,35 +1019,93 @@ public class AdminView extends JFrame {
         btnSave.setFocusPainted(false);
         btnSave.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSave.setPreferredSize(new Dimension(200, 45));
-
+    
+        // Update the btnSearch action listener to load doctor's schedule
+        btnSearch.addActionListener(e -> {
+            String doctorId = txtDoctorId.getText().trim();
+            if (doctorId.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập ID bác sĩ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Load doctor schedule from database
+            boolean[][] doctorSchedule = controller.getDoctorSchedule(doctorId);
+            if (doctorSchedule != null) {
+                // Update UI to reflect doctor's schedule using saved references
+                for (int i = 0; i < shifts.length; i++) {
+                    for (int j = 0; j < 7; j++) {
+                        schedule[i][j] = doctorSchedule[i][j];
+                        
+                        // Use the saved references to update UI
+                        if (schedule[i][j]) {
+                            cellPanels[i][j].setBackground(new Color(40, 167, 69, 60));
+                            iconLabels[i][j].setIcon(workingIcon);
+                        } else {
+                            cellPanels[i][j].setBackground(new Color(240, 240, 240));
+                            iconLabels[i][j].setIcon(notWorkingIcon);
+                        }
+                    }
+                }
+            } else {
+                // If no schedule found or error, reset to all not working
+                for (int i = 0; i < shifts.length; i++) {
+                    for (int j = 0; j < 7; j++) {
+                        schedule[i][j] = false;
+                        cellPanels[i][j].setBackground(new Color(240, 240, 240));
+                        iconLabels[i][j].setIcon(notWorkingIcon);
+                    }
+                }
+            }
+        });
+    
         btnSave.addActionListener(e -> {
             String doctorId = txtDoctorId.getText().trim();
             if (doctorId.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập ID bác sĩ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+            
+            // Không cần hiển thị thêm thông báo ở đây vì đã có trong AdminController
             controller.saveDoctorSchedule(doctorId, schedule);
+            
+            // Tự động làm mới lịch sau khi lưu để hiển thị dữ liệu mới nhất
+            boolean[][] updatedSchedule = controller.getDoctorSchedule(doctorId);
+            if (updatedSchedule != null) {
+                // Cập nhật lại schedule và giao diện
+                for (int i = 0; i < shifts.length; i++) {
+                    for (int j = 0; j < 7; j++) {
+                        schedule[i][j] = updatedSchedule[i][j];
+                        if (schedule[i][j]) {
+                            cellPanels[i][j].setBackground(new Color(40, 167, 69, 60));
+                            iconLabels[i][j].setIcon(workingIcon);
+                        } else {
+                            cellPanels[i][j].setBackground(new Color(240, 240, 240));
+                            iconLabels[i][j].setIcon(notWorkingIcon);
+                        }
+                    }
+                }
+            }
         });
-
+    
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.add(btnSave);
-
-        // Assemble the form
+    
+        // Assemble the form - Đảm bảo thứ tự các thành phần được thêm đúng
         formPanel.add(inputPanel, BorderLayout.NORTH);
         formPanel.add(schedulePanel, BorderLayout.CENTER);
         formPanel.add(legendPanel, BorderLayout.SOUTH);
-
+    
         JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.setOpaque(false);
         southPanel.add(buttonPanel, BorderLayout.CENTER);
         southPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
-
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(formPanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
-
+    
         contentPanel.add(titleLabel, BorderLayout.NORTH);
         contentPanel.add(wrapperPanel, BorderLayout.CENTER);
         contentPanel.add(southPanel, BorderLayout.SOUTH);
@@ -1196,6 +1159,99 @@ public class AdminView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
+        // Thêm panel chứa nút xuất báo cáo
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+        
+        JButton exportExcelBtn = new JButton("Xuất Excel");
+        exportExcelBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        exportExcelBtn.setBackground(new Color(40, 167, 69));
+        exportExcelBtn.setForeground(Color.WHITE);
+        exportExcelBtn.setFocusPainted(false);
+        exportExcelBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        JButton exportPdfBtn = new JButton("Xuất PDF");
+        exportPdfBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        exportPdfBtn.setBackground(new Color(220, 53, 69));
+        exportPdfBtn.setForeground(Color.WHITE);
+        exportPdfBtn.setFocusPainted(false);
+        exportPdfBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        buttonPanel.add(exportExcelBtn);
+        buttonPanel.add(exportPdfBtn);
+        
+        // Thêm sự kiện cho nút xuất Excel
+        exportExcelBtn.addActionListener(e -> {
+            if (doctors == null || doctors.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không có dữ liệu để xuất!", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu danh sách bác sĩ");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+            fileChooser.setSelectedFile(new File("DanhSachBacSi.xlsx"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".xlsx")) {
+                    filePath += ".xlsx";
+                }
+                
+                boolean success = controller.exportDoctorsToExcel(doctors, filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file Excel thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file Excel thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        
+        // Thêm sự kiện cho nút xuất PDF
+        exportPdfBtn.addActionListener(e -> {
+            if (doctors == null || doctors.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Không có dữ liệu để xuất!", 
+                    "Thông báo", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu danh sách bác sĩ");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("PDF Files (*.pdf)", "pdf"));
+            fileChooser.setSelectedFile(new File("DanhSachBacSi.pdf"));
+            
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".pdf")) {
+                    filePath += ".pdf";
+                }
+                
+                boolean success = controller.exportDoctorsToPdf(doctors, filePath);
+                if (success) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file PDF thành công!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Xuất file PDF thất bại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setBackground(Color.WHITE);
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
@@ -1203,6 +1259,7 @@ public class AdminView extends JFrame {
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
         tablePanel.add(scrollPane, BorderLayout.CENTER);
+        tablePanel.add(buttonPanel, BorderLayout.SOUTH);
 
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
@@ -1368,29 +1425,32 @@ public class AdminView extends JFrame {
         JPanel cell = new JPanel(new BorderLayout());
         cell.setBackground(bgColor);
         cell.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
-
+    
         if (isCurrentShift) {
             cell.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(0, 123, 255), 2),
                 BorderFactory.createEmptyBorder(1, 1, 1, 1)
             ));
         }
-
+    
         JPanel contentPanel = new JPanel(new BorderLayout(5, 5));
         contentPanel.setOpaque(false);
-
+    
         JLabel iconLabel = new JLabel("", SwingConstants.CENTER);
         if (status.equals("Đang làm việc")) {
             iconLabel.setIcon(workingIcon);
+            cell.setToolTipText("Có bác sĩ đang làm việc");
         } else if (status.equals("Hết ca làm việc")) {
             iconLabel.setIcon(finishedIcon);
+            cell.setToolTipText("Ca làm việc đã kết thúc");
         } else {
             iconLabel.setIcon(notWorkingIcon);
+            cell.setToolTipText("Không có bác sĩ làm việc");
         }
-
+    
         contentPanel.add(iconLabel, BorderLayout.CENTER);
         cell.add(contentPanel, BorderLayout.CENTER);
-
+    
         return cell;
     }
 
