@@ -452,17 +452,56 @@ public class DoctorController {
         }
     }
 
-    public void deletePatient(String patientId) {
-        if (patientId.isEmpty()) {
-            JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bệnh nhân!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-            return;
+    /**
+     * Xóa bệnh nhân khỏi hệ thống
+     * @param patientId ID của bệnh nhân cần xóa
+     * @return true nếu xóa thành công, false nếu xóa thất bại
+     */
+    public boolean deletePatient(String patientId) {
+        if (patientId == null || patientId.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(view, 
+                "ID bệnh nhân không hợp lệ!", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            return false;
         }
-
-        if (repository.deletePatient(patientId)) {
-            JOptionPane.showMessageDialog(view, "Xóa bệnh nhân thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
-            showHome();
-        } else {
-            JOptionPane.showMessageDialog(view, "Không thể xóa bệnh nhân!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+        
+        try {
+            // Kiểm tra xem bệnh nhân có tồn tại không
+            Patient patient = patientRepository.getPatientById(patientId);
+            if (patient == null) {
+                JOptionPane.showMessageDialog(view, 
+                    "Không tìm thấy bệnh nhân có ID: " + patientId, 
+                    "Lỗi", 
+                    JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+            
+            // Kiểm tra xem bệnh nhân có các lịch hẹn đang chờ không
+            boolean hasPendingAppointments = patientRepository.hasActiveAppointments(patientId);
+            if (hasPendingAppointments) {
+                int confirm = JOptionPane.showConfirmDialog(view,
+                    "Bệnh nhân này có các cuộc hẹn đang chờ. Việc xóa sẽ hủy tất cả các cuộc hẹn này.\n" +
+                    "Bạn có chắc chắn muốn tiếp tục không?",
+                    "Xác nhận",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+                
+                if (confirm != JOptionPane.YES_OPTION) {
+                    return false;
+                }
+            }
+            
+            // Thực hiện xóa bệnh nhân
+            return patientRepository.deletePatient(patientId);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi xóa bệnh nhân: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(view, 
+                "Đã xảy ra lỗi khi xóa bệnh nhân: " + e.getMessage(), 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     }
 
@@ -690,78 +729,6 @@ public class DoctorController {
         }
     }
 
-    // Thêm phương thức này vào class DoctorController
-    /*public boolean updateAllPassedShifts() {
-        try {
-            // Lấy ngày và thời gian hiện tại
-            LocalDate today = LocalDate.now();
-            LocalTime now = LocalTime.now();
-            
-            // Xác định ca hiện tại
-            String currentShift = getCurrentShift(now);
-            
-            // Xác định thứ trong tuần
-            int currentDayOfWeek = today.getDayOfWeek().getValue();
-            
-            // Xác định các ca đã qua để cập nhật thành "Hết ca làm việc"
-            // 1. Tất cả các ca của các ngày trong tuần đã qua
-            // 2. Các ca của ngày hiện tại, nhưng đã qua giờ làm việc
-            
-            // Định nghĩa ca làm việc
-            String[] shifts = {"Sáng", "Chiều", "Tối"};
-            int currentShiftIndex = -1;
-            
-            for (int i = 0; i < shifts.length; i++) {
-                if (shifts[i].equals(currentShift)) {
-                    currentShiftIndex = i;
-                    break;
-                }
-            }
-            
-            // Không có ca nào phù hợp cho cập nhật
-            if (currentShiftIndex == -1) {
-                return false;
-            }
-            
-            boolean anyUpdates = false;
-            
-            // Cập nhật tất cả ca trước ngày hiện tại nếu đang là "Đang làm việc"
-            for (int day = 1; day <= 7; day++) {
-                if (day < currentDayOfWeek) {
-                    // Ngày đã qua
-                    for (String shift : shifts) {
-                        String currentStatus = repository.getShiftStatus(
-                                doctorId, getDayOfWeekInVietnamese(day), shift);
-                        
-                        if ("Đang làm việc".equals(currentStatus)) {
-                            repository.updateShiftStatus(
-                                    doctorId, getDayOfWeekInVietnamese(day), shift, "Hết ca làm việc");
-                            anyUpdates = true;
-                        }
-                    }
-                } 
-                else if (day == currentDayOfWeek) {
-                    // Ngày hiện tại, chỉ cập nhật ca đã qua
-                    for (int i = 0; i < currentShiftIndex; i++) {
-                        String currentStatus = repository.getShiftStatus(
-                                doctorId, getDayOfWeekInVietnamese(day), shifts[i]);
-                        
-                        if ("Đang làm việc".equals(currentStatus)) {
-                            repository.updateShiftStatus(
-                                    doctorId, getDayOfWeekInVietnamese(day), shifts[i], "Hết ca làm việc");
-                            anyUpdates = true;
-                        }
-                    }
-                }
-            }
-            
-            return anyUpdates;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }*/
-
     /**
      * Chỉ cập nhật trạng thái các ca làm việc đã hết trong ngày hiện tại
      */
@@ -962,6 +929,60 @@ public class DoctorController {
             return false;
         }
     }
+        
+    /**
+     * Hủy cuộc hẹn với bệnh nhân
+     * @param appointmentId ID của cuộc hẹn cần hủy
+     * @return true nếu hủy thành công, ngược lại trả về false
+     */
+    public boolean cancelAppointment(String appointmentId) {
+        try {
+            return repository.cancelAppointment(appointmentId);
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi hủy lịch hẹn: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
 
+    /**
+     * Lấy thông tin bệnh nhân dựa trên ID
+     * @param patientId ID bệnh nhân cần tìm
+     * @return Đối tượng Patient nếu tìm thấy, null nếu không tìm thấy
+     */
+    public Patient getPatientById(String patientId) {
+        if (patientId == null || patientId.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            // Sử dụng patientRepository để tìm kiếm bệnh nhân
+            return patientRepository.getPatientById(patientId);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tìm kiếm bệnh nhân: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    /**
+     * Tìm kiếm bệnh nhân theo từ khóa
+     * @param keyword Từ khóa tìm kiếm
+     * @return Danh sách bệnh nhân tìm thấy
+     */
+    public List<Patient> searchPatients(String keyword) {
+        if (keyword == null || keyword.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        try {
+            // Sử dụng patientRepository để tìm kiếm bệnh nhân
+            return patientRepository.searchPatients(keyword);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tìm kiếm bệnh nhân: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
     
 }
