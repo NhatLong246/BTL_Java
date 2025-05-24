@@ -106,7 +106,7 @@ public class PatientView extends JFrame {
             gbc.fill = GridBagConstraints.HORIZONTAL;
             gbc.weightx = 1.0;
 
-            JLabel menuTitle = new JLabel("Patient Menu", SwingConstants.CENTER);
+            JLabel menuTitle = new JLabel("", SwingConstants.CENTER);
             menuTitle.setFont(new Font("Arial", Font.BOLD, 20));
             menuTitle.setForeground(Color.WHITE);
             gbc.gridy = 0;
@@ -451,7 +451,7 @@ public class PatientView extends JFrame {
         buttonPanel.setOpaque(false);
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 50));
         
-        JButton editButton = new JButton("Chỉnh sửa thông tin");
+       /* JButton editButton = new JButton("Chỉnh sửa thông tin");
         editButton.setFont(new Font("Arial", Font.BOLD, 14));
         editButton.setBackground(new Color(52, 152, 219));
         editButton.setForeground(Color.WHITE);
@@ -482,7 +482,7 @@ public class PatientView extends JFrame {
                 "Chức năng in thông tin đang được phát triển!",
                 "Thông báo",
                 JOptionPane.INFORMATION_MESSAGE);
-        });
+        });*/
         
         // ScrollPane để đảm bảo nội dung luôn hiển thị đầy đủ - THÊM MỚI
         JScrollPane scrollPane = new JScrollPane(mainPanel);

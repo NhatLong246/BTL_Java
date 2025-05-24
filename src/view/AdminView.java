@@ -123,7 +123,7 @@ public class AdminView extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
 
-        JLabel menuTitle = new JLabel("Admin Menu", SwingConstants.CENTER);
+        JLabel menuTitle = new JLabel("", SwingConstants.CENTER);
         menuTitle.setFont(new Font("Arial", Font.BOLD, 20));
         menuTitle.setForeground(Color.WHITE);
         gbc.gridy = 0;

@@ -56,8 +56,8 @@ public class LoginController {
 
         boolean loginSuccess = UserRepository.loginUser(username, password);
         if (loginSuccess) {
-            view.hideError();
-            JOptionPane.showMessageDialog(view, "Đăng nhập thành công!");
+            /*view.hideError();
+            JOptionPane.showMessageDialog(view, "Đăng nhập thành công!");*/
 
             String role = UserRepository.getUserRole(username);
             String userId = UserRepository.getUserIdByUsername(username);
