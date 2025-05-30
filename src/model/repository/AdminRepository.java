@@ -37,7 +37,8 @@ public class AdminRepository {
                      "FROM Doctors d " +
                      "JOIN UserAccounts u ON d.UserID = u.UserID " +
                      "LEFT JOIN Specialties s ON d.SpecialtyID = s.SpecialtyID " +
-                     "WHERE u.Role = 'Bác sĩ' AND u.IsLocked = 0";
+                     "WHERE u.Role = 'Bác sĩ' AND u.IsLocked = 0" +
+                     " ORDER BY d.DoctorID ASC"; // Sắp xếp theo ngày tạo mới nhất
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
@@ -964,6 +965,274 @@ public class AdminRepository {
                 } catch (SQLException e) {
                     System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
                     e.printStackTrace();
+                }
+            }
+        }
+    }
+    
+    /**
+     * Lưu phân công bác sĩ theo ca làm việc
+     * @param day Ngày trong tuần
+     * @param shift Tên ca
+     * @param doctorIds Danh sách ID bác sĩ
+     * @return true nếu lưu thành công
+     */
+    public boolean saveDoctorShiftAssignments(String day, String shift, List<String> doctorIds) {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                throw new SQLException("Không thể kết nối đến cơ sở dữ liệu!");
+            }
+            conn.setAutoCommit(false);
+            
+            // Xóa các phân công cũ cho ngày và ca này
+            String deleteSql = "DELETE FROM DoctorSchedule WHERE DayOfWeek = ? AND ShiftType = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteSql)) {
+                stmt.setString(1, day);
+                stmt.setString(2, shift);
+                stmt.executeUpdate();
+            }
+            
+            // Thêm phân công mới
+            if (!doctorIds.isEmpty()) {
+                String insertSql = "INSERT INTO DoctorSchedule (DoctorID, DayOfWeek, ShiftType, Status) VALUES (?, ?, ?, 'Đang làm việc')";
+                try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
+                    for (String doctorId : doctorIds) {
+                        stmt.setString(1, doctorId);
+                        stmt.setString(2, day);
+                        stmt.setString(3, shift);
+                        stmt.addBatch();
+                    }
+                    stmt.executeBatch();
+                }
+            }
+            
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    System.err.println("Lỗi khi rollback: " + ex.getMessage());
+                }
+            }
+            System.err.println("Lỗi SQL khi lưu lịch làm việc: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+                }
+            }
+        }
+    }
+    
+    /**
+     * Lấy tất cả bác sĩ được phân công cho một ca cụ thể
+     * @param day Ngày trong tuần
+     * @param shift Tên ca
+     * @return Danh sách các bác sĩ
+     */
+    public List<Doctor> getDoctorsForShift(String day, String shift) {
+        List<Doctor> doctors = new ArrayList<>();
+        Connection conn = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                throw new SQLException("Không thể kết nối đến cơ sở dữ liệu!");
+            }
+            
+            String sql = "SELECT d.DoctorID, d.UserID, u.FullName, d.DateOfBirth, d.Gender, d.Address, " +
+                         "s.SpecialtyID, s.SpecialtyName, u.Email, u.PhoneNumber, d.CreatedAt " +
+                         "FROM DoctorSchedule ds " +
+                         "JOIN Doctors d ON ds.DoctorID = d.DoctorID " +
+                         "JOIN UserAccounts u ON d.UserID = u.UserID " +
+                         "LEFT JOIN Specialties s ON d.SpecialtyID = s.SpecialtyID " +
+                         "WHERE ds.DayOfWeek = ? AND ds.ShiftType = ? AND ds.Status = 'Đang làm việc'" +
+                         "ORDER BY d.DoctorID ASC";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, day);
+                stmt.setString(2, shift);
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        Doctor doctor = new Doctor(
+                            rs.getString("UserID"),
+                            rs.getString("DoctorID"),
+                            rs.getString("FullName"),
+                            rs.getDate("DateOfBirth") != null ? rs.getDate("DateOfBirth").toLocalDate() : LocalDate.now(),
+                            rs.getString("Address"),
+                            Gender.fromDatabase(rs.getString("Gender")),
+                            rs.getString("PhoneNumber"),
+                            rs.getString("SpecialtyID") != null ? Specialization.fromId(rs.getString("SpecialtyID")) : null,
+                            rs.getString("Email"),
+                            rs.getDate("CreatedAt") != null ? rs.getDate("CreatedAt").toLocalDate() : LocalDate.now()
+                        );
+                        doctors.add(doctor);
+                    }
+                }
+            }
+            
+            return doctors;
+        } catch (SQLException e) {
+            System.err.println("Lỗi SQL khi lấy danh sách bác sĩ trực: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+                }
+            }
+        }
+    }
+    
+    /**
+     * Lấy lịch làm việc của một bác sĩ cụ thể
+     * @param doctorId ID của bác sĩ
+     * @return Map với cấu trúc: ngày -> ca -> danh sách bác sĩ
+     */
+    public Map<String, Map<String, List<Doctor>>> getDoctorShiftSchedule(String doctorId) {
+        Map<String, Map<String, List<Doctor>>> schedule = new HashMap<>();
+        String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+        String[] shifts = {"Sáng", "Chiều", "Tối"};
+        
+        // Khởi tạo cấu trúc Map
+        for (String day : days) {
+            schedule.put(day, new HashMap<>());
+            for (String shift : shifts) {
+                schedule.get(day).put(shift, new ArrayList<>());
+            }
+        }
+        
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                throw new SQLException("Không thể kết nối đến cơ sở dữ liệu!");
+            }
+            
+            // Lấy tất cả ca làm việc của bác sĩ cụ thể
+            String doctorShiftsSql = "SELECT DayOfWeek, ShiftType FROM DoctorSchedule " +
+                                  "WHERE DoctorID = ? AND Status = 'Đang làm việc'";
+            
+            List<String[]> doctorShifts = new ArrayList<>();
+            try (PreparedStatement stmt = conn.prepareStatement(doctorShiftsSql)) {
+                stmt.setString(1, doctorId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        doctorShifts.add(new String[]{rs.getString("DayOfWeek"), rs.getString("ShiftType")});
+                    }
+                }
+            }
+            
+            // Với mỗi ca làm việc của bác sĩ, lấy tất cả bác sĩ được phân công
+            for (String[] shift : doctorShifts) {
+                String day = shift[0];
+                String shiftName = shift[1];
+                
+                List<Doctor> doctors = getDoctorsForShift(day, shiftName);
+                schedule.get(day).put(shiftName, doctors);
+            }
+            
+            return schedule;
+        } catch (SQLException e) {
+            System.err.println("Lỗi SQL khi lấy lịch làm việc: " + e.getMessage());
+            e.printStackTrace();
+            return schedule;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * Lấy tất cả lịch trực của bác sĩ
+     * @return Map với cấu trúc: ngày -> ca -> danh sách bác sĩ
+     */
+    public Map<String, Map<String, List<Doctor>>> getAllDoctorSchedules() {
+        Map<String, Map<String, List<Doctor>>> schedules = new HashMap<>();
+        String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+        String[] shifts = {"Sáng", "Chiều", "Tối"};
+        
+        // Khởi tạo cấu trúc Map
+        for (String day : days) {
+            schedules.put(day, new HashMap<>());
+            for (String shift : shifts) {
+                schedules.get(day).put(shift, new ArrayList<>());
+            }
+        }
+        
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                throw new SQLException("Không thể kết nối đến cơ sở dữ liệu!");
+            }
+            
+            // Lấy tất cả lịch trực từ database
+            String sql = "SELECT ds.DoctorID, ds.DayOfWeek, ds.ShiftType, " +
+                         "d.UserID, u.FullName, d.DateOfBirth, d.Gender, d.Address, " +
+                         "s.SpecialtyID, s.SpecialtyName, u.Email, u.PhoneNumber, d.CreatedAt " +
+                         "FROM DoctorSchedule ds " +
+                         "JOIN Doctors d ON ds.DoctorID = d.DoctorID " +
+                         "JOIN UserAccounts u ON d.UserID = u.UserID " +
+                         "LEFT JOIN Specialties s ON d.SpecialtyID = s.SpecialtyID " +
+                         "WHERE ds.Status = 'Đang làm việc' " +
+                         "ORDER BY ds.DayOfWeek, ds.ShiftType";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+                
+                while (rs.next()) {
+                    String day = rs.getString("DayOfWeek");
+                    String shift = rs.getString("ShiftType");
+                    
+                    Doctor doctor = new Doctor(
+                        rs.getString("UserID"),
+                        rs.getString("DoctorID"),
+                        rs.getString("FullName"),
+                        rs.getDate("DateOfBirth") != null ? rs.getDate("DateOfBirth").toLocalDate() : LocalDate.now(),
+                        rs.getString("Address"),
+                        Gender.fromDatabase(rs.getString("Gender")),
+                        rs.getString("PhoneNumber"),
+                        rs.getString("SpecialtyID") != null ? Specialization.fromId(rs.getString("SpecialtyID")) : null,
+                        rs.getString("Email"),
+                        rs.getDate("CreatedAt") != null ? rs.getDate("CreatedAt").toLocalDate() : LocalDate.now()
+                    );
+                    
+                    if (schedules.containsKey(day) && schedules.get(day).containsKey(shift)) {
+                        schedules.get(day).get(shift).add(doctor);
+                    }
+                }
+            }
+            
+            return schedules;
+        } catch (SQLException e) {
+            System.err.println("Lỗi SQL khi lấy tất cả lịch làm việc: " + e.getMessage());
+            e.printStackTrace();
+            return schedules;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
                 }
             }
         }
