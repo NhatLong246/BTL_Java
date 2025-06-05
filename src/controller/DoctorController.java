@@ -1,8 +1,13 @@
 package controller;
 
-import model.entity.Patient;
 import model.entity.Appointment;
 import model.entity.Doctor;
+import model.entity.MedicalRecord;
+import model.entity.Medication;
+import model.entity.Patient;
+import model.entity.Prescription;
+import model.entity.PrescriptionDetail;
+import model.entity.VitalSign;
 import model.enums.Gender;
 import model.repository.DoctorRepository;
 import model.repository.PatientRepository;
@@ -11,7 +16,6 @@ import view.LoginView;
 import database.DatabaseConnection;
 
 import javax.swing.*;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -21,10 +25,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import utils.ReportExporter;
 
@@ -32,7 +40,7 @@ public class DoctorController {
     private final DoctorView view;
     private final DoctorRepository repository;
     private final String doctorId;
-    private Doctor doctorInfo; // Thêm thông tin bác sĩ
+    private Doctor doctorInfo;
     private final PatientRepository patientRepository;
 
     public DoctorController(DoctorView view, String doctorId) {
@@ -41,14 +49,10 @@ public class DoctorController {
         this.patientRepository = new PatientRepository();
         this.doctorId = doctorId;
         
-        // Tải thông tin bác sĩ khi khởi tạo controller
         loadDoctorInfo();
         repository.checkDoctorScheduleTable();
     }
 
-    /**
-     * Tải thông tin bác sĩ từ database
-     */
     private void loadDoctorInfo() {
         try {
             this.doctorInfo = repository.getDoctorById(doctorId);
@@ -58,10 +62,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy tên của bác sĩ
-     * @return Tên bác sĩ hoặc "Không xác định" nếu không tìm thấy
-     */
     public String getDoctorName() {
         if (doctorInfo != null) {
             return doctorInfo.getFullName();
@@ -69,10 +69,6 @@ public class DoctorController {
         return "Không xác định";
     }
 
-    /**
-     * Lấy tổng số bệnh nhân của bác sĩ
-     * @return Số lượng bệnh nhân
-     */
     public int getTotalPatients() {
         try {
             return repository.getTotalPatientCount();
@@ -83,10 +79,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy số lượng cuộc hẹn trong ngày hôm nay
-     * @return Số cuộc hẹn hôm nay
-     */
     public int getTodayAppointments() {
         try {
             return repository.getTodayAppointmentCount(doctorId);
@@ -97,10 +89,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy số bệnh nhân đang chờ khám
-     * @return Số bệnh nhân đang chờ
-     */
     public int getWaitingPatients() {
         try {
             return repository.getWaitingPatientCount(doctorId);
@@ -111,10 +99,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy số cuộc hẹn đã hoàn thành trong ngày
-     * @return Số cuộc hẹn hoàn thành
-     */
     public int getCompletedAppointments() {
         try {
             return repository.getCompletedTodayCount(doctorId);
@@ -125,10 +109,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy danh sách các cuộc hẹn sắp tới
-     * @return Danh sách các cuộc hẹn dưới dạng mảng Object[]
-     */
     public List<Object[]> getUpcomingAppointments() {
         try {
             return repository.getUpcomingAppointments(doctorId);
@@ -139,13 +119,9 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy danh sách bệnh nhân mới đăng ký gần đây
-     * @return Danh sách bệnh nhân dưới dạng mảng Object[]
-     */
     public List<Object[]> getRecentPatients() {
         try {
-            return repository.getRecentPatients(5); // Lấy 5 bệnh nhân mới nhất
+            return repository.getRecentPatients(5);
         } catch (SQLException e) {
             System.err.println("Lỗi khi lấy danh sách bệnh nhân mới: " + e.getMessage());
             e.printStackTrace();
@@ -173,7 +149,6 @@ public class DoctorController {
                 "Lỗi khi tải danh sách bệnh nhân: " + e.getMessage(),
                 "Lỗi", 
                 JOptionPane.ERROR_MESSAGE);
-            // Hiển thị danh sách trống nếu có lỗi
             view.showPatientList(new ArrayList<>());
         }
     }
@@ -183,32 +158,25 @@ public class DoctorController {
         view.showBookAppointment();
     }
 
+    public void showExamination() {
+        view.setSelectedButton(view.getBtnExamination());
+        view.showExamination();
+    }
+
     public void showDeletePatientForm() {
         view.setSelectedButton(view.getBtnDel());
         view.showDeletePatientForm();
     }
 
-        /**
-     * Thêm bệnh nhân mới vào hệ thống
-     * @param name Tên bệnh nhân
-     * @param birthDateStr Ngày sinh (dạng chuỗi YYYY-MM-DD)
-     * @param address Địa chỉ
-     * @param phone Số điện thoại
-     * @param gender Giới tính
-     * @param medicalHistory Bệnh lý/chẩn đoán
-     */
     public void addPatient(String name, String birthDateStr, String address, String phone, Gender gender, String medicalHistory, String email) {
-        // Kiểm tra dữ liệu đầu vào
         if (name.isEmpty() || birthDateStr.isEmpty() || address.isEmpty() || phone.isEmpty()) {
             JOptionPane.showMessageDialog(view, "Vui lòng điền đầy đủ thông tin!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
     
         try {
-            // Chuyển đổi chuỗi ngày sinh thành LocalDate
             LocalDate birthDate = LocalDate.parse(birthDateStr);
             
-            // Kiểm tra ngày sinh hợp lệ (không trong tương lai và không quá xa quá khứ)
             if (birthDate.isAfter(LocalDate.now())) {
                 JOptionPane.showMessageDialog(view, "Ngày sinh không thể ở tương lai!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
@@ -219,7 +187,6 @@ public class DoctorController {
                 return;
             }
             
-            // Kiểm tra định dạng số điện thoại
             if (!isValidVietnamesePhoneNumber(phone)) {
                 JOptionPane.showMessageDialog(view, 
                     "Số điện thoại không hợp lệ! Số điện thoại Việt Nam phải:\n" +
@@ -238,14 +205,6 @@ public class DoctorController {
                 return;
             }
 
-            // Debug email
-            System.out.println("Email nhập vào: '" + email + "'");
-            System.out.println("Độ dài email: " + email.length());
-            System.out.println("Mã ASCII của từng ký tự:");
-            for (int i = 0; i < email.length(); i++) {
-                System.out.println("Vị trí " + i + ": " + (int)email.charAt(i));
-            }
-
             if (!email.isEmpty() && !isValidEmail(email)) {
                 JOptionPane.showMessageDialog(view, "Định dạng email không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
@@ -253,19 +212,17 @@ public class DoctorController {
     
             String userId = generateNewUserID();
             
-            // Tạo đối tượng Patient
             Patient patient = new Patient(
-                userId,          // userID
-                null,            // patientID - sẽ được tạo trong repository
-                name,            // fullName
-                birthDate,       // dateOfBirth
-                address,         // address
-                gender,          // gender
-                phone,           // phoneNumber
-                LocalDate.now()  // registrationDate
+                userId,
+                null,
+                name,
+                birthDate,
+                address,
+                gender,
+                phone,
+                LocalDate.now()
             );
     
-            // Thêm bệnh nhân vào database
             if (patientRepository.addPatient(patient, medicalHistory, doctorId, email)) {
                 if (patient.getTempUsername() != null && patient.getTempPassword() != null) {
                     JOptionPane.showMessageDialog(
@@ -280,7 +237,6 @@ public class DoctorController {
                         JOptionPane.INFORMATION_MESSAGE
                     );
                     
-                    // Tùy chọn: Lưu thông tin đăng nhập vào file để in sau
                     savePrintableCredentials(patient);
                 } else {
                     JOptionPane.showMessageDialog(
@@ -290,7 +246,6 @@ public class DoctorController {
                         JOptionPane.INFORMATION_MESSAGE
                     );
                 }
-                // Quay về trang chủ
                 showHome();
             } else {
                 JOptionPane.showMessageDialog(
@@ -316,14 +271,12 @@ public class DoctorController {
     }
 
     private void savePrintableCredentials(Patient patient) {
-        // Tạo thư mục để lưu thông tin đăng nhập
         String directory = "credentials";
         File dir = new File(directory);
         if (!dir.exists()) {
-            dir.mkdirs(); // Tạo thư mục nếu chưa tồn tại
+            dir.mkdirs();
         }
         
-        // Tạo tên file có định dạng rõ ràng
         String filename = directory + File.separator + 
                          "credentials_" + patient.getPatientID() + "_" + 
                          java.time.LocalDate.now().toString() + ".txt";
@@ -343,7 +296,6 @@ public class DoctorController {
             
             System.out.println("Đã lưu thông tin đăng nhập vào file: " + filename);
             
-            // Hiển thị thông báo cho người dùng biết file được lưu ở đâu
             JOptionPane.showMessageDialog(
                 view,
                 "Thông tin đăng nhập đã được lưu tại:\n" + new File(filename).getAbsolutePath(),
@@ -361,10 +313,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Tạo UserID mới dựa trên mã lớn nhất trong database + 1
-     * @return UserID mới với định dạng USR-XXX
-     */
     private String generateNewUserID() {
         try (Connection conn = DatabaseConnection.getConnection()) {
             String query = "SELECT MAX(SUBSTRING(UserID, 5)) AS maxID FROM UserAccounts WHERE UserID LIKE 'USR-%'";
@@ -377,47 +325,36 @@ public class DoctorController {
                         try {
                             maxID = Integer.parseInt(maxIDStr);
                         } catch (NumberFormatException e) {
-                            // Nếu không phải số, giữ nguyên maxID = 0
                             System.err.println("Lỗi chuyển đổi mã UserID: " + e.getMessage());
                         }
                     }
                 }
-                return String.format("USR-%03d", maxID + 1); // Định dạng USR-XXX
+                return String.format("USR-%03d", maxID + 1);
             }
         } catch (SQLException e) {
             System.err.println("Lỗi khi tạo UserID mới: " + e.getMessage());
             e.printStackTrace();
-            // Fallback nếu không thể kết nối database
             return "USR-" + (int)(Math.random() * 900 + 100);
         }
     }
 
     private boolean isValidVietnamesePhoneNumber(String phone) {
-        // Loại bỏ khoảng trắng và dấu ngoặc nếu có
         String cleanPhone = phone.replaceAll("\\s+|-|\\(|\\)", "");
         
-        // Chuyển đổi +84 thành 0
         if (cleanPhone.startsWith("+84")) {
             cleanPhone = "0" + cleanPhone.substring(3);
         }
         
-        // Kiểm tra số điện thoại Việt Nam: 
-        // - Bắt đầu bằng 0
-        // - Tiếp theo là một trong các đầu số: 3, 5, 7, 8, 9
-        // - Tổng cộng 10 chữ số
         String regex = "^0[35789]\\d{8}$";
         
         return cleanPhone.matches(regex);
     }
 
     private boolean isValidEmail(String email) {
-        // Loại bỏ khoảng trắng thừa
         String trimmedEmail = email.trim();
         
-        // In ra log để debug
         System.out.println("Đang kiểm tra email: '" + trimmedEmail + "'");
         
-        // Biểu thức chính quy kiểm tra định dạng email được cải tiến
         String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
         boolean isValid = trimmedEmail.matches(emailRegex);
         
@@ -433,30 +370,30 @@ public class DoctorController {
         }
     
         try {
-            LocalDate appointmentDate = LocalDate.parse(dateStr);
+            LocalDateTime appointmentDateTime = LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             
-            // Kiểm tra ngày hẹn phải sau ngày hiện tại
-            if (appointmentDate.isBefore(LocalDate.now()) || appointmentDate.isEqual(LocalDate.now())) {
-                JOptionPane.showMessageDialog(view, "Ngày hẹn phải sau ngày hiện tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            if (appointmentDateTime.isBefore(LocalDateTime.now())) {
+                JOptionPane.showMessageDialog(view, "Thời gian hẹn phải sau thời gian hiện tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
-            if (repository.bookAppointment(patientId, appointmentDate, doctorId)) {
+            Patient patient = patientRepository.getPatientByID(patientId);
+            if (patient == null) {
+                JOptionPane.showMessageDialog(view, "Không tìm thấy bệnh nhân với ID: " + patientId, "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (repository.bookAppointment(patientId, appointmentDateTime.toLocalDate(), doctorId)) {
                 JOptionPane.showMessageDialog(view, "Đặt lịch hẹn thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
                 showHome();
             } else {
                 JOptionPane.showMessageDialog(view, "Không thể đặt lịch hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         } catch (DateTimeParseException e) {
-            JOptionPane.showMessageDialog(view, "Định dạng ngày không hợp lệ (YYYY-MM-DD)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(view, "Định dạng ngày không hợp lệ (YYYY-MM-DD HH:mm:ss)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    /**
-     * Xóa bệnh nhân khỏi hệ thống
-     * @param patientId ID của bệnh nhân cần xóa
-     * @return true nếu xóa thành công, false nếu xóa thất bại
-     */
     public boolean deletePatient(String patientId) {
         if (patientId == null || patientId.trim().isEmpty()) {
             JOptionPane.showMessageDialog(view, 
@@ -467,7 +404,6 @@ public class DoctorController {
         }
         
         try {
-            // Kiểm tra xem bệnh nhân có tồn tại không
             Patient patient = patientRepository.getPatientById(patientId);
             if (patient == null) {
                 JOptionPane.showMessageDialog(view, 
@@ -477,7 +413,6 @@ public class DoctorController {
                 return false;
             }
             
-            // Kiểm tra xem bệnh nhân có các lịch hẹn đang chờ không
             boolean hasPendingAppointments = patientRepository.hasActiveAppointments(patientId);
             if (hasPendingAppointments) {
                 int confirm = JOptionPane.showConfirmDialog(view,
@@ -492,7 +427,6 @@ public class DoctorController {
                 }
             }
             
-            // Thực hiện xóa bệnh nhân
             return patientRepository.deletePatient(patientId);
         } catch (Exception e) {
             System.err.println("Lỗi khi xóa bệnh nhân: " + e.getMessage());
@@ -505,9 +439,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Đăng xuất khỏi hệ thống
-     */
     public void logout() {
         int option = JOptionPane.showConfirmDialog(
                 view,
@@ -522,10 +453,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy chuyên khoa của bác sĩ
-     * @return Tên chuyên khoa
-     */
     public String getDoctorSpecialty() {
         if (doctorInfo != null && doctorInfo.getSpecialization() != null) {
             return doctorInfo.getSpecialization().getName();
@@ -533,10 +460,6 @@ public class DoctorController {
         return "Chưa cập nhật";
     }
 
-    /**
-     * Lấy email của bác sĩ
-     * @return Địa chỉ email
-     */
     public String getDoctorEmail() {
         if (doctorInfo != null) {
             return doctorInfo.getEmail();
@@ -544,10 +467,6 @@ public class DoctorController {
         return "Chưa cập nhật";
     }
 
-    /**
-     * Lấy số điện thoại của bác sĩ
-     * @return Số điện thoại
-     */
     public String getDoctorPhone() {
         if (doctorInfo != null) {
             return doctorInfo.getPhoneNumber();
@@ -555,10 +474,6 @@ public class DoctorController {
         return "Chưa cập nhật";
     }
 
-    /**
-     * Lấy địa chỉ của bác sĩ
-     * @return Địa chỉ
-     */
     public String getDoctorAddress() {
         if (doctorInfo != null) {
             return doctorInfo.getAddress();
@@ -566,10 +481,10 @@ public class DoctorController {
         return "Chưa cập nhật";
     }
 
-    /**
-     * Lấy lịch làm việc của bác sĩ trong ngày
-     * @return Danh sách các hoạt động trong ngày
-     */
+    public String getDoctorId() {
+        return doctorId;
+    }
+
     public List<Object[]> getTodaySchedule() {
         try {
             return repository.getDoctorTodaySchedule(doctorId);
@@ -580,13 +495,9 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy cuộc hẹn tiếp theo
-     * @return Danh sách cuộc hẹn sắp tới
-     */
     public List<Object[]> getNextAppointments() {
         try {
-            return repository.getNextAppointments(doctorId, 5); // Lấy 5 cuộc hẹn tiếp theo
+            return repository.getNextAppointments(doctorId, 5);
         } catch (SQLException e) {
             System.err.println("Lỗi khi lấy cuộc hẹn sắp tới: " + e.getMessage());
             e.printStackTrace();
@@ -594,13 +505,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Cập nhật trạng thái ca làm việc hiện tại
-     * @param dayOfWeek Ngày trong tuần
-     * @param shift Ca làm việc
-     * @param status Trạng thái mới
-     * @return true nếu cập nhật thành công
-     */
     public boolean updateCurrentShiftStatus(String dayOfWeek, String shift, String status) {
         try {
             return repository.updateDoctorScheduleStatus(doctorId, dayOfWeek, shift, status);
@@ -615,10 +519,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy thông tin ca làm việc hiện tại
-     * @return Thông tin ca làm việc
-     */
     public String getCurrentShiftInfo() {
         LocalTime now = LocalTime.now();
         String shift = "";
@@ -640,7 +540,6 @@ public class DoctorController {
             return "Đang nghỉ giữa ca";
         }
         
-        // Kiểm tra xem bác sĩ có làm việc trong ca hiện tại không
         try {
             String status = repository.getDoctorShiftStatus(doctorId, LocalDate.now().getDayOfWeek().toString(), shift);
             if (status.equals("Đang làm việc")) {
@@ -655,13 +554,8 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy lịch làm việc theo tuần
-     * @return Mảng 2 chiều chứa trạng thái lịch [ca][ngày]
-     */
     public String[][] getWeeklySchedule() {
         try {
-            // Mặc định tạo mảng với trạng thái "Không làm việc"
             String[][] scheduleData = new String[3][7];
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 7; j++) {
@@ -669,7 +563,6 @@ public class DoctorController {
                 }
             }
             
-            // Lấy dữ liệu từ repository nếu có
             List<Object[]> scheduleList = repository.getDoctorWeeklySchedule(doctorId);
             for (Object[] schedule : scheduleList) {
                 int shiftIndex = getShiftIndex((String)schedule[0]);
@@ -686,7 +579,6 @@ public class DoctorController {
             System.err.println("Lỗi khi lấy lịch làm việc: " + e.getMessage());
             e.printStackTrace();
             
-            // Trả về mảng mặc định nếu có lỗi
             String[][] defaultSchedule = new String[3][7];
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 7; j++) {
@@ -697,11 +589,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Chuyển đổi tên ca làm việc thành index
-     * @param shift Tên ca làm việc
-     * @return Index của ca (0-2)
-     */
     private int getShiftIndex(String shift) {
         switch (shift) {
             case "Sáng": return 0;
@@ -711,11 +598,6 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Chuyển đổi tên thứ trong tuần thành index
-     * @param dayOfWeek Tên thứ trong tuần
-     * @return Index của thứ (0-6)
-     */
     private int getDayIndex(String dayOfWeek) {
         switch (dayOfWeek) {
             case "Thứ Hai": return 0;
@@ -729,27 +611,19 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Chỉ cập nhật trạng thái các ca làm việc đã hết trong ngày hiện tại
-     */
     public boolean updateAllPassedShifts() {
         try {
-            // Lấy ngày và thời gian hiện tại
             LocalDate today = LocalDate.now();
             LocalTime now = LocalTime.now();
             
-            // Xác định ca hiện tại
             String currentShift = getCurrentShift(now);
             
-            // Xác định thứ trong tuần hiện tại
             int currentDayOfWeek = today.getDayOfWeek().getValue();
             String currentDayOfWeekVietnamese = getDayOfWeekInVietnamese(currentDayOfWeek);
             
-            // Debug
             System.out.println("Ngày hiện tại: " + currentDayOfWeekVietnamese);
             System.out.println("Ca hiện tại: " + currentShift);
             
-            // Định nghĩa ca làm việc
             String[] shifts = {"Sáng", "Chiều", "Tối"};
             int currentShiftIndex = -1;
             
@@ -760,10 +634,8 @@ public class DoctorController {
                 }
             }
             
-            // Debug
             System.out.println("Index ca hiện tại: " + currentShiftIndex);
             
-            // Không có ca nào phù hợp cho cập nhật
             if (currentShiftIndex == -1) {
                 System.out.println("Không tìm thấy ca hiện tại phù hợp.");
                 return false;
@@ -771,13 +643,10 @@ public class DoctorController {
             
             boolean anyUpdates = false;
             
-            // Chỉ cập nhật các ca trong ngày hiện tại đã qua
             try {
-                // In ra SQL query để debug
                 System.out.println("SQL debug: Lấy trạng thái ca làm việc cho " + doctorId + 
                                    " vào " + currentDayOfWeekVietnamese + " ca " + shifts[0]);
                 
-                // CHỈ cập nhật các ca trước ca hiện tại trong ngày hôm nay
                 for (int i = 0; i < currentShiftIndex; i++) {
                     String status = repository.getShiftStatus(doctorId, currentDayOfWeekVietnamese, shifts[i]);
                     System.out.println("Ca " + shifts[i] + ": " + status);
@@ -802,7 +671,6 @@ public class DoctorController {
         }
     }
 
-    // Helper method
     private String getDayOfWeekInVietnamese(int day) {
         switch (day) {
             case 1: return "Thứ Hai";
@@ -816,7 +684,6 @@ public class DoctorController {
         }
     }
 
-    // Helper method
     private String getCurrentShift(LocalTime time) {
         if ((time.isAfter(LocalTime.of(7, 0)) || time.equals(LocalTime.of(7, 0))) &&
             time.isBefore(LocalTime.of(11, 30))) {
@@ -832,52 +699,171 @@ public class DoctorController {
         }
     }
 
-    // Thêm vào DoctorController
-    public void showExamination() {
-        view.setSelectedButton(view.getBtnExamination());
-        view.showExamination();
-    }
-    
     /**
      * Lấy danh sách bệnh nhân chờ khám
+     * @return Danh sách bệnh nhân dưới dạng Object[]
      */
     public List<Object[]> getPatientsForExamination() {
         // Gọi repository để lấy danh sách bệnh nhân chờ khám
         return repository.getPatientsForExamination(doctorId);
     }
-    
+
     /**
      * Tìm kiếm bệnh nhân chờ khám theo từ khóa
+     * @param keyword Từ khóa tìm kiếm
+     * @return Danh sách bệnh nhân phù hợp dưới dạng Object[]
      */
     public List<Object[]> searchPatientsForExamination(String keyword) {
-        // Gọi repository để tìm kiếm bệnh nhân
-        return repository.searchPatientsForExamination(doctorId, keyword);
+        try {
+            List<Object[]> patientRecords = repository.searchPatientsForExamination(doctorId, keyword);
+            List<Object[]> result = new ArrayList<>();
+
+            for (Object[] record : patientRecords) {
+                Patient patient = (Patient) record[0];
+                MedicalRecord medicalRecord = (MedicalRecord) record[1];
+                Appointment appointment = (Appointment) record[2];
+
+                String diagnosis = medicalRecord != null ? medicalRecord.getDiagnosis() : "";
+                String birthDateStr = patient.getDateOfBirth() != null ? patient.getDateOfBirth().toString() : "";
+                String status = appointment != null ? appointment.getStatus().toString() : "Chờ khám";
+
+                // Lấy email từ UserAccounts qua userID
+                String email = getEmailFromUserId(patient.getUserID());
+
+                result.add(new Object[]{
+                    patient,
+                    medicalRecord,
+                    email,
+                    status
+                });
+            }
+
+            return result;
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tìm kiếm bệnh nhân chờ khám: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
-    
+
     /**
-     * Cập nhật trạng thái hoàn thành khám cho bệnh nhân
+     * Lấy chỉ số sức khỏe mới nhất của bệnh nhân
+     * @param patientId ID của bệnh nhân
+     * @return VitalSign hoặc null nếu không tìm thấy
      */
-    public void completeExamination(String patientId) {
-        // Gọi repository để cập nhật trạng thái
-        repository.completePatientExamination(patientId, doctorId);
+    public VitalSign getVitalSigns(String patientId) {
+        try {
+            return repository.getLatestVitalSignByPatientId(patientId);
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi lấy chỉ số sức khỏe: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
-    
+
     /**
-     * Sinh ID mới cho đơn thuốc
+     * Lưu chỉ số sức khỏe vào cơ sở dữ liệu
+     * @param patientId ID của bệnh nhân
+     * @param vitalSign Chỉ số sức khỏe
+     * @return true nếu lưu thành công
+     */
+    public boolean saveVitalSigns(String patientId, VitalSign vitalSign) {
+        try {
+            return repository.saveVitalSigns(patientId, vitalSign);
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi lưu chỉ số sức khỏe: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Lưu đơn thuốc vào cơ sở dữ liệu
+     * @param patientId ID bệnh nhân
+     * @param medicine Tên thuốc
+     * @param dosage Liều lượng
+     * @param frequency Tần suất
+     * @param duration Thời gian sử dụng
+     * @return true nếu lưu thành công
+     */
+    public boolean savePrescription(String patientId, String medicine, String dosage, String frequency, String duration) {
+        try {
+            // Sinh ID mới cho đơn thuốc
+            String prescriptionId = repository.generateNewPrescriptionId();
+
+            // Chuẩn bị dữ liệu cho prescriptionData
+            Map<String, Object> prescriptionData = new HashMap<>();
+            prescriptionData.put("prescriptionId", prescriptionId);
+            prescriptionData.put("patientId", patientId);
+
+            // Chuẩn bị danh sách thuốc
+            List<Map<String, Object>> medicineList = new ArrayList<>();
+            Map<String, Object> medicineMap = new HashMap<>();
+            medicineMap.put("medicineName", medicine);
+            medicineMap.put("dosage", dosage);
+            medicineMap.put("instructions", frequency + " - " + duration);
+            medicineList.add(medicineMap);
+
+            // Gọi phương thức savePrescription từ repository
+            return repository.savePrescription(doctorId, prescriptionData, medicineList);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi lưu đơn thuốc: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Hoàn thành khám bệnh cho bệnh nhân
+     * @param patientId ID bệnh nhân
+     * @return true nếu hoàn thành thành công
+     */
+    public boolean completeExamination(String patientId) {
+        try {
+            return repository.completePatientExamination(patientId, doctorId);
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi hoàn thành khám bệnh: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Sinh mã đơn thuốc mới
+     * @return Mã đơn thuốc mới
      */
     public String generateNewPrescriptionId() {
-        // Gọi repository để tạo ID mới
-        return repository.generateNewPrescriptionId();
+        try {
+            return repository.generateNewPrescriptionId();
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tạo ID đơn thuốc: " + e.getMessage());
+            e.printStackTrace();
+            return "PRES-" + (int)(Math.random() * 900 + 100);
+        }
     }
-    
+
     /**
-     * Lấy ID của bác sĩ hiện tại
+     * Lấy email từ userID thông qua UserAccounts
+     * @param userId ID người dùng
+     * @return Email hoặc chuỗi rỗng nếu không tìm thấy
      */
-    public String getDoctorId() {
-        return doctorId;
+    private String getEmailFromUserId(String userId) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT email FROM UserAccounts WHERE userID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, userId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString("email");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi khi lấy email: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return "";
     }
-    
-    // Thêm các phương thức sau vào lớp DoctorController
     public boolean exportPatientsToExcel(List<Patient> patients, String filePath) {
         try {
             return ReportExporter.exportPatientsToExcel(patients, filePath);
@@ -889,8 +875,6 @@ public class DoctorController {
     
     public boolean exportPatientsToPdf(List<Patient> patients, String filePath) {
         try {
-            // Lưu ý: Bạn cần thêm phương thức này vào class ReportExporter
-            // return ReportExporter.exportPatientsToPdf(patients, filePath);
             JOptionPane.showMessageDialog(view, 
                 "Chức năng xuất PDF đang được phát triển!", 
                 "Thông báo", JOptionPane.INFORMATION_MESSAGE);
@@ -901,7 +885,6 @@ public class DoctorController {
         }
     }
     
-    // Thêm phương thức xuất lịch làm việc
     public boolean exportScheduleToExcel(String doctorId, String doctorName, boolean[][] schedule, String filePath) {
         try {
             return ReportExporter.exportScheduleToExcel(doctorId, doctorName, schedule, filePath);
@@ -920,7 +903,6 @@ public class DoctorController {
         }
     }
     
-    // Thêm phương thức xuất danh sách cuộc hẹn
     public boolean exportAppointmentsToExcel(List<Appointment> appointments, String filePath) {
         try {
             return ReportExporter.exportAppointmentsToExcel(appointments, filePath);
@@ -930,11 +912,6 @@ public class DoctorController {
         }
     }
         
-    /**
-     * Hủy cuộc hẹn với bệnh nhân
-     * @param appointmentId ID của cuộc hẹn cần hủy
-     * @return true nếu hủy thành công, ngược lại trả về false
-     */
     public boolean cancelAppointment(String appointmentId) {
         try {
             return repository.cancelAppointment(appointmentId);
@@ -945,18 +922,12 @@ public class DoctorController {
         }
     }
 
-    /**
-     * Lấy thông tin bệnh nhân dựa trên ID
-     * @param patientId ID bệnh nhân cần tìm
-     * @return Đối tượng Patient nếu tìm thấy, null nếu không tìm thấy
-     */
     public Patient getPatientById(String patientId) {
         if (patientId == null || patientId.isEmpty()) {
             return null;
         }
         
         try {
-            // Sử dụng patientRepository để tìm kiếm bệnh nhân
             return patientRepository.getPatientById(patientId);
         } catch (Exception e) {
             System.err.println("Lỗi khi tìm kiếm bệnh nhân: " + e.getMessage());
@@ -965,18 +936,12 @@ public class DoctorController {
         }
     }
     
-    /**
-     * Tìm kiếm bệnh nhân theo từ khóa
-     * @param keyword Từ khóa tìm kiếm
-     * @return Danh sách bệnh nhân tìm thấy
-     */
     public List<Patient> searchPatients(String keyword) {
         if (keyword == null || keyword.isEmpty()) {
             return new ArrayList<>();
         }
         
         try {
-            // Sử dụng patientRepository để tìm kiếm bệnh nhân
             return patientRepository.searchPatients(keyword);
         } catch (Exception e) {
             System.err.println("Lỗi khi tìm kiếm bệnh nhân: " + e.getMessage());
@@ -984,5 +949,4 @@ public class DoctorController {
             return new ArrayList<>();
         }
     }
-    
 }

@@ -307,7 +307,7 @@ public class PatientView extends JFrame {
         panel.add(card);
     }	
 
-    public void showPatientInfo() {
+    public void showPatientInfo(Map<String, Object> vitalSigns) {
         contentPanel.removeAll();
         
         JPanel infoPanel = new JPanel(new BorderLayout());
@@ -324,7 +324,7 @@ public class PatientView extends JFrame {
         titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         headerPanel.add(titleLabel, BorderLayout.CENTER);
         
-        // Panel chính chứa thông tin - SỬA: Chuyển sang GridBagLayout để kiểm soát tốt hơn
+        // Panel chính chứa thông tin - Sử dụng GridBagLayout để kiểm soát tốt hơn
         JPanel mainPanel = new JPanel(new GridBagLayout());
         mainPanel.setOpaque(false);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
@@ -335,7 +335,7 @@ public class PatientView extends JFrame {
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         
-        // Panel trái: Avatar và thông tin cơ bản - SỬA: Đặt cố định chiều rộng lớn hơn
+        // Panel trái: Avatar và thông tin cơ bản
         JPanel leftPanel = new JPanel(new BorderLayout(0, 20));
         leftPanel.setOpaque(false);
         leftPanel.setPreferredSize(new Dimension(350, 500)); // Tăng chiều rộng
@@ -373,7 +373,7 @@ public class PatientView extends JFrame {
         };
         avatarPanel.setBorder(BorderFactory.createEmptyBorder(20, 75, 20, 75)); // Căn lề để avatar ở giữa
         
-        // Thông tin cơ bản - SỬA: Sử dụng JPanel thay vì createInfoCard để có nhiều kiểm soát hơn
+        // Thông tin cơ bản
         JPanel basicInfoPanel = new JPanel(new BorderLayout(0, 10));
         basicInfoPanel.setBackground(Color.WHITE);
         basicInfoPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -389,7 +389,6 @@ public class PatientView extends JFrame {
             BorderFactory.createEmptyBorder(0, 0, 10, 0)
         ));
         
-        // Panel cho các trường thông tin - SỬA: Thêm padding và tăng khoảng cách
         JPanel basicFieldsPanel = new JPanel(new GridLayout(4, 1, 0, 15)); // Tăng spacing
         basicFieldsPanel.setOpaque(false);
         basicFieldsPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 5, 5)); // Thêm padding
@@ -406,7 +405,7 @@ public class PatientView extends JFrame {
         leftPanel.add(avatarPanel, BorderLayout.NORTH);
         leftPanel.add(basicInfoPanel, BorderLayout.CENTER);
         
-        // Panel phải: Thông tin chi tiết và BHYT - SỬA: Đảm bảo khoảng cách giữa các panel
+        // Panel phải: Thông tin chi tiết và Chỉ số sức khỏe
         JPanel rightPanel = new JPanel(new GridLayout(2, 1, 0, 20));
         rightPanel.setOpaque(false);
         
@@ -421,22 +420,34 @@ public class PatientView extends JFrame {
         
         contactPanel.add(contactFieldsPanel, BorderLayout.CENTER);
         
-        // Thông tin đăng ký - SỬA: Chỉ hiển thị 2 trường thông tin
-        JPanel insurancePanel = createInfoCard("Thông tin đăng ký");
-        JPanel insuranceFieldsPanel = new JPanel(new GridLayout(2, 1, 0, 15)); // Giảm số lượng trường, tăng spacing
-        insuranceFieldsPanel.setOpaque(false);
-        insuranceFieldsPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 5, 5)); // Thêm padding
+        // Chỉ số sức khỏe - Thay thế "Thông tin đăng ký"
+        JPanel vitalSignsPanel = createInfoCard("Chỉ số sức khỏe");
+        JPanel vitalSignsFieldsPanel = new JPanel(new GridLayout(5, 1, 0, 15)); // Tăng số trường để hiển thị các chỉ số
+        vitalSignsFieldsPanel.setOpaque(false);
+        vitalSignsFieldsPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 5, 5)); // Thêm padding
         
-        addInfoField(insuranceFieldsPanel, "Ngày đăng ký:", patient.getRegistrationDate().toString());
-        addInfoField(insuranceFieldsPanel, "Hiệu lực đến:", LocalDate.now().plusYears(1).toString());
+        // Cập nhật dữ liệu từ vitalSigns
+        if (vitalSigns != null && !vitalSigns.isEmpty()) {
+            addInfoField(vitalSignsFieldsPanel, "Nhiệt độ:", vitalSigns.get("temperature") != null ? vitalSigns.get("temperature").toString() + " °C" : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Huyết áp:", vitalSigns.get("bloodPressure") != null ? vitalSigns.get("bloodPressure").toString() : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Mạch:", vitalSigns.get("heartRate") != null ? vitalSigns.get("heartRate").toString() + " bpm" : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Độ bão hòa oxy:", vitalSigns.get("oxygenSaturation") != null ? vitalSigns.get("oxygenSaturation").toString() + " %" : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Thời gian ghi nhận:", vitalSigns.get("recordedAt") != null ? vitalSigns.get("recordedAt").toString() : "Không có dữ liệu");
+        } else {
+            addInfoField(vitalSignsFieldsPanel, "Nhiệt độ:", "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Huyết áp:", "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Mạch:", "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Độ bão hòa oxy:", "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Thời gian ghi nhận:", "Không có dữ liệu");
+        }
         
-        insurancePanel.add(insuranceFieldsPanel, BorderLayout.CENTER);
+        vitalSignsPanel.add(vitalSignsFieldsPanel, BorderLayout.CENTER);
         
         // Thêm các panel vào panel phải
         rightPanel.add(contactPanel);
-        rightPanel.add(insurancePanel);
+        rightPanel.add(vitalSignsPanel);
         
-        // Thêm cả hai panel trái phải vào panel chính - SỬA: Sử dụng GridBagConstraints
+        // Thêm cả hai panel trái phải vào panel chính
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0.4; // Đặt trọng số nhỏ hơn cho panel trái
@@ -451,7 +462,7 @@ public class PatientView extends JFrame {
         buttonPanel.setOpaque(false);
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 50));
         
-       /* JButton editButton = new JButton("Chỉnh sửa thông tin");
+        JButton editButton = new JButton("Chỉnh sửa thông tin");
         editButton.setFont(new Font("Arial", Font.BOLD, 14));
         editButton.setBackground(new Color(52, 152, 219));
         editButton.setForeground(Color.WHITE);
@@ -482,9 +493,9 @@ public class PatientView extends JFrame {
                 "Chức năng in thông tin đang được phát triển!",
                 "Thông báo",
                 JOptionPane.INFORMATION_MESSAGE);
-        });*/
+        });
         
-        // ScrollPane để đảm bảo nội dung luôn hiển thị đầy đủ - THÊM MỚI
+        // ScrollPane để đảm bảo nội dung luôn hiển thị đầy đủ
         JScrollPane scrollPane = new JScrollPane(mainPanel);
         scrollPane.setBorder(null);
         scrollPane.setOpaque(false);
@@ -532,7 +543,7 @@ public class PatientView extends JFrame {
         JLabel labelComponent = new JLabel(label);
         labelComponent.setFont(new Font("Arial", Font.BOLD, 14));
         labelComponent.setForeground(new Color(100, 100, 100));
-        labelComponent.setPreferredSize(new Dimension(120, 20));
+        labelComponent.setPreferredSize(new Dimension(150, 20));
         
         JLabel valueComponent = new JLabel(value);
         valueComponent.setFont(new Font("Arial", Font.PLAIN, 14));

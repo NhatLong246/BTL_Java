@@ -48,9 +48,11 @@ public class PatientController {
         view.showHome();
     }
 
+    
     public void showPatientInfo() {
         view.setSelectedButton(view.getBtnViewInfo());
-        view.showPatientInfo();
+        Map<String, Object> vitalSigns = getVitalSigns();
+        view.showPatientInfo(vitalSigns); // Cập nhật để truyền dữ liệu chỉ số sức khỏe
     }
 
     public void showAppointments() {
@@ -344,4 +346,10 @@ public class PatientController {
             return new ArrayList<>();
         }
     }
+    
+    public Map<String, Object> getVitalSigns() {
+        return repository.getVitalSigns(patient.getPatientID());
+    }
+
+   
 }

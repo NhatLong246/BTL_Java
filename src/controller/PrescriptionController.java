@@ -1,5 +1,6 @@
 package controller;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import model.repository.DoctorRepository;
@@ -24,7 +25,7 @@ public class PrescriptionController {
     
     
     public boolean savePrescription(String doctorId, Map<String, Object> prescriptionData, 
-                                  List<Map<String, Object>> medicineList) {
+                                  List<Map<String, Object>> medicineList) throws SQLException {
         return repository.savePrescription(doctorId, prescriptionData, medicineList);
     }
 
