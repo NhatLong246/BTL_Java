@@ -2,14 +2,20 @@ package view;
 
 import controller.BillingController;
 import model.entity.Patient;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.common.BitMatrix;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BillingView extends JFrame {
     // Constants for colors
@@ -27,9 +33,24 @@ public class BillingView extends JFrame {
     private String billId;
     private String service;
     private double amount;
-    private JComboBox<String> cbPaymentMethod;
     private boolean paymentSuccessful = false;
-    private JPanel cardDetailsPanel;
+    private JPanel paymentDetailsPanel;
+    private CardLayout cardLayout;
+    private Map<String, JPanel> paymentPanels;
+    private JPanel selectedMethodPanel;
+
+    // Payment method constants
+    private static final String CASH = "Tiền mặt";
+    private static final String CREDIT_CARD = "Thẻ tín dụng";
+    private static final String BANK_TRANSFER = "Chuyển khoản ngân hàng";
+    private static final String MOMO = "Ví MoMo";
+    private static final String ZALOPAY = "ZaloPay";
+    private static final String VNPAY = "VNPay";
+
+    // Navigation buttons and related methods
+    private JButton btnViewInfo;
+    private JButton btnPayment;
+    private JButton btnHistory;
 
     public BillingView(Patient patient, String billId, String service, double amount) {
         this.patient = patient;
@@ -39,38 +60,36 @@ public class BillingView extends JFrame {
         this.controller = new BillingController(this, patient);
         
         setTitle("Thanh toán hóa đơn");
+        setupWindowProperties();
+        initializeUI();
+    }
         
-        // Get screen dimensions
+    private void setupWindowProperties() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        int screenWidth = screenSize.width;
-        int screenHeight = screenSize.height;
-        
-        // Calculate size (75% of screen width)
-        int width = (int)(screenWidth * 0.3); // Giảm kích thước xuống 30% màn hình
-        int height = (int)(screenHeight * 0.6); // Giảm chiều cao xuống 60% màn hình
+        int width = (int)(screenSize.width * 0.55);
+        int height = (int)(screenSize.height * 0.8);
         setSize(width, height);
-        
-        // Position on right side
-        setLocation(screenWidth - width - 50, 50); // Đặt vị trí cách phải 50px và cách trên 50px
-        
+        setLocation(screenSize.width - width - 50, 50);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setResizable(false);
-
-        initializeUI();
-        
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                if (!paymentSuccessful) {
-                    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                }
-            }
-        });
     }
 
     private void initializeUI() {
-        // Main content panel with shadow border
-        contentPanel = new JPanel(new BorderLayout()) {
+        contentPanel = createMainPanel();
+        JPanel headerPanel = createHeaderPanel();
+        JPanel formPanel = createFormPanel();
+        JPanel buttonPanel = createButtonPanel();
+
+        contentPanel.add(headerPanel, BorderLayout.NORTH);
+        contentPanel.add(formPanel, BorderLayout.CENTER);
+        contentPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        add(contentPanel);
+        initializePaymentPanels();
+    }
+
+    private JPanel createMainPanel() {
+        JPanel panel = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
@@ -81,9 +100,11 @@ public class BillingView extends JFrame {
                 g2d.dispose();
             }
         };
-        contentPanel.setBackground(BACKGROUND_COLOR);
+        panel.setBackground(BACKGROUND_COLOR);
+        return panel;
+    }
 
-        // Header Panel with gradient
+    private JPanel createHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -106,130 +127,306 @@ public class BillingView extends JFrame {
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.CENTER);
 
-        // Form Panel with rounded corners
-        JPanel formPanel = new JPanel(new GridBagLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(Color.WHITE);
-                g2d.fillRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
-                g2d.dispose();
-            }
-        };
+        return headerPanel;
+    }
+
+    private JPanel createFormPanel() {
+        JPanel formPanel = new JPanel(new BorderLayout());
         formPanel.setBackground(Color.WHITE);
-        formPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createEmptyBorder(20, 20, 20, 20),
-            new EmptyBorder(20, 30, 20, 30)
+        formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Bill Information Panel
+        JPanel billInfoPanel = new JPanel(new GridLayout(3, 2, 10, 10));
+        billInfoPanel.setBackground(Color.WHITE);
+        billInfoPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(SECONDARY_COLOR),
+            "Thông tin hóa đơn",
+            javax.swing.border.TitledBorder.LEFT,
+            javax.swing.border.TitledBorder.TOP,
+            new Font("Segoe UI", Font.BOLD, 14),
+            SECONDARY_COLOR
         ));
 
+        addFormField(billInfoPanel, "ID Hóa đơn:", billId);
+        addFormField(billInfoPanel, "Dịch vụ:", service);
+        addFormField(billInfoPanel, "Số tiền:", String.format("%,.0f VND", amount));
+
+        // Payment Methods Panel
+        JPanel paymentMethodsPanel = createPaymentMethodsPanel();
+
+        // Combine panels
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(Color.WHITE);
+        topPanel.add(billInfoPanel, BorderLayout.NORTH);
+        topPanel.add(paymentMethodsPanel, BorderLayout.CENTER);
+
+        formPanel.add(topPanel, BorderLayout.NORTH);
+
+        // Payment Details Panel with CardLayout
+        paymentDetailsPanel = new JPanel();
+        cardLayout = new CardLayout();
+        paymentDetailsPanel.setLayout(cardLayout);
+        formPanel.add(paymentDetailsPanel, BorderLayout.CENTER);
+
+        return formPanel;
+    }
+
+    private void addFormField(JPanel panel, String label, String value) {
+        JLabel lblField = new JLabel(label);
+        lblField.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblField.setForeground(TEXT_COLOR);
+
+        JLabel lblValue = new JLabel(value);
+        lblValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        lblValue.setForeground(TEXT_COLOR);
+
+        panel.add(lblField);
+        panel.add(lblValue);
+    }
+
+    private JPanel createPaymentMethodsPanel() {
+        JPanel panel = new JPanel(new GridLayout(0, 3, 10, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(SECONDARY_COLOR),
+            "Chọn phương thức thanh toán",
+            javax.swing.border.TitledBorder.LEFT,
+            javax.swing.border.TitledBorder.TOP,
+            new Font("Segoe UI", Font.BOLD, 14),
+            SECONDARY_COLOR
+        ));
+
+        String[] methods = {CASH, CREDIT_CARD, BANK_TRANSFER, MOMO, ZALOPAY, VNPAY};
+        ButtonGroup group = new ButtonGroup();
+
+        for (String method : methods) {
+            JRadioButton rb = createPaymentMethodButton(method);
+            group.add(rb);
+            panel.add(rb);
+        }
+
+        return panel;
+    }
+
+    private JRadioButton createPaymentMethodButton(String method) {
+        JRadioButton rb = new JRadioButton(method);
+        rb.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        rb.setBackground(Color.WHITE);
+        rb.setForeground(TEXT_COLOR);
+        rb.setFocusPainted(false);
+        rb.addActionListener(e -> handlePaymentMethodSelection(method));
+        return rb;
+    }
+
+    private void initializePaymentPanels() {
+        paymentPanels = new HashMap<>();
+        
+        // Initialize different payment panels
+        paymentPanels.put(CASH, createCashPanel());
+        paymentPanels.put(CREDIT_CARD, createCreditCardPanel());
+        paymentPanels.put(BANK_TRANSFER, createBankTransferPanel());
+        paymentPanels.put(MOMO, createEWalletPanel(MOMO));
+        paymentPanels.put(ZALOPAY, createEWalletPanel(ZALOPAY));
+        paymentPanels.put(VNPAY, createEWalletPanel(VNPAY));
+
+        // Add all panels to the card layout
+        for (Map.Entry<String, JPanel> entry : paymentPanels.entrySet()) {
+            paymentDetailsPanel.add(entry.getValue(), entry.getKey());
+        }
+    }
+
+    private JPanel createCashPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE);
+        
+        JLabel label = new JLabel("Vui lòng thanh toán tại quầy thu ngân");
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        panel.add(label);
+        
+        return panel;
+    }
+
+    private JPanel createCreditCardPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE);
         GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(12, 12, 12, 12);
-        gbc.weightx = 1.0;
+        gbc.insets = new Insets(5, 5, 5, 5);
 
-        // Bill Information with styled labels
-        addFormField(formPanel, gbc, "ID Hóa đơn:", createStyledLabel(billId), 0);
-        addFormField(formPanel, gbc, "Dịch vụ:", createStyledLabel(service), 1);
-        addFormField(formPanel, gbc, "Số tiền:", createStyledLabel(String.format("%,.0f VND", amount)), 2);
+        JTextField cardNumber = createStyledTextField("Số thẻ");
+        JTextField cardHolder = createStyledTextField("Tên chủ thẻ");
+        JTextField expiry = createStyledTextField("MM/YY");
+        JTextField cvv = createStyledTextField("CVV");
 
-        // Styled Payment Method Dropdown
-        cbPaymentMethod = createStyledComboBox(new String[]{"Tiền mặt", "Thẻ tín dụng", "Chuyển khoản ngân hàng"});
-        addFormField(formPanel, gbc, "Phương thức thanh toán:", cbPaymentMethod, 3);
+        panel.add(cardNumber, gbc);
+        panel.add(cardHolder, gbc);
+        
+        JPanel expiryAndCvv = new JPanel(new GridLayout(1, 2, 10, 0));
+        expiryAndCvv.setBackground(Color.WHITE);
+        expiryAndCvv.add(expiry);
+        expiryAndCvv.add(cvv);
+        
+        panel.add(expiryAndCvv, gbc);
 
-        // Card Details Panel with animation
-        cardDetailsPanel = createCardDetailsPanel();
-        gbc.gridy = 4;
-        formPanel.add(cardDetailsPanel, gbc);
+        return panel;
+    }
 
-        // Payment Method Change Listener
-        cbPaymentMethod.addActionListener(e -> {
-            boolean isCardPayment = "Thẻ tín dụng".equals(cbPaymentMethod.getSelectedItem());
-            animateCardDetailsPanel(isCardPayment);
+    private JPanel createBankTransferPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 5, 5, 5);
+
+        String bankInfo = "<html>"
+            + "<div style='font-size:13px;'>"
+            + "<b>Ngân hàng:</b> MBBank"
+            + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+            + "<b>Số tài khoản:</b> 0812299544"
+            + "</div>"
+            + "<br>"
+            + "<b>Chủ tài khoản:</b> BỆNH VIỆN ABC<br>"
+            + "<b>Nội dung:</b> " + billId + "<br><br>"
+            + "<b>Số tiền:</b> " + String.format("%,.0f VND", amount)
+            + "</html>";
+
+        JLabel label = new JLabel(bankInfo);
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        panel.add(label, gbc);
+
+        // Add QR code for bank transfer using VietQR
+        try {
+            String qrUrl = "https://img.vietqr.io/image/MB-0812299544-compact2.png?amount="
+                + String.format("%.0f", amount) + "&addInfo=" + billId;
+            ImageIcon qrIcon = new ImageIcon(new java.net.URL(qrUrl));
+            Image image = qrIcon.getImage().getScaledInstance(180, 180, Image.SCALE_SMOOTH);
+            qrIcon = new ImageIcon(image);
+            JLabel qrLabel = new JLabel(qrIcon);
+            panel.add(qrLabel, gbc);
+        } catch (Exception e) {
+            JLabel errorLabel = new JLabel("Không thể tải mã QR");
+            panel.add(errorLabel, gbc);
+        }
+
+        return panel;
+    }
+
+    private JPanel createEWalletPanel(String walletType) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 5, 5, 5);
+
+        String walletInfo = "<html>" +
+            "Quét mã QR bằng ứng dụng " + walletType + " để thanh toán<br>" +
+            "Số tiền: " + String.format("%,.0f VND", amount) +
+            "</html>";
+
+        JLabel label = new JLabel(walletInfo);
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        panel.add(label, gbc);
+
+        // Nếu là MoMo thì chỉ hiển thị placeholder để chèn ảnh QR thủ công
+        if (walletType.equals(MOMO)) {
+        ImageIcon qrIcon = new ImageIcon("resources/img/momo_qr.png");
+        Image image = qrIcon.getImage().getScaledInstance(180, 180, Image.SCALE_SMOOTH);
+        qrIcon = new ImageIcon(image);
+        JLabel qrLabel = new JLabel(qrIcon);
+        panel.add(qrLabel, gbc);
+        return panel;
+}
+
+        // Add QR code for VNPay, ZaloPay (QR thật)
+        try {
+            String qrUrl = null;
+            if (walletType.equals(VNPAY) || walletType.equals(ZALOPAY)) {
+                qrUrl = "https://img.vietqr.io/image/MB-0812299544-compact2.png?amount="
+                    + String.format("%.0f", amount) + "&addInfo=" + billId;
+            } else {
+                // Fallback: QR code tự tạo
+                BufferedImage qrImage = generateQRCode(walletType + ":" + billId + ":" + amount);
+                ImageIcon qrIcon = new ImageIcon(qrImage.getScaledInstance(180, 180, Image.SCALE_SMOOTH));
+                JLabel qrLabel = new JLabel(qrIcon);
+                panel.add(qrLabel, gbc);
+                return panel;
+            }
+            ImageIcon qrIcon = new ImageIcon(new java.net.URL(qrUrl));
+            Image image = qrIcon.getImage().getScaledInstance(180, 180, Image.SCALE_SMOOTH);
+            qrIcon = new ImageIcon(image);
+            JLabel qrLabel = new JLabel(qrIcon);
+            panel.add(qrLabel, gbc);
+        } catch (Exception e) {
+            JLabel errorLabel = new JLabel("Không thể tạo mã QR");
+            panel.add(errorLabel, gbc);
+        }
+
+        return panel;
+    }
+
+    private BufferedImage generateQRCode(String content) throws WriterException {
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        BitMatrix bitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, 300, 300);
+        return MatrixToImageWriter.toBufferedImage(bitMatrix);
+    }
+
+    private JTextField createStyledTextField(String placeholder) {
+        JTextField textField = new JTextField(20);
+        textField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        textField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(189, 195, 199)),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        
+        // Add placeholder
+        textField.setText(placeholder);
+        textField.setForeground(Color.GRAY);
+        
+        textField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (textField.getText().equals(placeholder)) {
+                    textField.setText("");
+                    textField.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (textField.getText().isEmpty()) {
+                    textField.setForeground(Color.GRAY);
+                    textField.setText(placeholder);
+                }
+            }
         });
+        
+        return textField;
+    }
 
-        // Buttons Panel
+    private void handlePaymentMethodSelection(String method) {
+        cardLayout.show(paymentDetailsPanel, method);
+        selectedMethodPanel = paymentPanels.get(method);
+        revalidate();
+        repaint();
+    }
+
+    private JPanel createButtonPanel() {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
         buttonPanel.setOpaque(false);
 
         JButton btnSubmit = createStyledButton("Thanh toán", SUCCESS_COLOR);
         JButton btnBack = createStyledButton("Quay lại", SECONDARY_COLOR);
 
-        // Add button listeners
-        addButtonListeners(btnSubmit, btnBack);
+        btnSubmit.addActionListener(e -> handlePayment());
+        btnBack.addActionListener(e -> dispose());
 
         buttonPanel.add(btnSubmit);
         buttonPanel.add(btnBack);
 
-        // Layout assembly
-        JPanel wrapperPanel = new JPanel(new BorderLayout());
-        wrapperPanel.setOpaque(false);
-        wrapperPanel.add(formPanel, BorderLayout.CENTER);
-        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-
-        contentPanel.add(headerPanel, BorderLayout.NORTH);
-        contentPanel.add(wrapperPanel, BorderLayout.CENTER);
-        contentPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        add(contentPanel);
-    }
-
-    private void addFormField(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field, int row) {
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.gridwidth = 1;
-        JLabel label = new JLabel(labelText);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        label.setForeground(TEXT_COLOR);
-        panel.add(label, gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        panel.add(field, gbc);
-    }
-
-    private JLabel createStyledLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        label.setForeground(TEXT_COLOR);
-        return label;
-    }
-
-    private JComboBox<String> createStyledComboBox(String[] items) {
-        JComboBox<String> comboBox = new JComboBox<>(items);
-        comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        comboBox.setPreferredSize(new Dimension(300, 35));
-        comboBox.setBackground(Color.WHITE);
-        comboBox.setForeground(TEXT_COLOR);
-        return comboBox;
-    }
-
-    private JPanel createCardDetailsPanel() {
-        JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
-        panel.setBackground(Color.WHITE);
-        panel.setVisible(false);
-
-        JTextField cardNumber = createStyledTextField();
-        JTextField cardExpiry = createStyledTextField();
-        
-        panel.add(createStyledLabel("Số thẻ:"));
-        panel.add(cardNumber);
-        panel.add(createStyledLabel("Hạn thẻ (MM/YY):"));
-        panel.add(cardExpiry);
-
-        return panel;
-    }
-
-    private JTextField createStyledTextField() {
-        JTextField textField = new JTextField();
-        textField.setPreferredSize(new Dimension(300, 35));
-        textField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        textField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(189, 195, 199)),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
-        return textField;
+        return buttonPanel;
     }
 
     private JButton createStyledButton(String text, Color baseColor) {
@@ -242,7 +439,6 @@ public class BillingView extends JFrame {
         button.setBorderPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Add hover effect
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -258,76 +454,46 @@ public class BillingView extends JFrame {
         return button;
     }
 
-    private void animateCardDetailsPanel(boolean show) {
-        Timer timer = new Timer(10, null);
-        final int targetHeight = show ? 80 : 0;
-        final int startHeight = cardDetailsPanel.getHeight();
-        final int distance = targetHeight - startHeight;
-        final int steps = 20;
-        final int[] step = {0};
-
-        timer.addActionListener(e -> {
-            step[0]++;
-            float progress = (float) step[0] / steps;
-            int currentHeight = startHeight + (int) (distance * progress);
-            
-            cardDetailsPanel.setPreferredSize(new Dimension(cardDetailsPanel.getWidth(), currentHeight));
-            cardDetailsPanel.setVisible(true);
-            cardDetailsPanel.revalidate();
-            cardDetailsPanel.repaint();
-
-            if (step[0] >= steps) {
-                timer.stop();
-                cardDetailsPanel.setVisible(show);
-            }
-        });
-        timer.start();
-    }
-
-    private void addButtonListeners(JButton btnSubmit, JButton btnBack) {
-        btnSubmit.addActionListener(e -> handlePayment(btnSubmit, btnBack));
-        btnBack.addActionListener(e -> dispose());
-    }
-
-    private void handlePayment(JButton btnSubmit, JButton btnBack) {
-        String selectedMethod = (String) cbPaymentMethod.getSelectedItem();
-        
-        if ("Thẻ tín dụng".equals(selectedMethod)) {
-            JTextField cardNumber = (JTextField) ((JPanel)cardDetailsPanel.getComponent(1)).getComponent(0);
-            JTextField cardExpiry = (JTextField) ((JPanel)cardDetailsPanel.getComponent(3)).getComponent(0);
-            
-            if (!validateCardDetails(cardNumber.getText(), cardExpiry.getText())) {
+    private void handlePayment() {
+        if (selectedMethodPanel == null) {
+            JOptionPane.showMessageDialog(this,
+                "Vui lòng chọn phương thức thanh toán",
+                "Thông báo",
+                JOptionPane.WARNING_MESSAGE);
                 return;
             }
+
+        // Validate payment details based on selected method
+        if (!validatePaymentDetails()) {
+            return;
         }
 
-        int confirm = showConfirmDialog(selectedMethod);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            processPayment(btnSubmit, btnBack);
-        }
-    }
-
-    private int showConfirmDialog(String paymentMethod) {
-        return JOptionPane.showConfirmDialog(
+        int confirm = JOptionPane.showConfirmDialog(
             this,
             String.format("<html><body style='width: 200px; padding: 10px;'>" +
                          "<div style='font-family: Segoe UI; font-size: 14px;'>" +
-                         "Xác nhận thanh toán <b>%,.0f VND</b><br>bằng <b>%s</b>?</div></body></html>",
-                         amount, paymentMethod),
+                         "Xác nhận thanh toán <b>%,.0f VND</b>?</div></body></html>",
+                         amount),
             "Xác nhận thanh toán",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE
         );
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            processPayment();
+        }
     }
 
-    private void processPayment(JButton btnSubmit, JButton btnBack) {
+    private boolean validatePaymentDetails() {
+        // Add validation logic based on payment method
+        return true;
+    }
+
+    private void processPayment() {
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-        btnSubmit.setEnabled(false);
-        btnBack.setEnabled(false);
         
         try {
-            if (controller.payBill(billId, (String) cbPaymentMethod.getSelectedItem())) {
+            if (controller.payBill(billId, getSelectedPaymentMethod())) {
                 paymentSuccessful = true;
                 showSuccessMessage();
                 dispose();
@@ -336,9 +502,16 @@ public class BillingView extends JFrame {
             }
         } finally {
             setCursor(Cursor.getDefaultCursor());
-            btnSubmit.setEnabled(true);
-            btnBack.setEnabled(true);
         }
+    }
+
+    private String getSelectedPaymentMethod() {
+        for (Map.Entry<String, JPanel> entry : paymentPanels.entrySet()) {
+            if (entry.getValue() == selectedMethodPanel) {
+                return entry.getKey();
+        }
+        }
+        return "";
     }
 
     private void showSuccessMessage() {
@@ -361,65 +534,43 @@ public class BillingView extends JFrame {
             JOptionPane.ERROR_MESSAGE);
     }
 
-    private boolean validateCardDetails(String cardNumber, String expiryDate) {
-        if (cardNumber.isEmpty() || expiryDate.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Vui lòng nhập đầy đủ thông tin thẻ tín dụng.",
-                "Lỗi",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-
-        if (!cardNumber.matches("\\d{16}")) {
-            JOptionPane.showMessageDialog(this,
-                "Số thẻ không hợp lệ. Vui lòng nhập 16 chữ số.",
-                "Lỗi",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-
-        if (!expiryDate.matches("\\d{2}/\\d{2}")) {
-            JOptionPane.showMessageDialog(this,
-                "Định dạng hạn thẻ không hợp lệ. Vui lòng nhập theo định dạng MM/YY.",
-                "Lỗi",
-                JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-
-        return true;
-    }
-
     public boolean isPaymentSuccessful() {
         return paymentSuccessful;
     }
 
-    // Additional view methods called by controller
-    private JButton btnViewInfo;
-    private JButton btnPayment;
-    private JButton btnHistory;
-
+    // Navigation buttons and related methods
     public JButton getBtnViewInfo() {
+        if (btnViewInfo == null) {
+            btnViewInfo = createStyledButton("Xem thông tin", SECONDARY_COLOR);
+        }
         return btnViewInfo;
     }
 
     public JButton getBtnPayment() {
+        if (btnPayment == null) {
+            btnPayment = createStyledButton("Thanh toán", SECONDARY_COLOR);
+        }
         return btnPayment;
     }
 
     public JButton getBtnHistory() {
+        if (btnHistory == null) {
+            btnHistory = createStyledButton("Lịch sử", SECONDARY_COLOR);
+        }
         return btnHistory;
     }
 
     public void setSelectedButton(JButton button) {
         // Reset all buttons to default style
-        for (JButton btn : new JButton[]{btnViewInfo, btnPayment, btnHistory}) {
+        JButton[] buttons = {getBtnViewInfo(), getBtnPayment(), getBtnHistory()};
+        for (JButton btn : buttons) {
             if (btn != null) {
-                btn.setBackground(new Color(52, 152, 219));
+                btn.setBackground(SECONDARY_COLOR);
             }
         }
         // Highlight selected button
         if (button != null) {
-            button.setBackground(new Color(41, 128, 185));
+            button.setBackground(PRIMARY_COLOR);
         }
     }
 
@@ -480,9 +631,22 @@ public class BillingView extends JFrame {
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
         dialog.add(mainPanel);
         
-        // Khôi phục kích thước và vị trí ban đầu
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        SwingUtilities.invokeLater(() -> {
+            Patient dummyPatient = new Patient();
+            BillingView billingView = new BillingView(dummyPatient, "BILL001", "Khám bệnh", 500000.00);
+            billingView.setVisible(true);
+        });
     }
 }
