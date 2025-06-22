@@ -1,6 +1,7 @@
 package view;
 
 import controller.DoctorController;
+import model.entity.Appointment;
 import model.entity.MedicalRecord;
 import model.entity.Patient;
 import model.entity.VitalSign;
@@ -10,6 +11,8 @@ import javax.swing.*;
 import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.time.LocalDate;
@@ -717,8 +720,16 @@ public class DoctorView extends JFrame {
         quickAccessPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
         
         JButton newAppBtn = createQuickButton("Lịch hẹn mới", new Color(0, 123, 255));
+        
         JButton searchBtn = createQuickButton("Tra cứu bệnh nhân", new Color(23, 162, 184));
+        searchBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        searchBtn.setPreferredSize(new Dimension(180, 35)); // Chiều rộng 180px, chiều cao 50px
+
         JButton reportBtn = createQuickButton("Báo cáo công việc", new Color(40, 167, 69));
+        reportBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        reportBtn.setPreferredSize(new Dimension(180, 35)); // Chiều rộng 180px, chiều cao 50px
+        
+        
         
         newAppBtn.addActionListener(e -> controller.showBookAppointment());
         searchBtn.addActionListener(e -> controller.showPatientList());
@@ -1639,6 +1650,8 @@ public class DoctorView extends JFrame {
         contentPanel.add(iconLabel, BorderLayout.CENTER);
         cell.add(contentPanel, BorderLayout.CENTER);
         
+        
+        
         return cell;
     }
 
@@ -1675,43 +1688,309 @@ public class DoctorView extends JFrame {
     }
 
 
+//    public void showExamination() {
+//        contentPanel.removeAll();
+//        contentPanel.setLayout(new BorderLayout());
+//    
+//        JLabel titleLabel = new JLabel("Khám bệnh", SwingConstants.CENTER);
+//        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+//        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 20, 0));
+//    
+//        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+//        searchPanel.setBackground(Color.WHITE);
+//        searchPanel.setBorder(BorderFactory.createCompoundBorder(
+//                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+//                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+//        ));
+//    
+//        JLabel searchLabel = new JLabel("Tìm kiếm bệnh nhân:");
+//        JTextField searchField = new JTextField(20);
+//        JButton searchButton = new JButton("Tìm kiếm");
+//        searchButton.setBackground(new Color(0, 123, 255));
+//        searchButton.setForeground(Color.WHITE);
+//        searchButton.setFocusPainted(false);
+//    
+//        searchPanel.add(searchLabel);
+//        searchPanel.add(searchField);
+//        searchPanel.add(searchButton);
+//    
+//        JPanel mainPanel = new JPanel(new BorderLayout());
+//        mainPanel.setOpaque(false);
+//        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
+//    
+//        JPanel patientListPanel = new JPanel(new BorderLayout());
+//        patientListPanel.setBackground(Color.WHITE);
+//        patientListPanel.setBorder(BorderFactory.createCompoundBorder(
+//                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+//                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+//        ));
+//    
+//        String[] columnNames = {"ID", "Họ và tên", "Ngày sinh", "Số điện thoại", "Bệnh chính", "Trạng thái", "Chọn"};
+//        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+//            @Override
+//            public boolean isCellEditable(int row, int column) {
+//                return column == 6;
+//            }
+//        };
+//        JTable patientTable = new JTable(tableModel);
+//        patientTable.setRowHeight(35);
+//        patientTable.setFont(new Font("Arial", Font.PLAIN, 14));
+//        patientTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+//        
+//        List<Object[]> patientRecords = controller.getPatientsForExamination();
+//        
+//        if (patientRecords == null || patientRecords.isEmpty()) {
+//            System.out.println("Không tìm thấy bệnh nhân chờ khám");
+//        } else {
+//            for (Object[] record : patientRecords) {
+//                try {
+//                    Patient patient = (Patient) record[0];
+//                    MedicalRecord medicalRecord = (MedicalRecord) record[1];
+//                    String email = (String) record[2];
+//                    String appointmentStatus = record.length > 3 ? (String) record[3] : "Chờ khám";
+//                    
+//                    String diagnosis = "";
+//                    if (medicalRecord != null && medicalRecord.getDiagnosis() != null) {
+//                        diagnosis = medicalRecord.getDiagnosis();
+//                    }
+//                    
+//                    String birthDateStr = "";
+//                    if (patient.getDateOfBirth() != null) {
+//                        birthDateStr = patient.getDateOfBirth().toString();
+//                    }
+//                    
+//                    tableModel.addRow(new Object[]{
+//                        patient.getPatientID(),
+//                        patient.getFullName(),
+//                        birthDateStr,
+//                        patient.getPhoneNumber(),
+//                        diagnosis,
+//                        appointmentStatus,
+//                        "Chọn"
+//                    });
+//                } catch (Exception e) {
+//                    System.out.println("Lỗi khi xử lý bản ghi: " + e.getMessage());
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
+//        
+//        patientTable.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
+//        patientTable.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox()));
+//    
+//        JScrollPane scrollPane = new JScrollPane(patientTable);
+//        patientListPanel.add(scrollPane, BorderLayout.CENTER);
+//        
+//        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+//        buttonPanel.setOpaque(false);
+//        
+//        JButton prescriptionButton = createQuickButton("Kê đơn thuốc", new Color(40, 167, 69));
+//        JButton completeButton = createQuickButton("Hoàn thành khám", new Color(0, 123, 255));
+//        
+//        buttonPanel.add(prescriptionButton);
+//        buttonPanel.add(completeButton);
+//        
+//        JPanel vitalSignsPanel = new JPanel(new GridLayout(7, 2, 10, 10));
+//        vitalSignsPanel.setBackground(Color.WHITE);
+//        vitalSignsPanel.setBorder(BorderFactory.createCompoundBorder(
+//                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+//                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+//        ));
+//    
+//        JTextField tempField = new JTextField("");
+////        JTextField systolicField = new JTextField("");
+//        JTextField diastolicField = new JTextField("");
+//        JTextField hrField = new JTextField("");
+//        JTextField oxyField = new JTextField("");
+//        JLabel recordedAtLabel = new JLabel("Chưa ghi nhận");
+//    
+//        vitalSignsPanel.add(new JLabel("Nhiệt độ (°C):"));
+//        vitalSignsPanel.add(tempField);
+////        vitalSignsPanel.add(new JLabel("Huyết áp tâm thu (mmHg):"));
+////        vitalSignsPanel.add(systolicField);
+//        vitalSignsPanel.add(new JLabel("Huyết áp tâm trương (mmHg):"));
+//        vitalSignsPanel.add(diastolicField);
+//        vitalSignsPanel.add(new JLabel("Nhịp tim (bpm):"));
+//        vitalSignsPanel.add(hrField);
+//        vitalSignsPanel.add(new JLabel("Độ bão hòa oxy (%):"));
+//        vitalSignsPanel.add(oxyField);
+//        vitalSignsPanel.add(new JLabel("Thời gian ghi nhận:"));
+//        vitalSignsPanel.add(recordedAtLabel);
+//    
+//        JButton saveButton = createQuickButton("Lưu chỉ số", new Color(0, 123, 255));
+//        vitalSignsPanel.add(saveButton);
+//        vitalSignsPanel.add(new JLabel(""));
+//    
+//        patientTable.addMouseListener(new MouseAdapter() {
+//            @Override
+//            public void mouseClicked(MouseEvent e) {
+//                int row = patientTable.getSelectedRow();
+//                int col = patientTable.getSelectedColumn();
+//                
+//                if (col == 6 && row >= 0) {
+//                    String patientId = (String) patientTable.getValueAt(row, 0);
+//                    VitalSign vitalSign = controller.getVitalSigns(patientId);
+//                    
+//                    if (vitalSign != null) {
+//                        tempField.setText(String.format("%.1f", vitalSign.getTemperature()));
+////                        systolicField.setText(String.valueOf(vitalSign.getSystolicPressure()));
+//                        diastolicField.setText(String.valueOf(vitalSign.getBloodPressure()));
+//                        hrField.setText(String.valueOf(vitalSign.getHeartRate()));
+//                        oxyField.setText(String.format("%.1f", vitalSign.getOxygenSaturation()));
+//                        recordedAtLabel.setText(vitalSign.getRecordedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+//                    } else {
+//                        tempField.setText("");
+////                        systolicField.setText("");
+//                        diastolicField.setText("");
+//                        hrField.setText("");
+//                        oxyField.setText("");
+//                        recordedAtLabel.setText("Chưa ghi nhận");
+//                    }
+//                }
+//            }
+//        });
+//
+//        saveButton.addActionListener(e -> {
+//            int row = patientTable.getSelectedRow();
+//            if (row < 0) {
+//                JOptionPane.showMessageDialog(this, "Vui lòng chọn một bệnh nhân!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+//                return;
+//            }
+//
+//            String patientId = (String) patientTable.getValueAt(row, 0);
+//            try {
+//                double temperature = Double.parseDouble(tempField.getText());
+////                int systolicBP = Integer.parseInt(systolicField.getText());
+//                int diastolicBP = Integer.parseInt(diastolicField.getText());
+//                int heartRate = Integer.parseInt(hrField.getText());
+//                double oxygenSat = Double.parseDouble(oxyField.getText());
+//
+//                // Sử dụng constructor mặc định và gán giá trị bằng setter
+//                VitalSign vitalSign = new VitalSign();
+//                vitalSign.setPatientID(patientId);
+//                vitalSign.setTemperature(temperature);
+////                vitalSign.setSystolicPressure(systolicBP);
+//                vitalSign.setBloodPressure(diastolicBP);
+//                vitalSign.setHeartRate(heartRate);
+//                vitalSign.setOxygenSaturation(oxygenSat);
+//                vitalSign.setRecordedAt(LocalDateTime.now()); // 01:25 AM +07, 05/06/2025
+//
+//                boolean success = controller.saveVitalSigns(patientId, vitalSign);
+//
+//                if (success) {
+//                    recordedAtLabel.setText(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+//                    JOptionPane.showMessageDialog(this, "Lưu chỉ số sức khỏe thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+//                } else {
+//                    JOptionPane.showMessageDialog(this, "Lưu chỉ số sức khỏe thất bại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+//                }
+//            } catch (NumberFormatException ex) {
+//                JOptionPane.showMessageDialog(this, "Vui lòng nhập đúng định dạng số cho các chỉ số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+//            } catch (IllegalArgumentException ex) {
+//                JOptionPane.showMessageDialog(this, ex.getMessage(), "Lỗi dữ liệu", JOptionPane.ERROR_MESSAGE);
+//            }
+//        });
+//
+//        // Xử lý tìm kiếm bệnh nhân
+//        searchButton.addActionListener(e -> {
+//            String keyword = searchField.getText().trim();
+//            if (keyword.isEmpty()) {
+//                // Nếu từ khóa trống, hiển thị lại tất cả bệnh nhân
+//                tableModel.setRowCount(0);
+//                List<Object[]> allPatients = controller.getPatientsForExamination();
+//                populateTable(tableModel, allPatients);
+//                return;
+//            }
+//            
+//            // Gọi controller để tìm kiếm
+//            List<Object[]> searchResults = controller.searchPatientsForExamination(keyword);
+//            
+//            // Cập nhật bảng
+//            tableModel.setRowCount(0);
+//            
+//            if (searchResults == null || searchResults.isEmpty()) {
+//                JOptionPane.showMessageDialog(this, 
+//                    "Không tìm thấy bệnh nhân nào phù hợp", 
+//                    "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+//            } else {
+//                populateTable(tableModel, searchResults);
+//            }
+//        });
+//
+//
+//     // Xử lý sự kiện khi nhấn nút kê đơn thuốc
+//        prescriptionButton.addActionListener(e -> prescribeForSelectedPatient(patientTable));
+//        
+//        // Xử lý sự kiện khi nhấn nút hoàn thành khám
+//        completeButton.addActionListener(e -> {
+//            int selectedRow = patientTable.getSelectedRow();
+//            if (selectedRow == -1) {
+//                JOptionPane.showMessageDialog(this, 
+//                    "Vui lòng chọn bệnh nhân để hoàn thành khám", 
+//                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+//                return;
+//            }
+//            
+//            String patientId = patientTable.getValueAt(selectedRow, 0).toString();
+//            controller.completeExamination(patientId);
+//            
+//            // Cập nhật trạng thái trong bảng
+//            tableModel.setValueAt("Đã hoàn thành", selectedRow, 5);
+//            JOptionPane.showMessageDialog(this, "Đã hoàn thành khám", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+//        });
+//
+//        JPanel rightPanel = new JPanel(new BorderLayout());
+//        rightPanel.setOpaque(false);
+//        rightPanel.add(vitalSignsPanel, BorderLayout.NORTH);
+//        rightPanel.add(buttonPanel, BorderLayout.SOUTH);
+//
+//        mainPanel.add(searchPanel, BorderLayout.NORTH);
+//        mainPanel.add(patientListPanel, BorderLayout.CENTER);
+//        mainPanel.add(rightPanel, BorderLayout.EAST);
+//
+//        contentPanel.add(titleLabel, BorderLayout.NORTH);
+//        contentPanel.add(mainPanel, BorderLayout.CENTER);
+//        contentPanel.revalidate();
+//        contentPanel.repaint();
+//
+//        setSelectedButton(btnExamination);
+//    }
     public void showExamination() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
-    
+
         JLabel titleLabel = new JLabel("Khám bệnh", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 20, 0));
-    
+
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         searchPanel.setBackground(Color.WHITE);
         searchPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
-    
+
         JLabel searchLabel = new JLabel("Tìm kiếm bệnh nhân:");
         JTextField searchField = new JTextField(20);
         JButton searchButton = new JButton("Tìm kiếm");
         searchButton.setBackground(new Color(0, 123, 255));
         searchButton.setForeground(Color.WHITE);
         searchButton.setFocusPainted(false);
-    
+
         searchPanel.add(searchLabel);
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
-    
+
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setOpaque(false);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
-    
+
         JPanel patientListPanel = new JPanel(new BorderLayout());
         patientListPanel.setBackground(Color.WHITE);
         patientListPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+                BorderFactory.createEmptyBorder(1, 1, 1, 1)
         ));
-    
+
         String[] columnNames = {"ID", "Họ và tên", "Ngày sinh", "Số điện thoại", "Bệnh chính", "Trạng thái", "Chọn"};
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -1720,12 +1999,12 @@ public class DoctorView extends JFrame {
             }
         };
         JTable patientTable = new JTable(tableModel);
-        patientTable.setRowHeight(35);
+        patientTable.setRowHeight(35); // Đảm bảo chiều cao hàng đủ để hiển thị nội dung
         patientTable.setFont(new Font("Arial", Font.PLAIN, 14));
         patientTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-        
+
         List<Object[]> patientRecords = controller.getPatientsForExamination();
-        
+
         if (patientRecords == null || patientRecords.isEmpty()) {
             System.out.println("Không tìm thấy bệnh nhân chờ khám");
         } else {
@@ -1735,17 +2014,17 @@ public class DoctorView extends JFrame {
                     MedicalRecord medicalRecord = (MedicalRecord) record[1];
                     String email = (String) record[2];
                     String appointmentStatus = record.length > 3 ? (String) record[3] : "Chờ khám";
-                    
+
                     String diagnosis = "";
                     if (medicalRecord != null && medicalRecord.getDiagnosis() != null) {
                         diagnosis = medicalRecord.getDiagnosis();
                     }
-                    
+
                     String birthDateStr = "";
                     if (patient.getDateOfBirth() != null) {
                         birthDateStr = patient.getDateOfBirth().toString();
                     }
-                    
+
                     tableModel.addRow(new Object[]{
                         patient.getPatientID(),
                         patient.getFullName(),
@@ -1761,40 +2040,44 @@ public class DoctorView extends JFrame {
                 }
             }
         }
-        
+
+        // Áp dụng renderer và editor cho cột "Chọn"
         patientTable.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
         patientTable.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox()));
-    
+
+        // Tự động điều chỉnh chiều rộng cột
+        autoAdjustColumnWidths(patientTable);
+
         JScrollPane scrollPane = new JScrollPane(patientTable);
         patientListPanel.add(scrollPane, BorderLayout.CENTER);
-        
+
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         buttonPanel.setOpaque(false);
-        
+
         JButton prescriptionButton = createQuickButton("Kê đơn thuốc", new Color(40, 167, 69));
         JButton completeButton = createQuickButton("Hoàn thành khám", new Color(0, 123, 255));
-        
+
         buttonPanel.add(prescriptionButton);
         buttonPanel.add(completeButton);
-        
+
         JPanel vitalSignsPanel = new JPanel(new GridLayout(7, 2, 10, 10));
         vitalSignsPanel.setBackground(Color.WHITE);
         vitalSignsPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
-    
+
         JTextField tempField = new JTextField("");
-//        JTextField systolicField = new JTextField("");
+        JTextField systolicField = new JTextField("");
         JTextField diastolicField = new JTextField("");
         JTextField hrField = new JTextField("");
         JTextField oxyField = new JTextField("");
         JLabel recordedAtLabel = new JLabel("Chưa ghi nhận");
-    
+
         vitalSignsPanel.add(new JLabel("Nhiệt độ (°C):"));
         vitalSignsPanel.add(tempField);
-//        vitalSignsPanel.add(new JLabel("Huyết áp tâm thu (mmHg):"));
-//        vitalSignsPanel.add(systolicField);
+        vitalSignsPanel.add(new JLabel("Huyết áp tâm thu (mmHg):"));
+        vitalSignsPanel.add(systolicField);
         vitalSignsPanel.add(new JLabel("Huyết áp tâm trương (mmHg):"));
         vitalSignsPanel.add(diastolicField);
         vitalSignsPanel.add(new JLabel("Nhịp tim (bpm):"));
@@ -1803,31 +2086,31 @@ public class DoctorView extends JFrame {
         vitalSignsPanel.add(oxyField);
         vitalSignsPanel.add(new JLabel("Thời gian ghi nhận:"));
         vitalSignsPanel.add(recordedAtLabel);
-    
+
         JButton saveButton = createQuickButton("Lưu chỉ số", new Color(0, 123, 255));
         vitalSignsPanel.add(saveButton);
         vitalSignsPanel.add(new JLabel(""));
-    
+
         patientTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int row = patientTable.getSelectedRow();
                 int col = patientTable.getSelectedColumn();
-                
+
                 if (col == 6 && row >= 0) {
                     String patientId = (String) patientTable.getValueAt(row, 0);
                     VitalSign vitalSign = controller.getVitalSigns(patientId);
-                    
+
                     if (vitalSign != null) {
                         tempField.setText(String.format("%.1f", vitalSign.getTemperature()));
-//                        systolicField.setText(String.valueOf(vitalSign.getSystolicPressure()));
-                        diastolicField.setText(String.valueOf(vitalSign.getBloodPressure()));
+                        systolicField.setText(String.valueOf(vitalSign.getSystolicPressure()));
+                        diastolicField.setText(String.valueOf(vitalSign.getDiastolicPressure()));
                         hrField.setText(String.valueOf(vitalSign.getHeartRate()));
                         oxyField.setText(String.format("%.1f", vitalSign.getOxygenSaturation()));
                         recordedAtLabel.setText(vitalSign.getRecordedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
                     } else {
                         tempField.setText("");
-//                        systolicField.setText("");
+                        systolicField.setText("");
                         diastolicField.setText("");
                         hrField.setText("");
                         oxyField.setText("");
@@ -1847,20 +2130,19 @@ public class DoctorView extends JFrame {
             String patientId = (String) patientTable.getValueAt(row, 0);
             try {
                 double temperature = Double.parseDouble(tempField.getText());
-//                int systolicBP = Integer.parseInt(systolicField.getText());
+                int systolicPressure = Integer.parseInt(systolicField.getText());
                 int diastolicBP = Integer.parseInt(diastolicField.getText());
                 int heartRate = Integer.parseInt(hrField.getText());
                 double oxygenSat = Double.parseDouble(oxyField.getText());
 
-                // Sử dụng constructor mặc định và gán giá trị bằng setter
                 VitalSign vitalSign = new VitalSign();
                 vitalSign.setPatientID(patientId);
                 vitalSign.setTemperature(temperature);
-//                vitalSign.setSystolicPressure(systolicBP);
-                vitalSign.setBloodPressure(diastolicBP);
+                vitalSign.setSystolicPressure(systolicPressure);
+                vitalSign.setDiastolicPressure(diastolicBP);
                 vitalSign.setHeartRate(heartRate);
                 vitalSign.setOxygenSaturation(oxygenSat);
-                vitalSign.setRecordedAt(LocalDateTime.now()); // 01:25 AM +07, 05/06/2025
+                vitalSign.setRecordedAt(LocalDateTime.now());
 
                 boolean success = controller.saveVitalSigns(patientId, vitalSign);
 
@@ -1884,29 +2166,90 @@ public class DoctorView extends JFrame {
                 // Nếu từ khóa trống, hiển thị lại tất cả bệnh nhân
                 tableModel.setRowCount(0);
                 List<Object[]> allPatients = controller.getPatientsForExamination();
-                populateTable(tableModel, allPatients);
+                for (Object[] record : allPatients) {
+                    try {
+                        Patient patient = (Patient) record[0];
+                        MedicalRecord medicalRecord = (MedicalRecord) record[1];
+                        String email = (String) record[2];
+                        String appointmentStatus = record.length > 3 ? (String) record[3] : "Chờ khám";
+
+                        String diagnosis = "";
+                        if (medicalRecord != null && medicalRecord.getDiagnosis() != null) {
+                            diagnosis = medicalRecord.getDiagnosis();
+                        }
+
+                        String birthDateStr = "";
+                        if (patient.getDateOfBirth() != null) {
+                            birthDateStr = patient.getDateOfBirth().toString();
+                        }
+
+                        tableModel.addRow(new Object[]{
+                            patient.getPatientID(),
+                            patient.getFullName(),
+                            birthDateStr,
+                            patient.getPhoneNumber(),
+                            diagnosis,
+                            appointmentStatus,
+                            "Chọn"
+                        });
+                    } catch (Exception ex) {
+                        System.out.println("Lỗi khi xử lý bản ghi: " + ex.getMessage());
+                        ex.printStackTrace();
+                    }
+                }
+                autoAdjustColumnWidths(patientTable); // Điều chỉnh lại kích thước cột sau khi điền dữ liệu
                 return;
             }
-            
+
             // Gọi controller để tìm kiếm
             List<Object[]> searchResults = controller.searchPatientsForExamination(keyword);
-            
+
             // Cập nhật bảng
             tableModel.setRowCount(0);
-            
+
             if (searchResults == null || searchResults.isEmpty()) {
                 JOptionPane.showMessageDialog(this, 
                     "Không tìm thấy bệnh nhân nào phù hợp", 
                     "Thông báo", JOptionPane.INFORMATION_MESSAGE);
             } else {
-                populateTable(tableModel, searchResults);
+                for (Object[] record : searchResults) {
+                    try {
+                        Patient patient = (Patient) record[0];
+                        MedicalRecord medicalRecord = (MedicalRecord) record[1];
+                        Appointment appointment = (Appointment) record[2]; // Giả định cấu trúc mảng từ search
+                        String appointmentStatus = record.length > 3 ? (String) record[3] : "Chờ khám";
+
+                        String diagnosis = "";
+                        if (medicalRecord != null && medicalRecord.getDiagnosis() != null) {
+                            diagnosis = medicalRecord.getDiagnosis();
+                        }
+
+                        String birthDateStr = "";
+                        if (patient.getDateOfBirth() != null) {
+                            birthDateStr = patient.getDateOfBirth().toString();
+                        }
+
+                        tableModel.addRow(new Object[]{
+                            patient.getPatientID(),
+                            patient.getFullName(),
+                            birthDateStr,
+                            patient.getPhoneNumber(),
+                            diagnosis,
+                            appointmentStatus,
+                            "Chọn"
+                        });
+                    } catch (Exception ex) {
+                        System.out.println("Lỗi khi xử lý bản ghi: " + ex.getMessage());
+                        ex.printStackTrace();
+                    }
+                }
+                autoAdjustColumnWidths(patientTable); // Điều chỉnh lại kích thước cột sau khi điền dữ liệu
             }
         });
 
-
-     // Xử lý sự kiện khi nhấn nút kê đơn thuốc
+        // Xử lý sự kiện khi nhấn nút kê đơn thuốc
         prescriptionButton.addActionListener(e -> prescribeForSelectedPatient(patientTable));
-        
+
         // Xử lý sự kiện khi nhấn nút hoàn thành khám
         completeButton.addActionListener(e -> {
             int selectedRow = patientTable.getSelectedRow();
@@ -1916,10 +2259,10 @@ public class DoctorView extends JFrame {
                     "Thông báo", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            
+
             String patientId = patientTable.getValueAt(selectedRow, 0).toString();
             controller.completeExamination(patientId);
-            
+
             // Cập nhật trạng thái trong bảng
             tableModel.setValueAt("Đã hoàn thành", selectedRow, 5);
             JOptionPane.showMessageDialog(this, "Đã hoàn thành khám", "Thành công", JOptionPane.INFORMATION_MESSAGE);
@@ -1940,6 +2283,31 @@ public class DoctorView extends JFrame {
         contentPanel.repaint();
 
         setSelectedButton(btnExamination);
+    }
+
+    // Hàm tự động điều chỉnh kích thước cột
+    private void autoAdjustColumnWidths(JTable table) {
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF); // Tắt tự động điều chỉnh của JTable
+        for (int column = 0; column < table.getColumnCount(); column++) {
+            TableColumn tableColumn = table.getColumnModel().getColumn(column);
+            int maxWidth = 0;
+            for (int row = 0; row < table.getRowCount(); row++) {
+                TableCellRenderer renderer = table.getCellRenderer(row, column);
+                Component comp = table.prepareRenderer(renderer, row, column);
+                maxWidth = Math.max(comp.getPreferredSize().width, maxWidth);
+            }
+            // Kiểm tra chiều rộng của tiêu đề cột
+            TableCellRenderer headerRenderer = table.getTableHeader().getDefaultRenderer();
+            Component headerComp = headerRenderer.getTableCellRendererComponent(
+                    table, tableColumn.getHeaderValue(), false, false, 0, column);
+            maxWidth = Math.max(maxWidth, headerComp.getPreferredSize().width);
+            // Đặt chiều rộng tối thiểu và tối đa (thêm padding 10 pixel)
+            tableColumn.setPreferredWidth(maxWidth + 2);
+            // Đặt giới hạn tối đa để tránh cột quá rộng
+            if (tableColumn.getPreferredWidth() > 300) {
+                tableColumn.setPreferredWidth(300);
+            }
+        }
     }
 
     /**

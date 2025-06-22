@@ -6,7 +6,8 @@ public class VitalSign {
     private String vitalSignID;
     private String patientID;
     private double temperature; // Nhiệt độ
-    private int BloodPressure; // Huyết áp
+    private int systolicPressure; // Huyết áp tâm thu
+    private int diastolicPressure; // Huyết áp tâm trương
     private int heartRate; // Nhịp tim
     private double oxygenSaturation; // Độ bão hòa oxy
     private LocalDateTime recordedAt; // Thời điểm đo
@@ -15,13 +16,13 @@ public class VitalSign {
         this.recordedAt = LocalDateTime.now(); // Lấy thời gian thực tế
     }
 
-    public VitalSign(String vitalSignID, String patientID, double temperature,
-                     int BloodPressure, int heartRate, double oxygenSaturation, LocalDateTime recordedAt) {
+    public VitalSign(String vitalSignID, String patientID, double temperature, int systolicPressure, 
+                     int diastolicPressure, int heartRate, double oxygenSaturation, LocalDateTime recordedAt) {
         this.vitalSignID = vitalSignID;
         this.patientID = patientID;
         setTemperature(temperature);
-//        setSystolicPressure(systolicPressure);
-        setBloodPressure(BloodPressure);
+        setSystolicPressure(systolicPressure);
+        setDiastolicPressure(diastolicPressure);
         setHeartRate(heartRate);
         setOxygenSaturation(oxygenSaturation);
         this.recordedAt = recordedAt;
@@ -54,26 +55,26 @@ public class VitalSign {
         this.temperature = temperature;
     }
 
-//    public int getSystolicPressure() {
-//        return systolicPressure;
-//    }
-//
-//    public void setSystolicPressure(int systolicPressure) {
-//        if (systolicPressure < 50 || systolicPressure > 250) {
-//            throw new IllegalArgumentException("Huyết áp tâm thu phải trong khoảng 50 - 250 mmHg.");
-//        }
-//        this.systolicPressure = systolicPressure;
-//    }
-
-    public int getBloodPressure() {
-        return BloodPressure;
+    public int getSystolicPressure() {
+        return systolicPressure;
     }
 
-    public void setBloodPressure(int BloodPressure) {
-        if (BloodPressure < 30 || BloodPressure > 150) {
+    public void setSystolicPressure(int systolicPressure) {
+        if (systolicPressure < 50 || systolicPressure > 250) {
+            throw new IllegalArgumentException("Huyết áp tâm thu phải trong khoảng 50 - 250 mmHg.");
+        }
+        this.systolicPressure = systolicPressure;
+    }
+
+    public int getDiastolicPressure() {
+        return diastolicPressure;
+    }
+
+    public void setDiastolicPressure(int diastolicPressure) {
+        if (diastolicPressure < 30 || diastolicPressure > 150) {
             throw new IllegalArgumentException("Huyết áp tâm trương phải trong khoảng 30 - 150 mmHg.");
         }
-        this.BloodPressure = BloodPressure;
+        this.diastolicPressure = diastolicPressure;
     }
 
     public int getHeartRate() {

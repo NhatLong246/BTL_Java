@@ -106,7 +106,7 @@ public class PatientView extends JFrame {
             gbc.fill = GridBagConstraints.HORIZONTAL;
             gbc.weightx = 1.0;
 
-            JLabel menuTitle = new JLabel("", SwingConstants.CENTER);
+            JLabel menuTitle = new JLabel("Giao diện bệnh nhân", SwingConstants.CENTER);
             menuTitle.setFont(new Font("Arial", Font.BOLD, 20));
             menuTitle.setForeground(Color.WHITE);
             gbc.gridy = 0;
@@ -426,10 +426,11 @@ public class PatientView extends JFrame {
         vitalSignsFieldsPanel.setOpaque(false);
         vitalSignsFieldsPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 5, 5)); // Thêm padding
         
-        // Cập nhật dữ liệu từ vitalSigns
         if (vitalSigns != null && !vitalSigns.isEmpty()) {
             addInfoField(vitalSignsFieldsPanel, "Nhiệt độ:", vitalSigns.get("temperature") != null ? vitalSigns.get("temperature").toString() + " °C" : "Không có dữ liệu");
-            addInfoField(vitalSignsFieldsPanel, "Huyết áp:", vitalSigns.get("bloodPressure") != null ? vitalSigns.get("bloodPressure").toString() : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Huyết áp:", vitalSigns.get("systolicPressure") != null && vitalSigns.get("diastolicPressure") != null 
+                ? vitalSigns.get("systolicPressure").toString() + " / " + vitalSigns.get("diastolicPressure").toString() + " mmHg" 
+                : "Không có dữ liệu");
             addInfoField(vitalSignsFieldsPanel, "Mạch:", vitalSigns.get("heartRate") != null ? vitalSigns.get("heartRate").toString() + " bpm" : "Không có dữ liệu");
             addInfoField(vitalSignsFieldsPanel, "Độ bão hòa oxy:", vitalSigns.get("oxygenSaturation") != null ? vitalSigns.get("oxygenSaturation").toString() + " %" : "Không có dữ liệu");
             addInfoField(vitalSignsFieldsPanel, "Thời gian ghi nhận:", vitalSigns.get("recordedAt") != null ? vitalSigns.get("recordedAt").toString() : "Không có dữ liệu");
