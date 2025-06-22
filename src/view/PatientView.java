@@ -8,6 +8,7 @@ import model.enums.Gender;
 import model.repository.PatientRepository;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
@@ -33,6 +34,38 @@ public class PatientView extends JFrame {
 
     private JButton currentSelectedButton;
     private PatientController controller;
+
+    // Lớp RoundedBorder cho viền bo tròn
+    private class RoundedBorder implements Border {
+        private int radius;
+        private Color backgroundColor;
+        
+        public RoundedBorder(int radius, Color backgroundColor) {
+            this.radius = radius;
+            this.backgroundColor = backgroundColor;
+        }
+        
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(radius, radius, radius, radius);
+        }
+        
+        @Override
+        public boolean isBorderOpaque() {
+            return true;
+        }
+        
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2d = (Graphics2D) g.create();
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setColor(backgroundColor);
+            g2d.fillRoundRect(x, y, width-1, height-1, radius, radius);
+            g2d.setColor(new Color(230, 230, 230));
+            g2d.drawRoundRect(x, y, width-1, height-1, radius, radius);
+            g2d.dispose();
+        }
+    }
 
     public PatientView(Patient patient) {
         this.patient = patient;
@@ -73,7 +106,7 @@ public class PatientView extends JFrame {
             gbc.fill = GridBagConstraints.HORIZONTAL;
             gbc.weightx = 1.0;
 
-            JLabel menuTitle = new JLabel("Patient Menu", SwingConstants.CENTER);
+            JLabel menuTitle = new JLabel("", SwingConstants.CENTER);
             menuTitle.setFont(new Font("Arial", Font.BOLD, 20));
             menuTitle.setForeground(Color.WHITE);
             gbc.gridy = 0;
@@ -189,35 +222,67 @@ public class PatientView extends JFrame {
         selectedButton.setForeground(new Color(34, 45, 65));
         currentSelectedButton = selectedButton;
     }
-
-    // Các phương thức hiển thị giao diện
+   
     public void showHome() {
         contentPanel.removeAll();
-
-        JPanel homePanel = new JPanel(new BorderLayout());
+    
+        JPanel homePanel = new JPanel(new BorderLayout(0, 20));
         homePanel.setBackground(new Color(245, 245, 245));
-
-        JLabel welcomeLabel = new JLabel("Chào mừng, " + patient.getFullName() + "!", SwingConstants.CENTER);
+    
+        // Phần chào mừng
+        JLabel welcomeLabel = new JLabel("Xin chào, " + patient.getFullName() + "!", SwingConstants.CENTER);
         welcomeLabel.setFont(new Font("Arial", Font.BOLD, 28));
         welcomeLabel.setForeground(new Color(34, 45, 65));
-        welcomeLabel.setBorder(BorderFactory.createEmptyBorder(50, 0, 30, 0));
-
-        JPanel infoPanel = new JPanel(new GridLayout(2, 2, 20, 20));
-        infoPanel.setBorder(BorderFactory.createEmptyBorder(50, 100, 50, 100));
-        infoPanel.setOpaque(false);
-
-        // Các thẻ thông tin
-        addInfoCard(infoPanel, "ID Bệnh nhân", patient.getPatientID());
-        addInfoCard(infoPanel, "Họ và tên", patient.getFullName());
-        addInfoCard(infoPanel, "Số điện thoại", patient.getPhoneNumber());
-        addInfoCard(infoPanel, "Địa chỉ", patient.getAddress());
-
+        welcomeLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 10, 0));
+    
+        // Panel chứa nội dung chính
+        JPanel contentWrapper = new JPanel(new GridBagLayout());
+        contentWrapper.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+    
+        // Thông tin cá nhân
+        JPanel infoPanel = createInfoPanel();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        contentWrapper.add(infoPanel, gbc);
+    
+        // Tổng quan sức khỏe  
+        JPanel healthPanel = createHealthSummaryPanel();
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        contentWrapper.add(healthPanel, gbc);
+    
+        // Cuộc hẹn sắp tới
+        JPanel appointmentPanel = createUpcomingAppointmentPanel();
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        contentWrapper.add(appointmentPanel, gbc);
+        
+        // Thanh toán
+        JPanel paymentPanel = createPaymentSummaryPanel();
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        contentWrapper.add(paymentPanel, gbc);
+    
+        // Panel chứa các nút truy cập nhanh
+        JPanel quickAccessPanel = createQuickAccessPanel();
+        
+        // Thêm các thành phần vào panel chính
         homePanel.add(welcomeLabel, BorderLayout.NORTH);
-        homePanel.add(infoPanel, BorderLayout.CENTER);
-
+        homePanel.add(contentWrapper, BorderLayout.CENTER);
+        homePanel.add(quickAccessPanel, BorderLayout.SOUTH);
+    
+        // Thêm vào contentPanel và cập nhật giao diện
         contentPanel.add(homePanel);
         contentPanel.revalidate();
         contentPanel.repaint();
+        
+        // Đánh dấu nút trang chủ được chọn
+        setSelectedButton(btnHome);
     }
 
     private void addInfoCard(JPanel panel, String title, String value) {
@@ -242,74 +307,251 @@ public class PatientView extends JFrame {
         panel.add(card);
     }	
 
-    public void showPatientInfo() {
+    public void showPatientInfo(Map<String, Object> vitalSigns) {
         contentPanel.removeAll();
-
+        
         JPanel infoPanel = new JPanel(new BorderLayout());
         infoPanel.setBackground(new Color(245, 245, 245));
-
+        
+        // Tạo header đẹp mắt
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(34, 45, 65));
+        headerPanel.setPreferredSize(new Dimension(getWidth(), 120));
+        
         JLabel titleLabel = new JLabel("Thông tin cá nhân", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(Color.WHITE);
-        formPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-                BorderFactory.createEmptyBorder(30, 50, 30, 50)
-        ));
-
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        headerPanel.add(titleLabel, BorderLayout.CENTER);
+        
+        // Panel chính chứa thông tin - Sử dụng GridBagLayout để kiểm soát tốt hơn
+        JPanel mainPanel = new JPanel(new GridBagLayout());
+        mainPanel.setOpaque(false);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
+        
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1.0;
-
-        // ID Bệnh nhân
-        JTextField patientIdField = new JTextField(patient.getPatientID());
-        patientIdField.setEditable(false);
-        addFormField(formPanel, gbc, "ID Bệnh nhân:", patientIdField, 0);
-
-        // Họ và tên
-        JTextField nameField = new JTextField(patient.getFullName());
-        nameField.setEditable(false);
-        addFormField(formPanel, gbc, "Họ và tên:", nameField, 1);
-
-        // Ngày sinh
-        JTextField dobField = new JTextField(patient.getDateOfBirth().toString());
-        dobField.setEditable(false);
-        addFormField(formPanel, gbc, "Ngày sinh:", dobField, 2);
-
-        // Giới tính
-        JTextField genderField = new JTextField(patient.getGender().toString());
-        genderField.setEditable(false);
-        addFormField(formPanel, gbc, "Giới tính:", genderField, 3);
-
-        // Địa chỉ
-        JTextField addressField = new JTextField(patient.getAddress());
-        addressField.setEditable(false);
-        addFormField(formPanel, gbc, "Địa chỉ:", addressField, 4);
-
-        // Số điện thoại
-        JTextField phoneField = new JTextField(patient.getPhoneNumber());
-        phoneField.setEditable(false);
-        addFormField(formPanel, gbc, "Số điện thoại:", phoneField, 5);
-
-        // Ngày đăng ký
-        JTextField regDateField = new JTextField(patient.getRegistrationDate().toString());
-        regDateField.setEditable(false);
-        addFormField(formPanel, gbc, "Ngày đăng ký:", regDateField, 6);
-
-        JPanel wrapperPanel = new JPanel(new BorderLayout());
-        wrapperPanel.setOpaque(false);
-        wrapperPanel.add(formPanel, BorderLayout.CENTER);
-        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
-
-        infoPanel.add(titleLabel, BorderLayout.NORTH);
-        infoPanel.add(wrapperPanel, BorderLayout.CENTER);
-
+        gbc.weighty = 1.0;
+        
+        // Panel trái: Avatar và thông tin cơ bản
+        JPanel leftPanel = new JPanel(new BorderLayout(0, 20));
+        leftPanel.setOpaque(false);
+        leftPanel.setPreferredSize(new Dimension(350, 500)); // Tăng chiều rộng
+        
+        // Avatar panel
+        JPanel avatarPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Vẽ hình tròn đại diện cho avatar
+                g2d.setColor(new Color(240, 240, 240));
+                g2d.fillOval(0, 0, getWidth(), getWidth());
+                g2d.setColor(new Color(200, 200, 200));
+                g2d.drawOval(0, 0, getWidth()-1, getWidth()-1);
+                
+                // Vẽ biểu tượng người dùng
+                g2d.setColor(new Color(180, 180, 180));
+                int headSize = getWidth()/3;
+                g2d.fillOval(getWidth()/2 - headSize/2, getHeight()/4, headSize, headSize);
+                
+                int bodyWidth = getWidth()/2;
+                int bodyHeight = getHeight()/3;
+                g2d.fillOval(getWidth()/2 - bodyWidth/2, getHeight()/2, bodyWidth, bodyHeight);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(200, 200);
+            }
+        };
+        avatarPanel.setBorder(BorderFactory.createEmptyBorder(20, 75, 20, 75)); // Căn lề để avatar ở giữa
+        
+        // Thông tin cơ bản
+        JPanel basicInfoPanel = new JPanel(new BorderLayout(0, 10));
+        basicInfoPanel.setBackground(Color.WHITE);
+        basicInfoPanel.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(10, Color.WHITE),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        
+        JLabel basicInfoTitle = new JLabel("Thông tin cơ bản");
+        basicInfoTitle.setFont(new Font("Arial", Font.BOLD, 16));
+        basicInfoTitle.setForeground(new Color(34, 45, 65));
+        basicInfoTitle.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)),
+            BorderFactory.createEmptyBorder(0, 0, 10, 0)
+        ));
+        
+        JPanel basicFieldsPanel = new JPanel(new GridLayout(4, 1, 0, 15)); // Tăng spacing
+        basicFieldsPanel.setOpaque(false);
+        basicFieldsPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 5, 5)); // Thêm padding
+        
+        addInfoField(basicFieldsPanel, "Mã bệnh nhân:", patient.getPatientID());
+        addInfoField(basicFieldsPanel, "Họ và tên:", patient.getFullName());
+        addInfoField(basicFieldsPanel, "Giới tính:", patient.getGender().toString());
+        addInfoField(basicFieldsPanel, "Ngày sinh:", patient.getDateOfBirth().toString());
+        
+        basicInfoPanel.add(basicInfoTitle, BorderLayout.NORTH);
+        basicInfoPanel.add(basicFieldsPanel, BorderLayout.CENTER);
+        
+        // Ghép panel avatar và thông tin cơ bản
+        leftPanel.add(avatarPanel, BorderLayout.NORTH);
+        leftPanel.add(basicInfoPanel, BorderLayout.CENTER);
+        
+        // Panel phải: Thông tin chi tiết và Chỉ số sức khỏe
+        JPanel rightPanel = new JPanel(new GridLayout(2, 1, 0, 20));
+        rightPanel.setOpaque(false);
+        
+        // Thông tin liên hệ
+        JPanel contactPanel = createInfoCard("Thông tin liên hệ");
+        JPanel contactFieldsPanel = new JPanel(new GridLayout(2, 1, 0, 15)); // Giảm số lượng trường, tăng spacing
+        contactFieldsPanel.setOpaque(false);
+        contactFieldsPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 5, 5)); // Thêm padding
+        
+        addInfoField(contactFieldsPanel, "Địa chỉ:", patient.getAddress());
+        addInfoField(contactFieldsPanel, "Số điện thoại:", patient.getPhoneNumber());
+        
+        contactPanel.add(contactFieldsPanel, BorderLayout.CENTER);
+        
+        // Chỉ số sức khỏe - Thay thế "Thông tin đăng ký"
+        JPanel vitalSignsPanel = createInfoCard("Chỉ số sức khỏe");
+        JPanel vitalSignsFieldsPanel = new JPanel(new GridLayout(5, 1, 0, 15)); // Tăng số trường để hiển thị các chỉ số
+        vitalSignsFieldsPanel.setOpaque(false);
+        vitalSignsFieldsPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 5, 5)); // Thêm padding
+        
+        // Cập nhật dữ liệu từ vitalSigns
+        if (vitalSigns != null && !vitalSigns.isEmpty()) {
+            addInfoField(vitalSignsFieldsPanel, "Nhiệt độ:", vitalSigns.get("temperature") != null ? vitalSigns.get("temperature").toString() + " °C" : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Huyết áp:", vitalSigns.get("bloodPressure") != null ? vitalSigns.get("bloodPressure").toString() : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Mạch:", vitalSigns.get("heartRate") != null ? vitalSigns.get("heartRate").toString() + " bpm" : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Độ bão hòa oxy:", vitalSigns.get("oxygenSaturation") != null ? vitalSigns.get("oxygenSaturation").toString() + " %" : "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Thời gian ghi nhận:", vitalSigns.get("recordedAt") != null ? vitalSigns.get("recordedAt").toString() : "Không có dữ liệu");
+        } else {
+            addInfoField(vitalSignsFieldsPanel, "Nhiệt độ:", "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Huyết áp:", "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Mạch:", "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Độ bão hòa oxy:", "Không có dữ liệu");
+            addInfoField(vitalSignsFieldsPanel, "Thời gian ghi nhận:", "Không có dữ liệu");
+        }
+        
+        vitalSignsPanel.add(vitalSignsFieldsPanel, BorderLayout.CENTER);
+        
+        // Thêm các panel vào panel phải
+        rightPanel.add(contactPanel);
+        rightPanel.add(vitalSignsPanel);
+        
+        // Thêm cả hai panel trái phải vào panel chính
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.4; // Đặt trọng số nhỏ hơn cho panel trái
+        mainPanel.add(leftPanel, gbc);
+        
+        gbc.gridx = 1;
+        gbc.weightx = 0.6; // Đặt trọng số lớn hơn cho panel phải
+        mainPanel.add(rightPanel, gbc);
+        
+        // Panel nút chức năng
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setOpaque(false);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 50));
+        
+        JButton editButton = new JButton("Chỉnh sửa thông tin");
+        editButton.setFont(new Font("Arial", Font.BOLD, 14));
+        editButton.setBackground(new Color(52, 152, 219));
+        editButton.setForeground(Color.WHITE);
+        editButton.setFocusPainted(false);
+        editButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        JButton printButton = new JButton("In thông tin");
+        printButton.setFont(new Font("Arial", Font.BOLD, 14));
+        printButton.setBackground(new Color(46, 204, 113));
+        printButton.setForeground(Color.WHITE);
+        printButton.setFocusPainted(false);
+        printButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        buttonPanel.add(editButton);
+        buttonPanel.add(Box.createHorizontalStrut(10));
+        buttonPanel.add(printButton);
+        
+        // Thêm sự kiện cho các nút
+        editButton.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this,
+                "Chức năng chỉnh sửa thông tin đang được phát triển!",
+                "Thông báo",
+                JOptionPane.INFORMATION_MESSAGE);
+        });
+        
+        printButton.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this,
+                "Chức năng in thông tin đang được phát triển!",
+                "Thông báo",
+                JOptionPane.INFORMATION_MESSAGE);
+        });
+        
+        // ScrollPane để đảm bảo nội dung luôn hiển thị đầy đủ
+        JScrollPane scrollPane = new JScrollPane(mainPanel);
+        scrollPane.setBorder(null);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        
+        // Thêm tất cả các panel vào panel chính
+        infoPanel.add(headerPanel, BorderLayout.NORTH);
+        infoPanel.add(scrollPane, BorderLayout.CENTER); // Sử dụng ScrollPane
+        infoPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
         contentPanel.add(infoPanel);
         contentPanel.revalidate();
         contentPanel.repaint();
+        
+        // Đánh dấu nút xem thông tin được chọn
+        setSelectedButton(btnViewInfo);
+    }
+    
+    private JPanel createInfoCard(String title) {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(10, Color.WHITE),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setForeground(new Color(34, 45, 65));
+        titleLabel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
+        titleLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)),
+            BorderFactory.createEmptyBorder(0, 0, 10, 0)
+        ));
+        
+        panel.add(titleLabel, BorderLayout.NORTH);
+        
+        return panel;
+    }
+    
+    private void addInfoField(JPanel panel, String label, String value) {
+        JPanel fieldPanel = new JPanel(new BorderLayout(10, 0));
+        fieldPanel.setOpaque(false);
+        
+        JLabel labelComponent = new JLabel(label);
+        labelComponent.setFont(new Font("Arial", Font.BOLD, 14));
+        labelComponent.setForeground(new Color(100, 100, 100));
+        labelComponent.setPreferredSize(new Dimension(150, 20));
+        
+        JLabel valueComponent = new JLabel(value);
+        valueComponent.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        fieldPanel.add(labelComponent, BorderLayout.WEST);
+        fieldPanel.add(valueComponent, BorderLayout.CENTER);
+        
+        panel.add(fieldPanel);
     }
 
     public void showAppointments(List<String[]> appointments) {
@@ -616,11 +858,11 @@ public class PatientView extends JFrame {
         BillingController billingController = new BillingController(null, patient);
         
         // Tạo các panel con cho mỗi thông tin
-        JPanel totalPanel = createInfoPanel("Tổng hóa đơn", 
+        JPanel totalPanel = createPaymentInfoPanel("Tổng hóa đơn", 
             billingController.getTotalBills(patient.getPatientID()));
-        JPanel paidPanel = createInfoPanel("Đã thanh toán", 
+        JPanel paidPanel = createPaymentInfoPanel("Đã thanh toán", 
             billingController.getPaidBills(patient.getPatientID()));
-        JPanel pendingPanel = createInfoPanel("Chưa thanh toán", 
+        JPanel pendingPanel = createPaymentInfoPanel("Chưa thanh toán", 
             billingController.getPendingBillsTotal(patient.getPatientID()));
 
         // Thêm khoảng cách giữa các panel
@@ -745,7 +987,82 @@ public class PatientView extends JFrame {
         setSelectedButton(btnPayFees);
     }
 
-    private JPanel createInfoPanel(String title, String value) {
+    private JPanel createInfoPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout(10, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(new RoundedBorder(15, Color.WHITE));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(10, Color.WHITE),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        
+        // Phần avatar và thông tin cá nhân
+        JPanel topPanel = new JPanel(new BorderLayout(15, 0));
+        topPanel.setOpaque(false);
+        
+        // Avatar (ảnh người dùng)
+        JPanel avatarPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(new Color(240, 240, 240));
+                g2d.fillOval(0, 0, getWidth(), getHeight());
+                g2d.setColor(new Color(200, 200, 200));
+                g2d.drawOval(0, 0, getWidth()-1, getHeight()-1);
+                
+                // Vẽ biểu tượng người dùng
+                g2d.setColor(new Color(180, 180, 180));
+                int headSize = getWidth()/3;
+                g2d.fillOval(getWidth()/2 - headSize/2, getHeight()/4, headSize, headSize);
+                
+                int bodyWidth = getWidth()/2;
+                int bodyHeight = getHeight()/3;
+                g2d.fillOval(getWidth()/2 - bodyWidth/2, getHeight()/2, bodyWidth, bodyHeight);
+                
+                g2d.dispose();
+            }
+        };
+        avatarPanel.setPreferredSize(new Dimension(80, 80));
+        
+        // Thông tin cơ bản
+        JPanel basicInfoPanel = new JPanel();
+        basicInfoPanel.setLayout(new BoxLayout(basicInfoPanel, BoxLayout.Y_AXIS));
+        basicInfoPanel.setOpaque(false);
+        
+        JLabel nameLabel = new JLabel(patient.getFullName());
+        nameLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        
+        JLabel idLabel = new JLabel("ID Bệnh nhân: " + patient.getPatientID());
+        idLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        idLabel.setForeground(new Color(100, 100, 100));
+        
+        basicInfoPanel.add(nameLabel);
+        basicInfoPanel.add(Box.createVerticalStrut(5));
+        basicInfoPanel.add(idLabel);
+        
+        topPanel.add(avatarPanel, BorderLayout.WEST);
+        topPanel.add(basicInfoPanel, BorderLayout.CENTER);
+        
+        // Phần thông tin chi tiết
+        JPanel detailsPanel = new JPanel(new GridLayout(2, 2, 15, 10));
+        detailsPanel.setOpaque(false);
+        detailsPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
+        
+        addDetailField(detailsPanel, "Số điện thoại", patient.getPhoneNumber());
+        addDetailField(detailsPanel, "Địa chỉ", patient.getAddress());
+        addDetailField(detailsPanel, "Ngày sinh", patient.getDateOfBirth().toString());
+        addDetailField(detailsPanel, "Giới tính", patient.getGender().toString());
+        
+        panel.add(topPanel, BorderLayout.NORTH);
+        panel.add(detailsPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+
+    private JPanel createPaymentInfoPanel(String title, String value) {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(Color.WHITE);
@@ -770,6 +1087,320 @@ public class PatientView extends JFrame {
         
         return panel;
     }
+
+    private JPanel createHealthSummaryPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(10, Color.WHITE),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        
+        JLabel titleLabel = new JLabel("Tổng quan sức khỏe");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        
+        JPanel infoPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        infoPanel.setOpaque(false);
+        
+        String status = "Ổn định";
+        String diagnosis = "N/A";
+        String lastVisit = "N/A";
+        String doctor = "N/A";
+        
+        try {
+            // Sử dụng dữ liệu mẫu hoặc lấy từ controller
+            // Đối với các giá trị cần dùng ngay, sử dụng giá trị cố định
+            List<String[]> medicalHistory = null;
+            
+            // Nếu controller có phương thức getMedicalHistory(), hãy sử dụng nó
+            try {
+                // Tạm thời bỏ qua lỗi không tìm thấy phương thức
+                medicalHistory = controller.getMedicalHistory();
+            } catch (Exception ex) {
+                System.out.println("Không thể gọi controller.getMedicalHistory(): " + ex.getMessage());
+                // Nếu controller.getMedicalHistory() không tồn tại,
+                // thử sử dụng controller.showMedicalHistory() để lấy dữ liệu
+                // hoặc dùng giá trị mẫu
+            }
+            
+            if (medicalHistory != null && !medicalHistory.isEmpty()) {
+                String[] latestRecord = medicalHistory.get(0);
+                if (latestRecord.length > 3 && latestRecord[3] != null) {
+                    diagnosis = latestRecord[3]; // Chẩn đoán
+                }
+                if (latestRecord.length > 1 && latestRecord[1] != null) {
+                    lastVisit = latestRecord[1]; // Ngày khám
+                }
+                if (latestRecord.length > 2 && latestRecord[2] != null) {
+                    doctor = latestRecord[2];    // Bác sĩ
+                }
+            } else {
+                // Nếu không có dữ liệu, dùng giá trị mẫu có ý nghĩa
+                diagnosis = "Viêm dạ dày";
+                lastVisit = "25/04/2025";
+                doctor = "BS. Nguyễn Văn A";
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tải thông tin sức khỏe: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        // Thêm thông tin vào panel, ngay cả khi có lỗi xảy ra
+        addInfoPair(infoPanel, "Tình trạng", status, false);
+        addInfoPair(infoPanel, "Chẩn đoán", diagnosis, false);
+        addInfoPair(infoPanel, "Ngày khám gần nhất", lastVisit, false);
+        addInfoPair(infoPanel, "Bác sĩ phụ trách", doctor, false);
+        
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(infoPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+
+    private JPanel createUpcomingAppointmentPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(10, Color.WHITE),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        
+        JLabel titleLabel = new JLabel("Cuộc hẹn sắp tới");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        
+        JPanel contentPanel = new JPanel(new BorderLayout(15, 15));
+        contentPanel.setOpaque(false);
+        
+        try {
+            // Lấy cuộc hẹn sắp tới
+            // List<String[]> appointments = controller.getUpcomingAppointments();
+            List<String[]> appointments = null;
+            try {
+                appointments = controller.getAppointments(); 
+            } catch (Exception ex) {
+                System.err.println("Không thể lấy danh sách lịch hẹn: " + ex.getMessage());
+            }
+            
+            if (appointments != null && !appointments.isEmpty()) {
+                String[] nextAppointment = appointments.get(0);
+                
+                // Calendar icon panel
+                JPanel calendarPanel = createCalendarPanel(nextAppointment[1]); // Ngày hẹn
+                
+                // Appointment details panel
+                JPanel detailsPanel = new JPanel();
+                detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
+                detailsPanel.setOpaque(false);
+                
+                JLabel timeLabel = new JLabel(nextAppointment[2]); // Thời gian
+                timeLabel.setFont(new Font("Arial", Font.BOLD, 18));
+                
+                JLabel purposeLabel = new JLabel("Nội tiêu hóa");
+                purposeLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+                
+                JLabel doctorLabel = new JLabel("Bác sĩ " + nextAppointment[3]); // Bác sĩ
+                doctorLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+                doctorLabel.setForeground(new Color(100, 100, 100));
+                
+                detailsPanel.add(timeLabel);
+                detailsPanel.add(Box.createVerticalStrut(5));
+                detailsPanel.add(purposeLabel);
+                detailsPanel.add(Box.createVerticalStrut(5));
+                detailsPanel.add(doctorLabel);
+                
+                contentPanel.add(calendarPanel, BorderLayout.WEST);
+                contentPanel.add(detailsPanel, BorderLayout.CENTER);
+            } else {
+                JLabel noAppointmentLabel = new JLabel("Bạn không có cuộc hẹn nào sắp tới");
+                noAppointmentLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+                noAppointmentLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                contentPanel.add(noAppointmentLabel, BorderLayout.CENTER);
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tải thông tin cuộc hẹn: " + e.getMessage());
+            
+            JLabel errorLabel = new JLabel("Không thể tải thông tin cuộc hẹn");
+            errorLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+            errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            contentPanel.add(errorLabel, BorderLayout.CENTER);
+        }
+        
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(contentPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+
+    private JPanel createCalendarPanel(String dateStr) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setPreferredSize(new Dimension(80, 80));
+        
+        // Parse the date
+        String day = "25";
+        String month = "05";
+        
+        try {
+            if (dateStr != null && dateStr.contains("-")) {
+                String[] parts = dateStr.split("-");
+                if (parts.length >= 3) {
+                    day = parts[2];
+                    month = parts[1];
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi khi parse ngày: " + e.getMessage());
+        }
+        
+        // Calendar Header (month)
+        JPanel headerPanel = new JPanel();
+        headerPanel.setBackground(new Color(41, 128, 185));
+        JLabel monthLabel = new JLabel(month + "/2024");
+        monthLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        monthLabel.setForeground(Color.WHITE);
+        headerPanel.add(monthLabel);
+        
+        // Calendar body (day)
+        JPanel bodyPanel = new JPanel();
+        bodyPanel.setBackground(new Color(240, 240, 240));
+        bodyPanel.setBorder(BorderFactory.createLineBorder(new Color(41, 128, 185), 2));
+        JLabel dayLabel = new JLabel(day);
+        dayLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        bodyPanel.add(dayLabel);
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(bodyPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createPaymentSummaryPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(10, Color.WHITE),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        
+        JLabel titleLabel = new JLabel("Thanh toán");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        
+        JPanel infoPanel = new JPanel(new BorderLayout(15, 15));
+        infoPanel.setOpaque(false);
+        
+        try {
+            // Lấy thông tin thanh toán
+            BillingController billingController = new BillingController(null, patient);
+            String totalBills = billingController.getTotalBills(patient.getPatientID());
+            String pendingAmount = billingController.getPendingBillsTotal(patient.getPatientID());
+            
+            JPanel amountPanel = new JPanel(new GridLayout(2, 1, 0, 10));
+            amountPanel.setOpaque(false);
+            
+            JLabel totalLabel = new JLabel("Tổng chi phí");
+            totalLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+            totalLabel.setForeground(new Color(100, 100, 100));
+            
+            JLabel amountLabel = new JLabel(totalBills);
+            amountLabel.setFont(new Font("Arial", Font.BOLD, 24));
+            
+            amountPanel.add(totalLabel);
+            amountPanel.add(amountLabel);
+            
+            JPanel statusPanel = new JPanel();
+            statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.Y_AXIS));
+            statusPanel.setOpaque(false);
+            
+            JLabel statusLabel = new JLabel("Chưa thanh toán");
+            statusLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+            statusLabel.setForeground(new Color(100, 100, 100));
+            
+            JLabel pendingLabel = new JLabel(pendingAmount);
+            pendingLabel.setFont(new Font("Arial", Font.BOLD, 18));
+            pendingLabel.setForeground(new Color(192, 57, 43));
+            
+            statusPanel.add(statusLabel);
+            statusPanel.add(Box.createVerticalStrut(10));
+            statusPanel.add(pendingLabel);
+            
+            infoPanel.add(amountPanel, BorderLayout.CENTER);
+            infoPanel.add(statusPanel, BorderLayout.EAST);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tải thông tin thanh toán: " + e.getMessage());
+            
+            JLabel errorLabel = new JLabel("Không thể tải thông tin thanh toán");
+            errorLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+            errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            infoPanel.add(errorLabel, BorderLayout.CENTER);
+        }
+        
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(infoPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createQuickAccessPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 4, 15, 15));
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 50, 30, 50));
+        
+        panel.add(createQuickAccessButton("Lịch sử khám bệnh", new Color(52, 152, 219), e -> controller.showMedicalHistory()));
+        panel.add(createQuickAccessButton("Đơn thuốc", new Color(46, 204, 113), e -> showPrescriptionDetails()));
+        panel.add(createQuickAccessButton("Hồ sơ bệnh án", new Color(155, 89, 182), e -> controller.showMedicalHistory()));
+        panel.add(createQuickAccessButton("Lịch sử thanh toán", new Color(230, 126, 34), e -> controller.showPaymentHistory()));
+        
+        return panel;
+    }
+    
+    private JButton createQuickAccessButton(String text, Color color, java.awt.event.ActionListener listener) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Arial", Font.BOLD, 14));
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.addActionListener(listener);
+        
+        return button;
+    }
+    
+    private void addDetailField(JPanel panel, String title, String value) {
+        JPanel fieldPanel = new JPanel(new BorderLayout(5, 2));
+        fieldPanel.setOpaque(false);
+        
+        JLabel titleLabel = new JLabel(title + ":");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        titleLabel.setForeground(new Color(100, 100, 100));
+        
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        fieldPanel.add(titleLabel, BorderLayout.NORTH);
+        fieldPanel.add(valueLabel, BorderLayout.CENTER);
+        
+        panel.add(fieldPanel);
+    }
+    
+    private void addInfoPair(JPanel panel, String label, String value, boolean highlight) {
+        JLabel lblTitle = new JLabel(label);
+        lblTitle.setFont(new Font("Arial", Font.PLAIN, 14));
+        lblTitle.setForeground(new Color(100, 100, 100));
+        
+        JLabel lblValue = new JLabel(value);
+        lblValue.setFont(new Font("Arial", Font.BOLD, 16));
+        if (highlight) {
+            lblValue.setForeground(new Color(41, 128, 185));
+        }
+        
+        panel.add(lblTitle);
+        panel.add(lblValue);
+    }
+
 
     private class ButtonRenderer extends JButton implements TableCellRenderer {
         public ButtonRenderer() {

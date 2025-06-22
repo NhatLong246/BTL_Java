@@ -14,12 +14,14 @@ public class BillingRepository {
 
     public String getTotalBills(String patientId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT SUM(Amount) FROM Bills WHERE PatientID = ?";
+            // Sửa từ bills sang Billing và Amount sang TotalAmount
+            String query = "SELECT SUM(TotalAmount) as TotalAmount FROM Billing WHERE PatientID = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, patientId);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return String.format("%,.0f VND", rs.getDouble(1));
+                double amount = rs.getDouble("TotalAmount");
+                return String.format("%,.0f VND", amount > 0 ? amount : 0);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -29,12 +31,14 @@ public class BillingRepository {
 
     public String getPaidBills(String patientId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT SUM(Amount) FROM Bills WHERE PatientID = ? AND Status = 'Đã thanh toán'";
+            // Sửa từ bills sang Billing và Amount sang TotalAmount
+            String query = "SELECT SUM(TotalAmount) as TotalAmount FROM Billing WHERE PatientID = ? AND Status = 'Đã thanh toán'";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, patientId);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return String.format("%,.0f VND", rs.getDouble(1));
+                double amount = rs.getDouble("TotalAmount");
+                return String.format("%,.0f VND", amount > 0 ? amount : 0);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -44,14 +48,17 @@ public class BillingRepository {
 
     public String getPendingBillsTotal(String patientId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT SUM(Amount) FROM Bills WHERE PatientID = ? AND Status = 'Chưa thanh toán'";
+            // Sửa từ bills sang Billing và Amount sang TotalAmount
+            String query = "SELECT SUM(TotalAmount) as TotalAmount FROM Billing WHERE PatientID = ? AND Status = 'Chưa thanh toán'";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, patientId);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return String.format("%,.0f VND", rs.getDouble(1));
+                double amount = rs.getDouble("TotalAmount");
+                return String.format("%,.0f VND", amount > 0 ? amount : 0);
             }
         } catch (SQLException e) {
+            System.err.println("Lỗi khi lấy tổng hóa đơn chưa thanh toán: " + e.getMessage());
             e.printStackTrace();
         }
         return "0 VND";
@@ -60,8 +67,9 @@ public class BillingRepository {
     public boolean processPayment(String patientId, double amount, String method) {
         try (Connection conn = DatabaseConnection.getConnection()) {
             String billID = "BILL" + System.currentTimeMillis();
-            String query = "INSERT INTO Bills (BillID, PatientID, Amount, PaymentMethod, Status, CreatedAt, UpdatedAt) " +
-                          "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            // Sửa từ Bills sang Billing và Amount sang TotalAmount
+            String query = "INSERT INTO Billing (BillID, PatientID, TotalAmount, PaymentMethod, Status, CreatedAt) " +
+                          "VALUES (?, ?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(query);
             Timestamp now = Timestamp.valueOf(LocalDateTime.now());
             
@@ -71,8 +79,7 @@ public class BillingRepository {
             stmt.setString(4, method);
             stmt.setString(5, "Đã thanh toán");
             stmt.setTimestamp(6, now);
-            stmt.setTimestamp(7, now);
-
+    
             int rowsInserted = stmt.executeUpdate();
             if (rowsInserted > 0) {
                 addBillingDetails(billID, amount);
@@ -102,7 +109,8 @@ public class BillingRepository {
      * Kiểm tra xem hóa đơn có đang chờ thanh toán không
      */
     public boolean isBillPendingPayment(String billId) {
-        String query = "SELECT Status FROM Bills WHERE BillID = ?";
+        // Sửa từ Bills sang Billing
+        String query = "SELECT Status FROM Billing WHERE BillID = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
@@ -123,13 +131,13 @@ public class BillingRepository {
      * Cập nhật trạng thái hóa đơn
      */
     public boolean updateBillStatus(String billId, String status) {
-        String query = "UPDATE Bills SET Status = ?, UpdatedAt = ? WHERE BillID = ?";
+        // Sửa từ Bills sang Billing và loại bỏ UpdatedAt (vì bảng Billing không có)
+        String query = "UPDATE Billing SET Status = ? WHERE BillID = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
             stmt.setString(1, status);
-            stmt.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
-            stmt.setString(3, billId);
+            stmt.setString(2, billId);
             
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -163,9 +171,11 @@ public class BillingRepository {
      * Lấy danh sách hóa đơn chưa thanh toán của bệnh nhân
      */
     public Object[][] getPendingBills(String patientId) {
-        String query = "SELECT b.BillID, b.CreatedAt, s.ServiceName, b.Amount, b.Status " +
-                      "FROM Bills b " +
-                      "JOIN Services s ON b.ServiceID = s.ServiceID " +
+        // Sửa từ Bills sang Billing và Amount sang TotalAmount
+        String query = "SELECT b.BillID, b.CreatedAt, s.ServiceName, b.TotalAmount, b.Status " +
+                      "FROM Billing b " +
+                      "LEFT JOIN BillingDetails bd ON b.BillID = bd.BillID " +
+                      "LEFT JOIN Services s ON bd.ServiceID = s.ServiceID " +
                       "WHERE b.PatientID = ? AND b.Status = 'Chưa thanh toán' " +
                       "ORDER BY b.CreatedAt DESC";
                       
@@ -181,8 +191,8 @@ public class BillingRepository {
                 Object[] bill = new Object[5];
                 bill[0] = rs.getString("BillID");
                 bill[1] = rs.getTimestamp("CreatedAt");
-                bill[2] = rs.getString("ServiceName");
-                bill[3] = String.format("%,.0f VND", rs.getDouble("Amount"));
+                bill[2] = rs.getString("ServiceName") != null ? rs.getString("ServiceName") : "Dịch vụ khám bệnh";
+                bill[3] = String.format("%,.0f VND", rs.getDouble("TotalAmount"));
                 bill[4] = rs.getString("Status");
                 bills.add(bill);
             }
@@ -197,12 +207,13 @@ public class BillingRepository {
      * Lấy lịch sử thanh toán của bệnh nhân
      */
     public Object[][] getPaymentHistory(String patientId) {
-        String query = "SELECT p.BillID, p.PaymentDate, s.ServiceName, b.Amount, p.PaymentMethod " +
-                      "FROM PaymentLogs p " +
-                      "JOIN Bills b ON p.BillID = b.BillID " +
-                      "JOIN Services s ON b.ServiceID = s.ServiceID " +
-                      "WHERE p.PatientID = ? " +
-                      "ORDER BY p.PaymentDate DESC";
+        // Sửa lại truy vấn để phù hợp với bảng PaymentLogs (nếu tồn tại) hoặc Billing
+        String query = "SELECT b.BillID, b.CreatedAt, s.ServiceName, b.TotalAmount, b.PaymentMethod " +
+                      "FROM Billing b " +
+                      "LEFT JOIN BillingDetails bd ON b.BillID = bd.BillID " +
+                      "LEFT JOIN Services s ON bd.ServiceID = s.ServiceID " +
+                      "WHERE b.PatientID = ? AND b.Status = 'Đã thanh toán' " +
+                      "ORDER BY b.CreatedAt DESC";
                       
         List<Object[]> payments = new ArrayList<>();
         
@@ -215,9 +226,9 @@ public class BillingRepository {
             while (rs.next()) {
                 Object[] payment = new Object[5];
                 payment[0] = rs.getString("BillID");
-                payment[1] = rs.getTimestamp("PaymentDate");
-                payment[2] = rs.getString("ServiceName");
-                payment[3] = String.format("%,.0f VND", rs.getDouble("Amount"));
+                payment[1] = rs.getTimestamp("CreatedAt");
+                payment[2] = rs.getString("ServiceName") != null ? rs.getString("ServiceName") : "Dịch vụ khám bệnh";
+                payment[3] = String.format("%,.0f VND", rs.getDouble("TotalAmount"));
                 payment[4] = rs.getString("PaymentMethod");
                 payments.add(payment);
             }
@@ -232,7 +243,8 @@ public class BillingRepository {
      * Lấy số tiền của hóa đơn
      */
     public double getBillAmount(String billId) {
-        String query = "SELECT Amount FROM Bills WHERE BillID = ?";
+        // Sửa từ Bills sang Billing và Amount sang TotalAmount
+        String query = "SELECT TotalAmount FROM Billing WHERE BillID = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
@@ -240,7 +252,7 @@ public class BillingRepository {
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                return rs.getDouble("Amount");
+                return rs.getDouble("TotalAmount");
             }
             return 0.0;
         } catch (SQLException e) {
@@ -253,9 +265,11 @@ public class BillingRepository {
      * Lấy tên dịch vụ của hóa đơn
      */
     public String getBillService(String billId) {
+        // Sửa từ Bills sang Billing và chỉnh sửa JOIN
         String query = "SELECT s.ServiceName " +
-                      "FROM Bills b " +
-                      "JOIN Services s ON b.ServiceID = s.ServiceID " +
+                      "FROM Billing b " +
+                      "LEFT JOIN BillingDetails bd ON b.BillID = bd.BillID " +
+                      "LEFT JOIN Services s ON bd.ServiceID = s.ServiceID " +
                       "WHERE b.BillID = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -264,12 +278,13 @@ public class BillingRepository {
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                return rs.getString("ServiceName");
+                String serviceName = rs.getString("ServiceName"); 
+                return serviceName != null ? serviceName : "Dịch vụ khám bệnh";
             }
-            return "";
+            return "Dịch vụ khám bệnh";
         } catch (SQLException e) {
             e.printStackTrace();
-            return "";
+            return "Dịch vụ khám bệnh";
         }
     }
 }

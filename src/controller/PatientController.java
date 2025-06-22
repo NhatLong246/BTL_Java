@@ -48,9 +48,11 @@ public class PatientController {
         view.showHome();
     }
 
+    
     public void showPatientInfo() {
         view.setSelectedButton(view.getBtnViewInfo());
-        view.showPatientInfo();
+        Map<String, Object> vitalSigns = getVitalSigns();
+        view.showPatientInfo(vitalSigns); // Cập nhật để truyền dữ liệu chỉ số sức khỏe
     }
 
     public void showAppointments() {
@@ -326,4 +328,28 @@ public class PatientController {
             return false;
         }
     }
+
+    /**
+     * Lấy danh sách hồ sơ bệnh án của bệnh nhân hiện tại
+     * @return List<String[]> danh sách hồ sơ bệnh án
+     */
+    public List<String[]> getMedicalHistory() {
+        return repository.getMedicalHistory(this.patient.getPatientID());
+    }
+
+    public List<String[]> getAppointments() {
+        try {
+            return this.repository.getAppointments(patient.getPatientID());
+        } catch (Exception e) {
+            System.err.println("Lỗi khi lấy danh sách lịch hẹn: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+    
+    public Map<String, Object> getVitalSigns() {
+        return repository.getVitalSigns(patient.getPatientID());
+    }
+
+   
 }

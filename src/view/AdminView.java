@@ -22,13 +22,21 @@ import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
 import javax.swing.text.DefaultFormatter;
+import javax.swing.text.PlainDocument;
 import javax.swing.JFormattedTextField.AbstractFormatter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Properties;
+
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 public class AdminView extends JFrame {
     private AdminController controller;
@@ -36,6 +44,9 @@ public class AdminView extends JFrame {
     private JButton btnHome, btnCreateDoctor, btnManageDoctor, btnViewLockedDoctors, btnScheduleDoctor, btnViewDoctorInfo, btnLogout;
     private JButton currentSelectedButton;
     private ImageIcon workingIcon, finishedIcon, notWorkingIcon;
+
+    private JPanel[][] cellPanels;
+    private JLabel[][] iconLabels;
 
     // Lớp để lưu trữ và hiển thị chuyên khoa trong ComboBox
     private class SpecialtyItem {
@@ -123,7 +134,7 @@ public class AdminView extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
 
-        JLabel menuTitle = new JLabel("Admin Menu", SwingConstants.CENTER);
+        JLabel menuTitle = new JLabel("", SwingConstants.CENTER);
         menuTitle.setFont(new Font("Arial", Font.BOLD, 20));
         menuTitle.setForeground(Color.WHITE);
         gbc.gridy = 0;
@@ -894,7 +905,7 @@ public class AdminView extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
     
-        JTextField txtDoctorId = new JTextField(40);
+        /* JTextField txtDoctorId = new JTextField(40);
         txtDoctorId.setFont(new Font("Arial", Font.PLAIN, 16));
         
         // Tạo nút tìm kiếm RIÊNG chỉ dùng trong formPanel
@@ -911,7 +922,275 @@ public class AdminView extends JFrame {
         searchPanel.add(txtDoctorId, BorderLayout.CENTER);
         searchPanel.add(btnSearch, BorderLayout.EAST);
         
-        addFormField(inputPanel, gbc, "ID Bác sĩ:", searchPanel, 0);
+        addFormField(inputPanel, gbc, "ID Bác sĩ:", searchPanel, 0); */
+        
+        // Thay bằng dạng ComboBox
+        
+        // Tạo model cho ComboBox chứa thông tin bác sĩ
+        DefaultComboBoxModel<String> doctorModel = new DefaultComboBoxModel<>();
+        doctorModel.addElement("Hiển thị tất cả"); // Thêm tùy chọn hiển thị tất cả
+        
+        // Lấy danh sách bác sĩ từ controller
+        List<Doctor> doctors = controller.getAllDoctors();
+        for (Doctor doctor : doctors) {
+            String displayText = doctor.getDoctorId() + " - " + doctor.getFullName();
+            if (doctor.getSpecialization() != null) {
+                displayText += " (" + doctor.getSpecialization().getName() + ")";
+            }
+            doctorModel.addElement(displayText);
+        }
+        
+        // Tạo JComboBox với model đã có
+        JComboBox<String> cbDoctors = new JComboBox<>(doctorModel);
+        cbDoctors.setFont(new Font("Arial", Font.PLAIN, 16));
+        cbDoctors.setEditable(true); // Cho phép nhập để tìm kiếm nhanh
+        cbDoctors.setMaximumRowCount(10); // Hiển thị tối đa 10 hàng trong dropdown
+        
+        // Thêm tính năng tự động hoàn thành cho JComboBox
+        JTextField textField = (JTextField) cbDoctors.getEditor().getEditorComponent();
+        textField.setDocument(new PlainDocument() {
+            @Override
+            public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
+                if (str == null) return;
+                
+                String currentText = getText(0, getLength());
+                String beforeOffset = currentText.substring(0, offs);
+                String afterOffset = currentText.substring(offs, currentText.length());
+                String futureText = beforeOffset + str + afterOffset;
+                
+                // Tìm item phù hợp với futureText
+                for (int i = 0; i < cbDoctors.getItemCount(); i++) {
+                    String item = cbDoctors.getItemAt(i).toString().toLowerCase();
+                    if (item.startsWith(futureText.toLowerCase())) {
+                        super.remove(0, getLength());
+                        super.insertString(0, cbDoctors.getItemAt(i).toString(), a);
+                        textField.setCaretPosition(futureText.length());
+                        textField.moveCaretPosition(getLength());
+                        return;
+                    }
+                }
+                
+                // Nếu không tìm thấy item phù hợp, chỉ chèn chuỗi đầu vào
+                super.insertString(offs, str, a);
+            }
+        });
+        
+        // Tạo nút tìm kiếm
+        JButton btnSearch = new JButton("Tìm kiếm");
+        btnSearch.setFont(new Font("Arial", Font.PLAIN, 14));
+        btnSearch.setBackground(new Color(0, 123, 255));
+        btnSearch.setForeground(Color.WHITE);
+        btnSearch.setFocusPainted(false);
+        btnSearch.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        // Tạo panel chứa ComboBox và nút tìm kiếm
+        JPanel searchPanel = new JPanel(new BorderLayout(10, 0));
+        searchPanel.setOpaque(false);
+        searchPanel.add(cbDoctors, BorderLayout.CENTER);
+        searchPanel.add(btnSearch, BorderLayout.EAST);
+        
+        // Thêm panel tìm kiếm vào form
+        addFormField(inputPanel, gbc, "Tìm bác sĩ:", searchPanel, 0);
+        
+        // Thêm phần code xử lý sự kiện tìm kiếm
+        btnSearch.addActionListener(e -> {
+            String selectedText = cbDoctors.getSelectedItem() != null ? 
+                                  cbDoctors.getSelectedItem().toString() : "";
+            
+            if (selectedText.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng chọn bác sĩ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Nếu chọn "Hiển thị tất cả", hiển thị lịch làm việc của tất cả bác sĩ
+            if (selectedText.equals("Hiển thị tất cả")) {
+                // Reset all cells first
+                for (int i = 0; i < 3; i++) {
+                    for (int j = 0; j < 7; j++) {
+                        cellPanels[i][j].setBackground(Color.WHITE);
+                        iconLabels[i][j].setText("<html><center>Hiển thị tất cả</center></html>");
+                    }
+                }
+                
+                // Tải thông tin lịch trực của tất cả bác sĩ
+                String[] shiftNames = {"Sáng", "Chiều", "Tối"};
+                String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+                
+                // Lấy thông tin lịch trực của tất cả bác sĩ
+                Map<String, Map<String, List<Doctor>>> allSchedules = controller.getAllDoctorSchedules();
+                
+                // Cập nhật UI dựa trên dữ liệu từ database
+                for (int i = 0; i < shiftNames.length; i++) {
+                    for (int j = 0; j < days.length; j++) {
+                        String day = days[j];
+                        String shiftName = shiftNames[i];
+                        
+                        if (allSchedules.containsKey(day) && allSchedules.get(day).containsKey(shiftName)) {
+                            List<Doctor> availableDoctors = allSchedules.get(day).get(shiftName);
+                            
+                            if (availableDoctors != null && !availableDoctors.isEmpty()) {
+                                // Format text hiển thị
+                                StringBuilder displayText = new StringBuilder("<html>");
+                                
+                                // Giới hạn số lượng bác sĩ hiển thị
+                                int displayLimit = 3; // Chỉ hiển thị tối đa 3 bác sĩ
+                                int totalDoctors = availableDoctors.size();
+                                
+                                for (int k = 0; k < Math.min(displayLimit, totalDoctors); k++) {
+                                    Doctor doctor = availableDoctors.get(k);
+                                    displayText.append("• ").append(doctor.getDoctorId()).append(": ")
+                                            .append(doctor.getFullName());
+                                                                    
+                                    if (doctor.getSpecialization() != null) {
+                                        displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                    }
+                                    displayText.append("<br>");
+                                }
+                                
+                                // Thêm dòng "Xem thêm..." nếu có nhiều hơn số lượng giới hạn
+                                if (totalDoctors > displayLimit) {
+                                    // In ra console để debug
+                                    System.out.println(day + " - " + shiftName + ": Tổng số bác sĩ = " + totalDoctors + ", hiển thị = " + displayLimit);
+                                    
+                                    // Đảm bảo hiển thị số lượng bác sĩ còn lại chính xác
+                                    int remainingDoctors = totalDoctors - displayLimit;
+                                    displayText.append("<br><font color='blue'><u>+ " + remainingDoctors + " bác sĩ khác...</u></font>");
+                                }
+                                displayText.append("</html>");
+                                
+                                // Tạo tooltip để hiển thị đầy đủ danh sách
+                                StringBuilder tooltipText = new StringBuilder("<html>");
+                                for (int k = 0; k < totalDoctors; k++) {
+                                    Doctor doctor = availableDoctors.get(k);
+                                    if (k > 0) tooltipText.append("<br>");
+                                    tooltipText.append(doctor.getDoctorId()).append(": ")
+                                            .append(doctor.getFullName());
+                                    
+                                    if (doctor.getSpecialization() != null) {
+                                        tooltipText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                    }
+                                }
+                                tooltipText.append("</html>");
+                                
+                                // Cập nhật cell và thêm tooltip
+                                iconLabels[i][j].setText(displayText.toString());
+                                iconLabels[i][j].setToolTipText(tooltipText.toString());
+                            } else {
+                                // Nếu không có bác sĩ nào trực ca này
+                                iconLabels[i][j].setText("<html><center>Hiển thị tất cả</center></html>");
+                                iconLabels[i][j].setToolTipText(null);
+                            }
+                        }
+                    }
+                }
+                
+                return;
+            }
+            
+            // Trích xuất ID bác sĩ từ chuỗi đã chọn
+            String doctorId = "";
+            if (selectedText.contains(" - ")) {
+                doctorId = selectedText.substring(0, selectedText.indexOf(" - "));
+            } else {
+                doctorId = selectedText; // Nếu người dùng nhập trực tiếp ID
+            }
+            
+            // Lấy dữ liệu lịch làm việc của bác sĩ để hiển thị
+            String[] shiftNames = {"Sáng", "Chiều", "Tối"};
+            String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+            
+            // Reset all cells first
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 7; j++) {
+                    cellPanels[i][j].setBackground(Color.WHITE); // Dùng màu trắng thay vì màu nền
+                    iconLabels[i][j].setText("<html><center>Không có bác sĩ</center></html>");
+                }
+            }
+            
+            // Lấy dữ liệu phân công của bác sĩ này
+            Map<String, Map<String, List<Doctor>>> doctorSchedule = controller.getDoctorShiftSchedule(doctorId);
+            
+            // Cập nhật giao diện dựa trên dữ liệu lịch
+            for (int i = 0; i < shiftNames.length; i++) {
+                for (int j = 0; j < days.length; j++) {
+                    String day = days[j];
+                    String shiftName = shiftNames[i]; // Sử dụng tên ca ngắn gọn để khớp với database
+                    
+                    // Kiểm tra xem có dữ liệu cho ngày và ca này không
+                    if (doctorSchedule.containsKey(day) && doctorSchedule.get(day).containsKey(shiftName)) {
+                        List<Doctor> availableDoctors = doctorSchedule.get(day).get(shiftName);
+                        
+                        if (availableDoctors != null && !availableDoctors.isEmpty()) {
+                            // Format text hiển thị
+                            StringBuilder displayText = new StringBuilder("<html>");
+                            
+                            // Giới hạn số lượng bác sĩ hiển thị
+                            int displayLimit = 3; // Chỉ hiển thị tối đa 3 bác sĩ
+                            int totalDoctors = availableDoctors.size();
+                            
+                            for (int k = 0; k < Math.min(displayLimit, totalDoctors); k++) {
+                                Doctor doctor = availableDoctors.get(k);
+                                
+                                // Highlight bác sĩ đang tìm kiếm bằng chữ đậm
+                                if (doctor.getDoctorId().equals(doctorId)) {
+                                    displayText.append("• <b>").append(doctor.getDoctorId()).append(": ")
+                                            .append(doctor.getFullName());
+                                    
+                                    if (doctor.getSpecialization() != null) {
+                                        displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                    }
+                                    displayText.append("</b>");
+                                } else {
+                                    displayText.append("• ").append(doctor.getDoctorId()).append(": ")
+                                            .append(doctor.getFullName());
+                                    
+                                    if (doctor.getSpecialization() != null) {
+                                        displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                    }
+                                }
+                                displayText.append("<br>");
+                            }
+                            
+                            // Thêm dòng "Xem thêm..." nếu có nhiều hơn số lượng giới hạn
+                            if (totalDoctors > displayLimit) {
+                                int remainingDoctors = totalDoctors - displayLimit;
+                                displayText.append("<br><font color='blue'><u>+ " + remainingDoctors + " bác sĩ khác...</u></font>");
+                            }
+                            
+                            displayText.append("</html>");
+                            
+                            // Tạo tooltip để hiển thị đầy đủ danh sách
+                            StringBuilder tooltipText = new StringBuilder("<html>");
+                            for (int k = 0; k < totalDoctors; k++) {
+                                Doctor doctor = availableDoctors.get(k);
+                                if (k > 0) tooltipText.append("<br>");
+                                tooltipText.append(doctor.getDoctorId()).append(": ")
+                                            .append(doctor.getFullName());
+                                
+                                if (doctor.getSpecialization() != null) {
+                                    tooltipText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                }
+                            }
+                            tooltipText.append("</html>");
+                            
+                            // Cập nhật cell và thêm tooltip
+                            iconLabels[i][j].setText(displayText.toString());
+                            iconLabels[i][j].setToolTipText(tooltipText.toString());
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Thêm phần xử lý khi nhấn Enter trong ComboBox
+        cbDoctors.getEditor().getEditorComponent().addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    btnSearch.doClick();
+                }
+            }
+        });
     
         // Schedule Grid
         JPanel schedulePanel = new JPanel(new BorderLayout());
@@ -950,49 +1229,56 @@ public class AdminView extends JFrame {
         String[] shifts = {"Sáng (7:00-11:30)", "Chiều (13:30-17:00)", "Tối (17:00-7:00)"};
         boolean[][] schedule = new boolean[3][7]; // Tracks working/not working status
     
-        // QUAN TRỌNG: Tạo mảng để lưu trữ các cell panel và icon
-        final JPanel[][] cellPanels = new JPanel[3][7];
-        final JLabel[][] iconLabels = new JLabel[3][7];
-    
-        // Initialize schedule grid with clickable cells - initially all not working
+        // QUAN TRỌNG: Khởi tạo giá trị cho biến thành viên cellPanels và iconLabels
+        cellPanels = new JPanel[3][7];
+        iconLabels = new JLabel[3][7];
+       
         for (int i = 0; i < shifts.length; i++) {
             calendarPanel.add(createHeaderCell(shifts[i]));
             for (int j = 0; j < 7; j++) {
                 final int shiftIndex = i;
                 final int dayIndex = j;
                 
-                // Create cell panel
-                JPanel cellPanel = new JPanel(new BorderLayout());
-                cellPanel.setBackground(new Color(240, 240, 240));
+                // Thay đổi cấu trúc cell để hiển thị thông tin bác sĩ
+                JPanel cellPanel = new JPanel();
+                cellPanel.setLayout(new BoxLayout(cellPanel, BoxLayout.Y_AXIS));
+                cellPanel.setBackground(Color.WHITE); 
                 cellPanel.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
                 
-                // Create icon label
-                JLabel iconLabel = new JLabel(notWorkingIcon);
-                iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                // Label để hiển thị thông tin bác sĩ
+                JLabel infoLabel = new JLabel("<html><center>Không có bác sĩ</center></html>");
+                infoLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                infoLabel.setFont(new Font("Arial", Font.PLAIN, 11));
                 
-                cellPanel.add(iconLabel, BorderLayout.CENTER);
-                schedule[i][j] = false; // Not working by default
+                cellPanel.add(Box.createVerticalGlue());
+                cellPanel.add(infoLabel);
+                cellPanel.add(Box.createVerticalGlue());
                 
                 // Lưu tham chiếu vào mảng
                 cellPanels[i][j] = cellPanel;
-                iconLabels[i][j] = iconLabel;
+                iconLabels[i][j] = infoLabel;
                 
-                // Add click listener to toggle status
-                cellPanel.addMouseListener(new MouseAdapter() {
+                // THÊM: Thêm MouseListener cho cả infoLabel
+                infoLabel.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        schedule[shiftIndex][dayIndex] = !schedule[shiftIndex][dayIndex];
-                        if (schedule[shiftIndex][dayIndex]) {
-                            cellPanel.setBackground(new Color(40, 167, 69, 60));
-                            iconLabel.setIcon(workingIcon);
-                        } else {
-                            cellPanel.setBackground(new Color(240, 240, 240));
-                            iconLabel.setIcon(notWorkingIcon);
-                        }
+                        // Mở dialog chọn bác sĩ
+                        showDoctorSelectorDialog(dayIndex, shiftIndex, iconLabels[shiftIndex][dayIndex], cellPanels[shiftIndex][dayIndex]);
                     }
                 });
                 
-                // Thêm cell vào bảng lịch
+                // Đảm bảo cả label và panel đều có cursor hand để người dùng biết có thể click
+                infoLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                
+                // Vẫn giữ MouseListener cho cellPanel
+                cellPanel.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        showDoctorSelectorDialog(dayIndex, shiftIndex, iconLabels[shiftIndex][dayIndex], cellPanels[shiftIndex][dayIndex]);
+                    }
+                });
+                
+                cellPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 calendarPanel.add(cellPanel);
             }
         }
@@ -1001,7 +1287,7 @@ public class AdminView extends JFrame {
         schedulePanel.add(calendarPanel, BorderLayout.CENTER);
     
         // Legend for Schedule
-        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        /* JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         legendPanel.setOpaque(false);
         legendPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
     
@@ -1009,7 +1295,20 @@ public class AdminView extends JFrame {
         JPanel notWorkingLegend = createLegendItemWithIcon("Không làm việc", new Color(240, 240, 240), notWorkingIcon);
     
         legendPanel.add(workingLegend);
-        legendPanel.add(notWorkingLegend);
+        legendPanel.add(notWorkingLegend); */
+
+        // Thay đổi phần legend panel
+        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        legendPanel.setOpaque(false);
+        legendPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        
+        JPanel assignedLegend = createLegendItem("Có bác sĩ trực", new Color(40, 167, 69, 60));
+        JPanel highlightedLegend = createLegendItem("Bác sĩ được tìm", new Color(40, 167, 69, 120));
+        JPanel emptyLegend = createLegendItem("Không có bác sĩ", new Color(240, 240, 240));
+        
+        legendPanel.add(assignedLegend);
+        legendPanel.add(highlightedLegend);
+        legendPanel.add(emptyLegend);
     
         // Save Button
         JButton btnSave = new JButton("Lưu lịch");
@@ -1019,71 +1318,140 @@ public class AdminView extends JFrame {
         btnSave.setFocusPainted(false);
         btnSave.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSave.setPreferredSize(new Dimension(200, 45));
-    
-        // Update the btnSearch action listener to load doctor's schedule
+        
         btnSearch.addActionListener(e -> {
-            String doctorId = txtDoctorId.getText().trim();
-            if (doctorId.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Vui lòng nhập ID bác sĩ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            String selectedText = cbDoctors.getSelectedItem() != null ? 
+                                  cbDoctors.getSelectedItem().toString() : "";
+            
+            if (selectedText.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng chọn bác sĩ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
-            // Load doctor schedule from database
-            boolean[][] doctorSchedule = controller.getDoctorSchedule(doctorId);
-            if (doctorSchedule != null) {
-                // Update UI to reflect doctor's schedule using saved references
-                for (int i = 0; i < shifts.length; i++) {
-                    for (int j = 0; j < 7; j++) {
-                        schedule[i][j] = doctorSchedule[i][j];
-                        
-                        // Use the saved references to update UI
-                        if (schedule[i][j]) {
-                            cellPanels[i][j].setBackground(new Color(40, 167, 69, 60));
-                            iconLabels[i][j].setIcon(workingIcon);
-                        } else {
-                            cellPanels[i][j].setBackground(new Color(240, 240, 240));
-                            iconLabels[i][j].setIcon(notWorkingIcon);
-                        }
-                    }
-                }
+            // Trích xuất ID bác sĩ từ chuỗi đã chọn
+            String doctorId = "";
+            if (selectedText.contains(" - ")) {
+                doctorId = selectedText.substring(0, selectedText.indexOf(" - "));
             } else {
-                // If no schedule found or error, reset to all not working
-                for (int i = 0; i < shifts.length; i++) {
-                    for (int j = 0; j < 7; j++) {
-                        schedule[i][j] = false;
-                        cellPanels[i][j].setBackground(new Color(240, 240, 240));
-                        iconLabels[i][j].setIcon(notWorkingIcon);
+                doctorId = selectedText; // Nếu người dùng nhập trực tiếp ID
+            }
+            
+            // Lấy dữ liệu lịch làm việc của bác sĩ để hiển thị
+            String[] shiftNames = {"Sáng", "Chiều", "Tối"};
+            String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+            
+            // Reset all cells first
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 7; j++) {
+                    cellPanels[i][j].setBackground(Color.WHITE); // Dùng màu trắng thay vì màu nền
+                    iconLabels[i][j].setText("<html><center>Không có bác sĩ</center></html>");
+                }
+            }
+            
+            // Lấy dữ liệu phân công của bác sĩ này
+            Map<String, Map<String, List<Doctor>>> doctorSchedule = controller.getDoctorShiftSchedule(doctorId);
+            
+            // Cập nhật giao diện dựa trên dữ liệu lịch
+            for (int i = 0; i < shifts.length; i++) {
+                for (int j = 0; j < days.length; j++) {
+                    String day = days[j];
+                    String shiftName = shiftNames[i]; // Sử dụng tên ca ngắn gọn để khớp với database
+                    
+                    // Kiểm tra xem có dữ liệu cho ngày và ca này không
+                    if (doctorSchedule.containsKey(day) && doctorSchedule.get(day).containsKey(shiftName)) {
+                        List<Doctor> availableDoctors = doctorSchedule.get(day).get(shiftName);
+                        
+                        if (availableDoctors != null && !availableDoctors.isEmpty()) {
+                            // Format text hiển thị
+                            StringBuilder displayText = new StringBuilder("<html>");
+                            // Giới hạn số lượng bác sĩ hiển thị
+                            int displayLimit = 3; // Chỉ hiển thị tối đa 3 bác sĩ
+                            int totalDoctors = availableDoctors.size();
+                                                        
+                            for (int k = 0; k < Math.min(displayLimit, totalDoctors); k++) {
+                                Doctor doctor = availableDoctors.get(k);
+                                
+                                // Highlight bác sĩ đang tìm kiếm bằng chữ đậm
+                                if (doctor.getDoctorId().equals(doctorId)) {
+                                    displayText.append("• <b>").append(doctor.getDoctorId()).append(": ")
+                                            .append(doctor.getFullName());
+                                    
+                                    if (doctor.getSpecialization() != null) {
+                                        displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                    }
+                                    displayText.append("</b>");
+                                } else {
+                                    displayText.append("• ").append(doctor.getDoctorId()).append(": ")
+                                            .append(doctor.getFullName());
+                                    
+                                    if (doctor.getSpecialization() != null) {
+                                        displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                    }
+                                }
+                                displayText.append("<br>");
+                            }
+                            displayText.append("</html>");
+                            
+                            // Cập nhật cell
+                            iconLabels[i][j].setText(displayText.toString());
+                        }
                     }
                 }
             }
         });
     
         btnSave.addActionListener(e -> {
-            String doctorId = txtDoctorId.getText().trim();
-            if (doctorId.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Vui lòng nhập ID bác sĩ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            String selectedText = cbDoctors.getSelectedItem() != null ? 
+                                cbDoctors.getSelectedItem().toString() : "";
+            
+            if (selectedText.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Vui lòng chọn bác sĩ để lưu lịch!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
-            // Không cần hiển thị thêm thông báo ở đây vì đã có trong AdminController
-            controller.saveDoctorSchedule(doctorId, schedule);
+            // Trích xuất ID bác sĩ từ chuỗi đã chọn
+            String doctorId = "";
+            if (selectedText.contains(" - ")) {
+                doctorId = selectedText.substring(0, selectedText.indexOf(" - "));
+            } else {
+                doctorId = selectedText; // Nếu người dùng nhập trực tiếp ID
+            }
             
-            // Tự động làm mới lịch sau khi lưu để hiển thị dữ liệu mới nhất
-            boolean[][] updatedSchedule = controller.getDoctorSchedule(doctorId);
-            if (updatedSchedule != null) {
-                // Cập nhật lại schedule và giao diện
-                for (int i = 0; i < shifts.length; i++) {
-                    for (int j = 0; j < 7; j++) {
-                        schedule[i][j] = updatedSchedule[i][j];
-                        if (schedule[i][j]) {
-                            cellPanels[i][j].setBackground(new Color(40, 167, 69, 60));
-                            iconLabels[i][j].setIcon(workingIcon);
-                        } else {
-                            cellPanels[i][j].setBackground(new Color(240, 240, 240));
-                            iconLabels[i][j].setIcon(notWorkingIcon);
-                        }
+            // Lấy danh sách các ca đã phân công cho bác sĩ này
+            String[] shiftNames = {"Sáng", "Chiều", "Tối"};
+            String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+            
+            // Tạo danh sách các ca đã phân công cho bác sĩ dựa trên giao diện hiện tại
+            List<Map<String, String>> assignedShifts = new ArrayList<>();
+            
+            for (int i = 0; i < shiftNames.length; i++) {
+                for (int j = 0; j < days.length; j++) {
+                    String cellText = iconLabels[i][j].getText();
+                    if (cellText.contains(doctorId)) {
+                        // Bác sĩ này đã được phân công vào ca này
+                        Map<String, String> assignment = new HashMap<>();
+                        assignment.put("doctorId", doctorId);
+                        assignment.put("day", days[j]);
+                        assignment.put("shift", shiftNames[i]);
+                        assignedShifts.add(assignment);
                     }
                 }
+            }
+            
+            // Lưu toàn bộ lịch làm việc của bác sĩ này
+            boolean success = controller.updateDoctorFullSchedule(doctorId, assignedShifts);
+            
+            if (success) {
+                JOptionPane.showMessageDialog(this, 
+                    "Đã lưu lịch làm việc cho bác sĩ " + selectedText + " thành công!", 
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                
+                // Tự động làm mới lịch sau khi lưu
+                btnSearch.doClick();
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    "Không thể lưu lịch làm việc! Vui lòng thử lại.", 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         });
     
@@ -1111,6 +1479,352 @@ public class AdminView extends JFrame {
         contentPanel.add(southPanel, BorderLayout.SOUTH);
         contentPanel.revalidate();
         contentPanel.repaint();
+
+        // Tải thông tin bác sĩ trực từ database khi khởi tạo màn hình
+        String[] shiftNames = {"Sáng", "Chiều", "Tối"};
+        String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+        
+        // Lấy thông tin lịch trực của tất cả bác sĩ
+        Map<String, Map<String, List<Doctor>>> allSchedules = controller.getAllDoctorSchedules();
+        
+        // Cập nhật UI dựa trên dữ liệu từ database
+        for (int i = 0; i < shifts.length; i++) {
+            for (int j = 0; j < days.length; j++) {
+                String day = days[j];
+                String shiftName = shiftNames[i];
+                
+                if (allSchedules.containsKey(day) && allSchedules.get(day).containsKey(shiftName)) {
+                    List<Doctor> availableDoctors = allSchedules.get(day).get(shiftName);
+                    
+                    if (availableDoctors != null && !availableDoctors.isEmpty()) {
+                        // Format text hiển thị
+                        StringBuilder displayText = new StringBuilder("<html>");
+                        
+                        // Giới hạn số lượng bác sĩ hiển thị
+                        int displayLimit = 3; // Chỉ hiển thị tối đa 3 bác sĩ
+                        int totalDoctors = availableDoctors.size();
+                        
+                        for (int k = 0; k < Math.min(displayLimit, totalDoctors); k++) {
+                            Doctor doctor = availableDoctors.get(k);
+                            displayText.append("• ").append(doctor.getDoctorId()).append(": ")
+                                    .append(doctor.getFullName());
+                                                            
+                            if (doctor.getSpecialization() != null) {
+                                displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                            }
+                            displayText.append("<br>");
+                        }
+                        
+                        // Thêm dòng "Xem thêm..." nếu có nhiều hơn số lượng giới hạn
+                        if (totalDoctors > displayLimit) {
+                            int remainingDoctors = totalDoctors - displayLimit;
+                            displayText.append("<br><font color='blue'><u>+ " + remainingDoctors + " bác sĩ khác...</u></font>");
+                        }
+                        
+                        displayText.append("</html>");
+                        
+                        // Tạo tooltip để hiển thị đầy đủ danh sách
+                        StringBuilder tooltipText = new StringBuilder("<html>");
+                        for (int k = 0; k < totalDoctors; k++) {
+                            Doctor doctor = availableDoctors.get(k);
+                            if (k > 0) tooltipText.append("<br>");
+                            tooltipText.append(doctor.getDoctorId()).append(": ")
+                                      .append(doctor.getFullName());
+                            
+                            if (doctor.getSpecialization() != null) {
+                                tooltipText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                            }
+                        }
+                        tooltipText.append("</html>");
+                        
+                        // Cập nhật cell và thêm tooltip
+                        iconLabels[i][j].setText(displayText.toString());
+                        iconLabels[i][j].setToolTipText(tooltipText.toString());
+                    }
+                }
+            }
+        }
+    }
+
+    // Phương thức để cập nhật lịch dựa trên ID bác sĩ
+    private void updateScheduleWithDoctorId(String doctorId, JPanel[][] cellPanels, JLabel[][] iconLabels, String[] shifts) {
+        if (doctorId.isEmpty()) {
+            return;
+        }
+        
+        // Chuyển đổi tên ca từ shifts (với giờ) sang shiftNames (không có giờ)
+        String[] shiftNames = {"Sáng", "Chiều", "Tối"};
+        String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+        
+        // Reset all cells first
+        for (int i = 0; i < shiftNames.length; i++) {
+            for (int j = 0; j < days.length; j++) {
+                cellPanels[i][j].setBackground(Color.WHITE);
+                iconLabels[i][j].setText("<html><center>Không có bác sĩ</center></html>");
+            }
+        }
+        
+        // Lấy dữ liệu phân công của bác sĩ này
+        Map<String, Map<String, List<Doctor>>> doctorSchedule = controller.getDoctorShiftSchedule(doctorId);
+        
+        // Cập nhật giao diện dựa trên dữ liệu lịch
+        for (int i = 0; i < shiftNames.length; i++) {
+            for (int j = 0; j < days.length; j++) {
+                String day = days[j];
+                String shiftName = shiftNames[i];
+                
+                // Kiểm tra xem có dữ liệu cho ngày và ca này không
+                if (doctorSchedule.containsKey(day) && doctorSchedule.get(day).containsKey(shiftName)) {
+                    List<Doctor> availableDoctors = doctorSchedule.get(day).get(shiftName);
+                    
+                    if (availableDoctors != null && !availableDoctors.isEmpty()) {
+                        // Format text hiển thị
+                        StringBuilder displayText = new StringBuilder("<html>");
+                                                    
+                        // Giới hạn số lượng bác sĩ hiển thị
+                        int displayLimit = 3; // Chỉ hiển thị tối đa 3 bác sĩ
+                        int totalDoctors = availableDoctors.size();
+                                                    
+                        for (int k = 0; k < Math.min(displayLimit, totalDoctors); k++) {
+                            Doctor doctor = availableDoctors.get(k);
+                            
+                            // Highlight bác sĩ đang tìm kiếm bằng chữ đậm
+                            if (doctor.getDoctorId().equals(doctorId)) {
+                                displayText.append("• <b>").append(doctor.getDoctorId()).append(": ")
+                                         .append(doctor.getFullName());
+                                
+                                if (doctor.getSpecialization() != null) {
+                                    displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                }
+                                displayText.append("</b>");
+                            } else {
+                                displayText.append("• ").append(doctor.getDoctorId()).append(": ")
+                                         .append(doctor.getFullName());
+                                
+                                if (doctor.getSpecialization() != null) {
+                                    displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                                }
+                            }
+                            displayText.append("<br>");
+                        }                    
+                        displayText.append("</html>");
+                        
+                        // Cập nhật cell
+                        iconLabels[i][j].setText(displayText.toString());
+                    }
+                }
+            }
+        }
+    }
+    
+    private void showDoctorSelectorDialog(int dayIndex, int shiftIndex, JLabel infoLabel, JPanel cellPanel) {
+        String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+        String[] shifts = {"Sáng", "Chiều", "Tối"};
+        
+        // Tạo dialog để hiển thị danh sách bác sĩ có thể chọn
+        JDialog dialog = new JDialog(this, "Chọn bác sĩ trực " + shifts[shiftIndex] + " " + days[dayIndex], true);
+        dialog.setLayout(new BorderLayout());
+        
+        // Lấy danh sách bác sĩ từ controller
+        List<Doctor> availableDoctors = controller.getAllDoctors();
+        
+        // Panel chứa danh sách checkbox bác sĩ
+        JPanel doctorPanel = new JPanel();
+        doctorPanel.setLayout(new BoxLayout(doctorPanel, BoxLayout.Y_AXIS));
+        
+        // Map để lưu trạng thái checkbox
+        Map<String, JCheckBox> checkboxMap = new HashMap<>();
+        
+        for (Doctor doctor : availableDoctors) {
+            JCheckBox checkbox = new JCheckBox(
+                doctor.getDoctorId() + " - " + doctor.getFullName() + 
+                (doctor.getSpecialization() != null ? " (" + doctor.getSpecialization().getName() + ")" : "")
+            );
+            checkbox.setActionCommand(doctor.getDoctorId());
+            doctorPanel.add(checkbox);
+            checkboxMap.put(doctor.getDoctorId(), checkbox);
+        }
+        
+        // Kiểm tra xem đã có bác sĩ nào được phân công chưa
+        String day = days[dayIndex];
+        String shift = shifts[shiftIndex];
+        
+        // Lấy bác sĩ đã được phân công cho ca này
+        List<Doctor> assignedDoctors = controller.getDoctorsForShift(day, shift);
+        
+        // Tự động chọn các bác sĩ đã được phân công
+        for (Doctor doctor : assignedDoctors) {
+            JCheckBox checkbox = checkboxMap.get(doctor.getDoctorId());
+            if (checkbox != null) {
+                checkbox.setSelected(true);
+            }
+        }
+        
+        // Thêm thanh cuộn nếu có nhiều bác sĩ
+        JScrollPane scrollPane = new JScrollPane(doctorPanel);
+        scrollPane.setPreferredSize(new Dimension(400, 300));
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        
+        // Thêm label hiển thị số lượng bác sĩ đã chọn
+        JLabel doctorCountLabel = new JLabel("Số lượng bác sĩ trực: " + assignedDoctors.size());
+        doctorCountLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        doctorCountLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        doctorCountLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        // Panel phía dưới chứa nút và thông tin số lượng bác sĩ
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setBackground(Color.WHITE);
+        
+        // Panel cho các nút
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Hủy");
+        
+        // Thêm sự kiện cập nhật số lượng bác sĩ khi check/uncheck các checkbox
+        for (JCheckBox checkbox : checkboxMap.values()) {
+            checkbox.addItemListener(e -> {
+                int selectedCount = 0;
+                for (JCheckBox cb : checkboxMap.values()) {
+                    if (cb.isSelected()) {
+                        selectedCount++;
+                    }
+                }
+                doctorCountLabel.setText("Số lượng bác sĩ trực: " + selectedCount);
+            });
+        }
+        
+        okButton.addActionListener(e -> {
+            // Thu thập các bác sĩ được chọn
+            List<String> selectedDoctorIds = new ArrayList<>();
+            StringBuilder displayText = new StringBuilder("<html>");
+            
+            // Đếm số lượng bác sĩ đã chọn để giới hạn hiển thị
+            int totalSelected = 0;
+            for (Doctor doctor : availableDoctors) {
+                JCheckBox checkbox = checkboxMap.get(doctor.getDoctorId());
+                if (checkbox != null && checkbox.isSelected()) {
+                    totalSelected++;
+                }
+            }
+            
+            // Số lượng bác sĩ tối đa hiển thị
+            int displayLimit = 3;
+            int count = 0;
+            
+            // Thêm bác sĩ vào danh sách và hiển thị
+            for (Doctor doctor : availableDoctors) {
+                JCheckBox checkbox = checkboxMap.get(doctor.getDoctorId());
+                if (checkbox != null && checkbox.isSelected()) {
+                    selectedDoctorIds.add(doctor.getDoctorId());
+                    
+                    // Chỉ hiển thị trong giới hạn
+                    if (count < displayLimit) {
+                        // Thêm vào text hiển thị với dấu bullet
+                        displayText.append("• ").append(doctor.getDoctorId()).append(": ")
+                                 .append(doctor.getFullName());
+                        
+                        // Thêm chuyên khoa nếu có
+                        if (doctor.getSpecialization() != null) {
+                            displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                        }
+                        
+                        displayText.append("<br>");
+                        count++;
+                    }
+                }
+            }
+            
+            // Thêm dòng "Xem thêm..." nếu có nhiều hơn số lượng giới hạn
+            if (totalSelected > displayLimit) {
+                int remainingDoctors = totalSelected - displayLimit;
+                displayText.append("<font color='blue'><u>+ " + remainingDoctors + " bác sĩ khác...</u></font>");
+            }
+            
+            // Nếu không có bác sĩ nào được chọn, hiển thị text mặc định
+            if (selectedDoctorIds.isEmpty()) {
+                displayText = new StringBuilder("<html>Hiển thị tất cả</html>");
+            } else {
+                displayText.append("</html>");
+            }
+            
+            // Tạo tooltip để hiển thị đầy đủ danh sách
+            StringBuilder tooltipText = new StringBuilder("<html>");
+            for (int k = 0; k < selectedDoctorIds.size(); k++) {
+                String doctorId = selectedDoctorIds.get(k);
+                Doctor doctor = null;
+                for (Doctor d : availableDoctors) {
+                    if (d.getDoctorId().equals(doctorId)) {
+                        doctor = d;
+                        break;
+                    }
+                }
+                
+                if (doctor != null) {
+                    if (k > 0) tooltipText.append("<br>");
+                    tooltipText.append(doctor.getDoctorId()).append(": ")
+                              .append(doctor.getFullName());
+                    
+                    if (doctor.getSpecialization() != null) {
+                        tooltipText.append(" (").append(doctor.getSpecialization().getName()).append(")");
+                    }
+                }
+            }
+            tooltipText.append("</html>");
+            
+            // Cập nhật label và tooltip
+            infoLabel.setText(displayText.toString());
+            if (!selectedDoctorIds.isEmpty()) {
+                infoLabel.setToolTipText(tooltipText.toString());
+            } else {
+                infoLabel.setToolTipText(null);
+            }
+            
+            // Lưu lịch vào database
+            boolean success = controller.saveDoctorShiftAssignments(day, shift, selectedDoctorIds);
+            if (success) {
+                System.out.println("Đã lưu lịch thành công");
+            } else {
+                System.out.println("Lưu lịch thất bại");
+                JOptionPane.showMessageDialog(dialog, 
+                "Không thể lưu lịch làm việc! Vui lòng thử lại.", 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+            
+            dialog.dispose();
+        });
+        
+        cancelButton.addActionListener(e -> dialog.dispose());
+        
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+        
+        // Thêm doctorCountLabel vào panel phía dưới
+        bottomPanel.add(doctorCountLabel, BorderLayout.WEST);
+        bottomPanel.add(buttonPanel, BorderLayout.EAST);
+        
+        dialog.add(bottomPanel, BorderLayout.SOUTH);
+        
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+    
+    private JPanel createLegendItem(String text, Color color) {
+        JPanel legendItem = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        legendItem.setOpaque(false);
+        
+        JPanel colorBox = new JPanel();
+        colorBox.setPreferredSize(new Dimension(20, 20));
+        colorBox.setBackground(color);
+        colorBox.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        legendItem.add(colorBox);
+        legendItem.add(label);
+        
+        return legendItem;
     }
 
     public void showViewDoctorInfoForm(List<Doctor> doctors) {
