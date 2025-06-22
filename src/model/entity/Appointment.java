@@ -38,7 +38,7 @@ public class Appointment {
 
     // Phương thức sinh mã lịch hẹn tự động (AP-001, AP-002,...)
     private String generateAppointmentId(Connection conn) {
-        String newAppointmentID = "AP-001"; // Mã mặc định nếu bảng chưa có dữ liệu
+        String newAppointmentID = "APP-001"; // Mã mặc định nếu bảng chưa có dữ liệu
         String sql = "SELECT MAX(CAST(REGEXP_SUBSTR(AppointmentID, '[0-9]+') AS UNSIGNED)) AS maxID FROM Appointments";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql);
@@ -46,7 +46,7 @@ public class Appointment {
 
             if (rs.next() && rs.getInt("maxID") > 0) {
                 int maxID = rs.getInt("maxID") + 1; // Lấy số lớn nhất và tăng lên 1
-                newAppointmentID = String.format("AP-%03d", maxID); // Định dạng thành AP-XXX
+                newAppointmentID = String.format("APP-%03d", maxID); // Định dạng thành AP-XXX
             }
 
         } catch (SQLException e) {

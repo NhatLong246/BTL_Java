@@ -510,8 +510,13 @@ public class DoctorView extends JFrame {
 
         schedulePanel.add(scheduleHeader, BorderLayout.NORTH);
         schedulePanel.add(calendarPanel, BorderLayout.CENTER);
-
-        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        
+        // Tạo panel chứa các thành phần ở dưới với BorderLayout
+        JPanel bottomPanel = new JPanel(new BorderLayout(10, 0));
+        bottomPanel.setOpaque(false);
+        
+        // Panel bên trái chứa chú thích (legend)
+        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
         legendPanel.setOpaque(false);
         legendPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         
@@ -522,19 +527,35 @@ public class DoctorView extends JFrame {
         legendPanel.add(workingLegend);
         legendPanel.add(finishedLegend);
         legendPanel.add(notWorkingLegend);
-
+        
+        // Panel ở giữa chứa thông tin ca hiện tại
         JPanel currentShiftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         currentShiftPanel.setOpaque(false);
         currentShiftPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-
+        
         String currentShiftInfo = controller.getCurrentShiftInfo();
         JLabel currentShiftLabel = new JLabel("Ca hiện tại: " + currentShiftInfo);
         currentShiftLabel.setFont(new Font("Arial", Font.BOLD, 14));
-
+        
         currentShiftPanel.add(currentShiftLabel);
+        
+        // Thêm legendPanel và currentShiftPanel vào infoPanel
+        infoPanel.add(legendPanel, BorderLayout.WEST);
+        infoPanel.add(currentShiftPanel, BorderLayout.CENTER);
 
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setOpaque(false);
+        // Panel cho các nút action ở dưới, dùng BoxLayout để đảm bảo nút hiển thị bên dưới
+        JPanel bottomContainer = new JPanel();
+        bottomContainer.setLayout(new BoxLayout(bottomContainer, BoxLayout.Y_AXIS));
+        bottomContainer.setOpaque(false);
+
+        // Thêm infoPanel vào đầu tiên
+        bottomContainer.add(infoPanel);
+
+        // Panel riêng cho các nút, đặt ở dưới
+        JPanel actionBtnPanel = new JPanel();
+        actionBtnPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
+        actionBtnPanel.setOpaque(false);
+        actionBtnPanel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0)); // Tăng padding top lên 60px
         
         JButton updateAllBtn = new JButton("Cập nhật lịch làm việc");
         updateAllBtn.setFont(new Font("Arial", Font.BOLD, 12));
@@ -551,17 +572,13 @@ public class DoctorView extends JFrame {
                 JOptionPane.INFORMATION_MESSAGE);
         });
         
-        JPanel updateBtnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        updateBtnPanel.setOpaque(false);
-        updateBtnPanel.add(updateAllBtn);
-        
         JButton exportScheduleBtn = new JButton("Xuất lịch làm việc");
         exportScheduleBtn.setFont(new Font("Arial", Font.BOLD, 12));
         exportScheduleBtn.setForeground(Color.WHITE);
         exportScheduleBtn.setBackground(new Color(23, 162, 184));
         exportScheduleBtn.setFocusPainted(false);
         exportScheduleBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
+        
         exportScheduleBtn.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setDialogTitle("Xuất lịch làm việc");
@@ -618,13 +635,17 @@ public class DoctorView extends JFrame {
                 }
             }
         });
-
-        updateBtnPanel.add(exportScheduleBtn);
-
+        
+        // Thêm các nút vào panel
+        actionBtnPanel.add(updateAllBtn);
+        actionBtnPanel.add(exportScheduleBtn);
+        
+        // Thêm các panel vào bottomPanel theo BorderLayout
         bottomPanel.add(legendPanel, BorderLayout.WEST);
-        bottomPanel.add(currentShiftPanel, BorderLayout.CENTER);
-        bottomPanel.add(updateBtnPanel, BorderLayout.EAST);
-
+        bottomPanel.add(currentShiftPanel, BorderLayout.CENTER); 
+        bottomPanel.add(actionBtnPanel, BorderLayout.EAST);
+        
+        // Thêm bottomPanel vào schedulePanel
         schedulePanel.add(bottomPanel, BorderLayout.SOUTH);
 
         JPanel upcomingPanel = new JPanel(new BorderLayout());

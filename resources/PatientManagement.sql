@@ -114,6 +114,21 @@ CREATE TABLE BillingDetails (
     FOREIGN KEY (ServiceID) REFERENCES Services(ServiceID) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+-- thêm bảng mới 
+CREATE TABLE PaymentLogs (
+    LogID INT AUTO_INCREMENT PRIMARY KEY,
+    BillID VARCHAR(50) NOT NULL,
+    PatientID VARCHAR(50) NOT NULL,
+    PaymentAmount DECIMAL(10,2) NOT NULL CHECK (PaymentAmount >= 0),
+    PaymentMethod ENUM('Tiền mặt', 'Chuyển khoản', 'Thẻ tín dụng', 'Ví điện tử') NOT NULL,
+    PaymentDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    TransactionID VARCHAR(100),
+    Notes TEXT,
+    FOREIGN KEY (BillID) REFERENCES Billing(BillID) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (PatientID) REFERENCES Patients(PatientID) ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_payment_date (PaymentDate)
+);
+
 -- Bảng Hồ Sơ Y Tế
 CREATE TABLE MedicalRecords (
     RecordID VARCHAR(50) PRIMARY KEY,

@@ -2,16 +2,26 @@ package model.enums;
 
 public enum AppointmentStatus {
     PENDING("Chờ xác nhận"),
-    COMPLETED("Đã hoàn thành"),
-    CANCELED("Đã hủy");
-
-    private final String vietnamese;
-
-    AppointmentStatus(String vietnamese) {
-        this.vietnamese = vietnamese;
+    COMPLETED("Hoàn thành"),
+    CANCELED("Hủy");
+    
+    private final String value;
+    
+    AppointmentStatus(String value) {
+        this.value = value;
     }
-
-    public String getVietnamese() {
-        return vietnamese;
+    
+    @Override
+    public String toString() {
+        return value;
+    }
+    
+    public static AppointmentStatus fromString(String text) {
+        for (AppointmentStatus status : AppointmentStatus.values()) {
+            if (status.value.equalsIgnoreCase(text)) {
+                return status;
+            }
+        }
+        throw new IllegalArgumentException("No constant with value " + text);
     }
 }
