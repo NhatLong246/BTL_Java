@@ -2348,7 +2348,7 @@ public class DoctorView extends JFrame {
                     JOptionPane.showMessageDialog(this, "Lưu chỉ số sức khỏe thất bại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 }
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Vui lòng nhập đúng định dạng số cho các chỉ số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ và đúng định dạng số cho các chỉ số!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             } catch (IllegalArgumentException ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Lỗi dữ liệu", JOptionPane.ERROR_MESSAGE);
             }

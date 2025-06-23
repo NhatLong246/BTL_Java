@@ -15,7 +15,6 @@ public class PrescriptionController {
         this.repository = new DoctorRepository();
     }
 
-    
     /**
      * Sinh mã đơn thuốc tự động
      */
@@ -23,9 +22,40 @@ public class PrescriptionController {
         return repository.generateNewPrescriptionId();
     }
     
-    
+    /**
+     * Lưu đơn thuốc vào cơ sở dữ liệu
+     * @param doctorId ID bác sĩ
+     * @param prescriptionData Dữ liệu đơn thuốc
+     * @param medicineList Danh sách thuốc
+     * @return true nếu lưu thành công
+     * @throws SQLException nếu có lỗi SQL
+     */
     public boolean savePrescription(String doctorId, Map<String, Object> prescriptionData, 
                                   List<Map<String, Object>> medicineList) throws SQLException {
+        if (doctorId == null || doctorId.trim().isEmpty()) {
+            throw new IllegalArgumentException("doctorId không được để trống");
+        }
+        if (prescriptionData == null || prescriptionData.get("prescriptionId") == null || 
+            prescriptionData.get("patientId") == null) {
+            throw new IllegalArgumentException("prescriptionData không hợp lệ");
+        }
+        if (medicineList == null || medicineList.isEmpty()) {
+            throw new IllegalArgumentException("Danh sách thuốc không được để trống");
+        }
+        for (Map<String, Object> medicine : medicineList) {
+            String name = (String) medicine.get("name");
+            String dosage = (String) medicine.get("dosage");
+            String instruction = (String) medicine.get("instruction");
+            if (name == null || name.trim().isEmpty()) {
+                throw new IllegalArgumentException("Tên thuốc không được để trống");
+            }
+            if (dosage == null || dosage.trim().isEmpty()) {
+                throw new IllegalArgumentException("Liều dùng không được để trống");
+            }
+            if (instruction == null || instruction.trim().isEmpty()) {
+                throw new IllegalArgumentException("Cách dùng không được để trống");
+            }
+        }
         return repository.savePrescription(doctorId, prescriptionData, medicineList);
     }
 
