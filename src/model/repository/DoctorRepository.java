@@ -700,9 +700,9 @@ public class DoctorRepository {
                 }
             }
 
-            if (hasScheduleIDColumn) {
-                System.out.println("CẢNH BÁO: Bảng DoctorSchedule có cột ScheduleID không được dùng trong code hiện tại!");
-            }
+//            if (hasScheduleIDColumn) {
+//                System.out.println("CẢNH BÁO: Bảng DoctorSchedule có cột ScheduleID không được dùng trong code hiện tại!");
+//            }
         } catch (SQLException e) {
             System.out.println("Lỗi kiểm tra bảng: " + e.getMessage());
         }
@@ -716,10 +716,24 @@ public class DoctorRepository {
             conn = DatabaseConnection.getConnection();
             
             // Sửa câu truy vấn để hiển thị cả cuộc hẹn cũ quá hạn
+//            String sql = "SELECT p.*, u.Email, mr.RecordID, mr.Diagnosis, mr.TreatmentPlan, " +
+//                         "a.AppointmentDate, " +
+//                         "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
+//                         "ELSE CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) END as AppointmentStatus " +
+//                         "FROM Patients p " +
+//                         "JOIN Appointments a ON p.PatientID = a.PatientID " +
+//                         "JOIN UserAccounts u ON p.UserID = u.UserID " +
+//                         "LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID " +
+//                         "AND mr.RecordDate = (SELECT MAX(RecordDate) FROM MedicalRecords " +
+//                         "                     WHERE PatientID = p.PatientID) " +
+//                         "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
+//                         "ORDER BY a.AppointmentDate";
+            
             String sql = "SELECT p.*, u.Email, mr.RecordID, mr.Diagnosis, mr.TreatmentPlan, " +
-                         "a.AppointmentDate, " +
-                         "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
-                         "ELSE CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) END as AppointmentStatus " +
+                    	 "a.AppointmentDate, " +
+                    	 "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
+                         "WHEN DATE(a.AppointmentDate) < CURDATE() THEN CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) " +
+                         "ELSE DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y') END as AppointmentStatus " +
                          "FROM Patients p " +
                          "JOIN Appointments a ON p.PatientID = a.PatientID " +
                          "JOIN UserAccounts u ON p.UserID = u.UserID " +
@@ -916,8 +930,8 @@ public class DoctorRepository {
                 vitalSign.setVitalSignID(rs.getString("vitalSignID"));
                 vitalSign.setPatientID(rs.getString("patientID"));
                 vitalSign.setTemperature(rs.getDouble("temperature"));
-//                vitalSign.setSystolicPressure(rs.getInt("systolicPressure"));
-                vitalSign.setBloodPressure(rs.getInt("BloodPressure"));
+                vitalSign.setSystolicPressure(rs.getInt("systolicPressure"));
+                vitalSign.setDiastolicPressure(rs.getInt("diastolicPressure"));
                 vitalSign.setHeartRate(rs.getInt("heartRate"));
                 vitalSign.setOxygenSaturation(rs.getDouble("oxygenSaturation"));
                 vitalSign.setRecordedAt(rs.getTimestamp("recordedAt").toLocalDateTime());
@@ -949,11 +963,11 @@ public class DoctorRepository {
             stmt.setString(1, vitalSign.getVitalSignID() != null ? vitalSign.getVitalSignID() : generateVitalSignId(conn));
             stmt.setString(2, patientId);
             stmt.setDouble(3, vitalSign.getTemperature());
-//            stmt.setInt(4, vitalSign.getSystolicPressure());
-            stmt.setInt(4, vitalSign.getBloodPressure());
-            stmt.setInt(5, vitalSign.getHeartRate());
-            stmt.setDouble(6, vitalSign.getOxygenSaturation());
-            stmt.setTimestamp(7, Timestamp.valueOf(vitalSign.getRecordedAt()));
+            stmt.setInt(4, vitalSign.getSystolicPressure());
+            stmt.setInt(5, vitalSign.getDiastolicPressure());
+            stmt.setInt(6, vitalSign.getHeartRate());
+            stmt.setDouble(7, vitalSign.getOxygenSaturation());
+            stmt.setTimestamp(8, Timestamp.valueOf(vitalSign.getRecordedAt()));
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
         } finally {

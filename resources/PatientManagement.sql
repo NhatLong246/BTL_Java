@@ -30,8 +30,8 @@ CREATE TABLE Doctors (
     DateOfBirth DATE NOT NULL,
     Gender ENUM('Nam', 'Nữ') NOT NULL,
     FullName NVARCHAR(100) NOT NULL,
-    PhoneNumber VARCHAR(20) NOT NULL,
-    Email VARCHAR(100) NOT NULL,
+    PhoneNumber VARCHAR(20),
+    Email VARCHAR(100),
     Address TEXT,
     SpecialtyID VARCHAR(50),
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -41,16 +41,18 @@ CREATE TABLE Doctors (
         ON DELETE SET NULL ON UPDATE CASCADE
 );
 
--- thêm bảng lịch làm việc cho bác sĩ 
+-- Tạo bảng DoctorSchedule
 CREATE TABLE DoctorSchedule (
-    DoctorID VARCHAR(50) NOT NULL,
-    DayOfWeek ENUM('Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật') NOT NULL,
-    ShiftType ENUM('Sáng', 'Chiều', 'Tối') NOT NULL,
-    Status ENUM('Đang làm việc', 'Hết ca làm việc') DEFAULT 'Đang làm việc',
-    PRIMARY KEY (DoctorID, DayOfWeek, ShiftType),
-    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
+    ScheduleID INT AUTO_INCREMENT PRIMARY KEY,
+    DoctorID VARCHAR(10) NOT NULL,
+    DayOfWeek NVARCHAR(10) NOT NULL,
+    ShiftType NVARCHAR(10) NOT NULL,
+    Status NVARCHAR(20) NOT NULL,
+    FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID),
+    CHECK (DayOfWeek IN ('Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật')),
+    CHECK (ShiftType IN ('Sáng', 'Chiều', 'Tối')),
+    CHECK (Status IN ('Đang làm việc', 'Hết ca làm việc'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Bảng Bệnh Nhân
 CREATE TABLE Patients (
@@ -106,12 +108,15 @@ CREATE TABLE Billing (
 
 -- Bảng Chi Tiết Hóa Đơn
 CREATE TABLE BillingDetails (
+    BillDetailID VARCHAR(50) PRIMARY KEY,
     BillID VARCHAR(50) NOT NULL,
     ServiceID VARCHAR(50) NOT NULL,
     Amount DECIMAL(10,2) NOT NULL CHECK (Amount >= 0),
-    PRIMARY KEY (BillID, ServiceID),
-    FOREIGN KEY (BillID) REFERENCES Billing(BillID) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (ServiceID) REFERENCES Services(ServiceID) ON DELETE CASCADE ON UPDATE CASCADE
+    UNIQUE KEY unique_bill_service (BillID, ServiceID),
+    FOREIGN KEY (BillID) REFERENCES Billing(BillID) 
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ServiceID) REFERENCES Services(ServiceID) 
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- thêm bảng mới 
@@ -147,20 +152,25 @@ CREATE TABLE MedicalRecords (
     INDEX idx_record_date (RecordDate)
 );
 
+ALTER TABLE MedicalRecords
+MODIFY COLUMN TreatmentPlan TEXT NULL;
 
 -- Bảng Chỉ Số Sức Khỏe
 CREATE TABLE VitalSigns (
     VitalSignID VARCHAR(50) PRIMARY KEY,
     PatientID VARCHAR(50) NOT NULL,
     Temperature DECIMAL(4,1) CHECK (Temperature BETWEEN 30 AND 45),
-    BloodPressure VARCHAR(20),
-    HeartRate INT CHECK (HeartRate > 0),
-    OxygenSaturation DECIMAL(5,2) CHECK (OxygenSaturation BETWEEN 0 AND 100),
+    SystolicPressure INT CHECK (SystolicPressure BETWEEN 50 AND 250),
+    DiastolicPressure INT CHECK (DiastolicPressure BETWEEN 30 AND 150),
+    HeartRate INT CHECK (HeartRate BETWEEN 30 AND 250),
+    OxygenSaturation DECIMAL(5,2) CHECK (OxygenSaturation BETWEEN 50 AND 100),
     RecordedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
         ON DELETE CASCADE ON UPDATE CASCADE,
     INDEX idx_recorded_at (RecordedAt)
 );
+
+
 
 -- Bảng Đơn thuốc
 CREATE TABLE Prescriptions (
@@ -378,83 +388,113 @@ INSERT INTO Patients (PatientID, UserID, FullName, DateOfBirth, Gender, PhoneNum
 ('PAT-019', 'PAT-019', 'Phạm Văn Ý', '1984-02-28', 'Nam', '0999012346', '90 Nguyễn Trãi, Huế', '2025-05-01'),
 ('PAT-020', 'PAT-020', 'Hoàng Thị Ánh', '1990-08-10', 'Nữ', '0900123457', '23 Lê Lợi, TP.HCM', '2025-05-01');
 
--- Thêm dữ liệu vào bảng DoctorSchedule (Lịch làm việc của bác sĩ)
--- Mỗi bác sĩ có lịch làm việc trong tuần (5 ca làm việc mỗi bác sĩ)
-INSERT INTO DoctorSchedule (ScheduleID, DoctorID, DayOfWeek, ShiftType, Status) VALUES
-('SCH-001', 'DOC-001', 'Thứ Hai', 'Sáng', 'Đang làm việc'),
-('SCH-002', 'DOC-001', 'Thứ Ba', 'Chiều', 'Đang làm việc'),
-('SCH-003', 'DOC-001', 'Thứ Tư', 'Tối', 'Đang làm việc'),
-('SCH-004', 'DOC-001', 'Thứ Năm', 'Sáng', 'Đang làm việc'),
-('SCH-005', 'DOC-001', 'Thứ Sáu', 'Chiều', 'Đang làm việc'),
-('SCH-006', 'DOC-002', 'Thứ Hai', 'Chiều', 'Đang làm việc'),
-('SCH-007', 'DOC-002', 'Thứ Ba', 'Tối', 'Đang làm việc'),
-('SCH-008', 'DOC-002', 'Thứ Tư', 'Sáng', 'Đang làm việc'),
-('SCH-009', 'DOC-002', 'Thứ Năm', 'Chiều', 'Đang làm việc'),
-('SCH-010', 'DOC-002', 'Thứ Sáu', 'Tối', 'Đang làm việc'),
-('SCH-011', 'DOC-003', 'Thứ Hai', 'Tối', 'Đang làm việc'),
-('SCH-012', 'DOC-003', 'Thứ Ba', 'Sáng', 'Đang làm việc'),
-('SCH-013', 'DOC-003', 'Thứ Tư', 'Chiều', 'Đang làm việc'),
-('SCH-014', 'DOC-003', 'Thứ Năm', 'Tối', 'Đang làm việc'),
-('SCH-015', 'DOC-003', 'Thứ Sáu', 'Sáng', 'Đang làm việc'),
-('SCH-016', 'DOC-004', 'Thứ Hai', 'Sáng', 'Đang làm việc'),
-('SCH-017', 'DOC-004', 'Thứ Ba', 'Chiều', 'Đang làm việc'),
-('SCH-018', 'DOC-004', 'Thứ Tư', 'Tối', 'Đang làm việc'),
-('SCH-019', 'DOC-004', 'Thứ Năm', 'Sáng', 'Đang làm việc'),
-('SCH-020', 'DOC-004', 'Thứ Sáu', 'Chiều', 'Đang làm việc'),
-('SCH-021', 'DOC-005', 'Thứ Hai', 'Chiều', 'Đang làm việc'),
-('SCH-022', 'DOC-005', 'Thứ Ba', 'Tối', 'Đang làm việc'),
-('SCH-023', 'DOC-005', 'Thứ Tư', 'Sáng', 'Đang làm việc'),
-('SCH-024', 'DOC-005', 'Thứ Năm', 'Chiều', 'Đang làm việc'),
-('SCH-025', 'DOC-005', 'Thứ Sáu', 'Tối', 'Đang làm việc'),
-('SCH-026', 'DOC-006', 'Thứ Hai', 'Tối', 'Đang làm việc'),
-('SCH-027', 'DOC-006', 'Thứ Ba', 'Sáng', 'Đang làm việc'),
-('SCH-028', 'DOC-006', 'Thứ Tư', 'Chiều', 'Đang làm việc'),
-('SCH-029', 'DOC-006', 'Thứ Năm', 'Tối', 'Đang làm việc'),
-('SCH-030', 'DOC-006', 'Thứ Sáu', 'Sáng', 'Đang làm việc'),
-('SCH-031', 'DOC-007', 'Thứ Hai', 'Sáng', 'Đang làm việc'),
-('SCH-032', 'DOC-007', 'Thứ Ba', 'Chiều', 'Đang làm việc'),
-('SCH-033', 'DOC-007', 'Thứ Tư', 'Tối', 'Đang làm việc'),
-('SCH-034', 'DOC-007', 'Thứ Năm', 'Sáng', 'Đang làm việc'),
-('SCH-035', 'DOC-007', 'Thứ Sáu', 'Chiều', 'Đang làm việc'),
-('SCH-036', 'DOC-008', 'Thứ Hai', 'Chiều', 'Đang làm việc'),
-('SCH-037', 'DOC-008', 'Thứ Ba', 'Tối', 'Đang làm việc'),
-('SCH-038', 'DOC-008', 'Thứ Tư', 'Sáng', 'Đang làm việc'),
-('SCH-039', 'DOC-008', 'Thứ Năm', 'Chiều', 'Đang làm việc'),
-('SCH-040', 'DOC-008', 'Thứ Sáu', 'Tối', 'Đang làm việc'),
-('SCH-041', 'DOC-009', 'Thứ Hai', 'Tối', 'Đang làm việc'),
-('SCH-042', 'DOC-009', 'Thứ Ba', 'Sáng', 'Đang làm việc'),
-('SCH-043', 'DOC-009', 'Thứ Tư', 'Chiều', 'Đang làm việc'),
-('SCH-044', 'DOC-009', 'Thứ Năm', 'Tối', 'Đang làm việc'),
-('SCH-045', 'DOC-009', 'Thứ Sáu', 'Sáng', 'Đang làm việc'),
-('SCH-046', 'DOC-010', 'Thứ Hai', 'Sáng', 'Đang làm việc'),
-('SCH-047', 'DOC-010', 'Thứ Ba', 'Chiều', 'Đang làm việc'),
-('SCH-048', 'DOC-010', 'Thứ Tư', 'Tối', 'Đang làm việc'),
-('SCH-049', 'DOC-010', 'Thứ Năm', 'Sáng', 'Đang làm việc'),
-('SCH-050', 'DOC-010', 'Thứ Sáu', 'Chiều', 'Đang làm việc');
+-- Chèn dữ liệu vào bảng DoctorSchedule (lịch làm việc đầy đủ cho tất cả 10 bác sĩ)
+INSERT INTO DoctorSchedule (DoctorID, DayOfWeek, ShiftType, Status) VALUES
+-- Lịch làm việc cho DOC-001
+('DOC-001', 'Thứ Hai', 'Sáng', 'Đang làm việc'),
+('DOC-001', 'Thứ Hai', 'Chiều', 'Đang làm việc'),
+('DOC-001', 'Thứ Ba', 'Sáng', 'Đang làm việc'),
+('DOC-001', 'Thứ Tư', 'Tối', 'Đang làm việc'),
+('DOC-001', 'Thứ Năm', 'Sáng', 'Đang làm việc'),
+('DOC-001', 'Thứ Sáu', 'Chiều', 'Đang làm việc'),
+('DOC-001', 'Thứ Bảy', 'Tối', 'Đang làm việc'),
+('DOC-001', 'Chủ Nhật', 'Sáng', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-002
+('DOC-002', 'Thứ Hai', 'Tối', 'Đang làm việc'),
+('DOC-002', 'Thứ Ba', 'Chiều', 'Đang làm việc'),
+('DOC-002', 'Thứ Tư', 'Sáng', 'Đang làm việc'),
+('DOC-002', 'Thứ Năm', 'Tối', 'Đang làm việc'),
+('DOC-002', 'Thứ Sáu', 'Sáng', 'Đang làm việc'),
+('DOC-002', 'Thứ Bảy', 'Chiều', 'Đang làm việc'),
+('DOC-002', 'Chủ Nhật', 'Tối', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-003
+('DOC-003', 'Thứ Hai', 'Sáng', 'Đang làm việc'),
+('DOC-003', 'Thứ Ba', 'Tối', 'Đang làm việc'),
+('DOC-003', 'Thứ Tư', 'Chiều', 'Đang làm việc'),
+('DOC-003', 'Thứ Năm', 'Sáng', 'Đang làm việc'),
+('DOC-003', 'Thứ Sáu', 'Tối', 'Đang làm việc'),
+('DOC-003', 'Thứ Bảy', 'Sáng', 'Đang làm việc'),
+('DOC-003', 'Chủ Nhật', 'Chiều', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-004
+('DOC-004', 'Thứ Hai', 'Chiều', 'Đang làm việc'),
+('DOC-004', 'Thứ Ba', 'Sáng', 'Đang làm việc'),
+('DOC-004', 'Thứ Tư', 'Tối', 'Đang làm việc'),
+('DOC-004', 'Thứ Năm', 'Chiều', 'Đang làm việc'),
+('DOC-004', 'Thứ Sáu', 'Sáng', 'Đang làm việc'),
+('DOC-004', 'Thứ Bảy', 'Tối', 'Đang làm việc'),
+('DOC-004', 'Chủ Nhật', 'Sáng', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-005
+('DOC-005', 'Thứ Hai', 'Tối', 'Đang làm việc'),
+('DOC-005', 'Thứ Ba', 'Sáng', 'Đang làm việc'),
+('DOC-005', 'Thứ Tư', 'Chiều', 'Đang làm việc'),
+('DOC-005', 'Thứ Năm', 'Tối', 'Đang làm việc'),
+('DOC-005', 'Thứ Sáu', 'Sáng', 'Đang làm việc'),
+('DOC-005', 'Thứ Bảy', 'Chiều', 'Đang làm việc'),
+('DOC-005', 'Chủ Nhật', 'Tối', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-006
+('DOC-006', 'Thứ Hai', 'Sáng', 'Đang làm việc'),
+('DOC-006', 'Thứ Ba', 'Chiều', 'Đang làm việc'),
+('DOC-006', 'Thứ Tư', 'Tối', 'Đang làm việc'),
+('DOC-006', 'Thứ Năm', 'Sáng', 'Đang làm việc'),
+('DOC-006', 'Thứ Sáu', 'Chiều', 'Đang làm việc'),
+('DOC-006', 'Thứ Bảy', 'Tối', 'Đang làm việc'),
+('DOC-006', 'Chủ Nhật', 'Sáng', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-007
+('DOC-007', 'Thứ Hai', 'Chiều', 'Đang làm việc'),
+('DOC-007', 'Thứ Ba', 'Tối', 'Đang làm việc'),
+('DOC-007', 'Thứ Tư', 'Sáng', 'Đang làm việc'),
+('DOC-007', 'Thứ Năm', 'Chiều', 'Đang làm việc'),
+('DOC-007', 'Thứ Sáu', 'Tối', 'Đang làm việc'),
+('DOC-007', 'Thứ Bảy', 'Sáng', 'Đang làm việc'),
+('DOC-007', 'Chủ Nhật', 'Chiều', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-008
+('DOC-008', 'Thứ Hai', 'Tối', 'Đang làm việc'),
+('DOC-008', 'Thứ Ba', 'Sáng', 'Đang làm việc'),
+('DOC-008', 'Thứ Tư', 'Chiều', 'Đang làm việc'),
+('DOC-008', 'Thứ Năm', 'Tối', 'Đang làm việc'),
+('DOC-008', 'Thứ Sáu', 'Sáng', 'Đang làm việc'),
+('DOC-008', 'Thứ Bảy', 'Chiều', 'Đang làm việc'),
+('DOC-008', 'Chủ Nhật', 'Tối', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-009
+('DOC-009', 'Thứ Hai', 'Sáng', 'Đang làm việc'),
+('DOC-009', 'Thứ Ba', 'Tối', 'Đang làm việc'),
+('DOC-009', 'Thứ Tư', 'Chiều', 'Đang làm việc'),
+('DOC-009', 'Thứ Năm', 'Sáng', 'Đang làm việc'),
+('DOC-009', 'Thứ Sáu', 'Tối', 'Đang làm việc'),
+('DOC-009', 'Thứ Bảy', 'Sáng', 'Đang làm việc'),
+('DOC-009', 'Chủ Nhật', 'Chiều', 'Đang làm việc'),
+-- Lịch làm việc cho DOC-010
+('DOC-010', 'Thứ Hai', 'Chiều', 'Đang làm việc'),
+('DOC-010', 'Thứ Ba', 'Sáng', 'Đang làm việc'),
+('DOC-010', 'Thứ Tư', 'Tối', 'Đang làm việc'),
+('DOC-010', 'Thứ Năm', 'Chiều', 'Đang làm việc'),
+('DOC-010', 'Thứ Sáu', 'Sáng', 'Đang làm việc'),
+('DOC-010', 'Thứ Bảy', 'Tối', 'Đang làm việc'),
+('DOC-010', 'Chủ Nhật', 'Sáng', 'Đang làm việc');
 
 -- Thêm dữ liệu vào bảng Appointments (Cuộc hẹn)
 -- Mỗi bệnh nhân có 1-2 cuộc hẹn với các bác sĩ khác nhau
 INSERT INTO Appointments (AppointmentID, PatientID, DoctorID, AppointmentDate, Status, Notes, CreatedAt) VALUES
-('APP-001', 'PAT-001', 'DOC-001', '2025-07-03 08:00:00', 'Chờ xác nhận', 'Khám tổng quát', '2025-05-02 10:00:00'),
-('APP-002', 'PAT-002', 'DOC-002', '2025-07-03 14:00:00', 'Chờ xác nhận', 'Kiểm tra vết mổ', '2025-05-02 10:00:00'),
-('APP-003', 'PAT-003', 'DOC-003', '2025-07-04 18:00:00', 'Chờ xác nhận', 'Khám nhi khoa', '2025-05-02 10:00:00'),
-('APP-004', 'PAT-004', 'DOC-004', '2025-07-04 08:00:00', 'Chờ xác nhận', 'Khám sản khoa', '2025-05-02 10:00:00'),
-('APP-005', 'PAT-005', 'DOC-005', '2025-07-05 14:00:00', 'Chờ xác nhận', 'Kiểm tra tim mạch', '2025-05-02 10:00:00'),
-('APP-006', 'PAT-006', 'DOC-006', '2025-07-05 18:00:00', 'Chờ xác nhận', 'Khám hô hấp', '2025-05-02 10:00:00'),
-('APP-007', 'PAT-007', 'DOC-007', '2025-07-06 08:00:00', 'Chờ xác nhận', 'Khám thần kinh', '2025-05-02 10:00:00'),
-('APP-008', 'PAT-008', 'DOC-008', '2025-07-06 14:00:00', 'Chờ xác nhận', 'Khám tiêu hóa', '2025-05-02 10:00:00'),
-('APP-009', 'PAT-009', 'DOC-009', '2025-07-07 18:00:00', 'Chờ xác nhận', 'Khám da liễu', '2025-05-02 10:00:00'),
-('APP-010', 'PAT-010', 'DOC-010', '2025-07-07 08:00:00', 'Chờ xác nhận', 'Khám xương khớp', '2025-05-02 10:00:00'),
-('APP-011', 'PAT-011', 'DOC-001', '2025-07-03 09:00:00', 'Chờ xác nhận', 'Khám tổng quát', '2025-05-02 10:00:00'),
-('APP-012', 'PAT-012', 'DOC-002', '2025-07-03 15:00:00', 'Chờ xác nhận', 'Kiểm tra sau phẫu thuật', '2025-05-02 10:00:00'),
-('APP-013', 'PAT-013', 'DOC-003', '2025-07-04 19:00:00', 'Chờ xác nhận', 'Khám nhi khoa', '2025-05-02 10:00:00'),
-('APP-014', 'PAT-014', 'DOC-004', '2025-07-04 09:00:00', 'Chờ xác nhận', 'Khám sản khoa', '2025-05-02 10:00:00'),
-('APP-015', 'PAT-015', 'DOC-005', '2025-07-05 15:00:00', 'Chờ xác nhận', 'Kiểm tra tim mạch', '2025-05-02 10:00:00'),
-('APP-016', 'PAT-016', 'DOC-006', '2025-07-05 19:00:00', 'Chờ xác nhận', 'Khám hô hấp', '2025-05-02 10:00:00'),
-('APP-017', 'PAT-017', 'DOC-007', '2025-07-06 09:00:00', 'Chờ xác nhận', 'Khám thần kinh', '2025-05-02 10:00:00'),
-('APP-018', 'PAT-018', 'DOC-008', '2025-07-06 15:00:00', 'Chờ xác nhận', 'Khám tiêu hóa', '2025-05-02 10:00:00'),
-('APP-019', 'PAT-019', 'DOC-009', '2025-07-07 19:00:00', 'Chờ xác nhận', 'Khám da liễu', '2025-05-02 10:00:00'),
-('APP-020', 'PAT-020', 'DOC-010', '2025-07-07 09:00:00', 'Chờ xác nhận', 'Khám xương khớp', '2025-05-02 10:00:00');
+('APP-001', 'PAT-001', 'DOC-001', '2025-05-05 08:00:00', 'Chờ xác nhận', 'Khám tổng quát', '2025-05-02 10:00:00'),
+('APP-002', 'PAT-002', 'DOC-002', '2025-07-08 14:00:00', 'Chờ xác nhận', 'Kiểm tra vết mổ', '2025-05-02 10:00:00'),
+('APP-003', 'PAT-003', 'DOC-003', '2025-07-08 18:00:00', 'Chờ xác nhận', 'Khám nhi khoa', '2025-05-02 10:00:00'),
+('APP-004', 'PAT-004', 'DOC-004', '2025-07-08 08:00:00', 'Chờ xác nhận', 'Khám sản khoa', '2025-05-02 10:00:00'),
+('APP-005', 'PAT-005', 'DOC-005', '2025-07-08 14:00:00', 'Chờ xác nhận', 'Kiểm tra tim mạch', '2025-05-02 10:00:00'),
+('APP-006', 'PAT-006', 'DOC-006', '2025-07-08 18:00:00', 'Chờ xác nhận', 'Khám hô hấp', '2025-05-02 10:00:00'),
+('APP-007', 'PAT-007', 'DOC-007', '2025-07-08 08:00:00', 'Chờ xác nhận', 'Khám thần kinh', '2025-05-02 10:00:00'),
+('APP-008', 'PAT-008', 'DOC-008', '2025-07-08 14:00:00', 'Chờ xác nhận', 'Khám tiêu hóa', '2025-05-02 10:00:00'),
+('APP-009', 'PAT-009', 'DOC-009', '2025-07-08 18:00:00', 'Chờ xác nhận', 'Khám da liễu', '2025-05-02 10:00:00'),
+('APP-010', 'PAT-010', 'DOC-010', '2025-07-08 08:00:00', 'Chờ xác nhận', 'Khám xương khớp', '2025-05-02 10:00:00'),
+('APP-011', 'PAT-011', 'DOC-001', '2025-07-08 09:00:00', 'Chờ xác nhận', 'Khám tổng quát', '2025-05-02 10:00:00'),
+('APP-012', 'PAT-012', 'DOC-002', '2025-07-08 15:00:00', 'Chờ xác nhận', 'Kiểm tra sau phẫu thuật', '2025-05-02 10:00:00'),
+('APP-013', 'PAT-013', 'DOC-003', '2025-07-08 19:00:00', 'Chờ xác nhận', 'Khám nhi khoa', '2025-05-02 10:00:00'),
+('APP-014', 'PAT-014', 'DOC-004', '2025-07-08 09:00:00', 'Chờ xác nhận', 'Khám sản khoa', '2025-05-02 10:00:00'),
+('APP-015', 'PAT-015', 'DOC-005', '2025-07-08 15:00:00', 'Chờ xác nhận', 'Kiểm tra tim mạch', '2025-05-02 10:00:00'),
+('APP-016', 'PAT-016', 'DOC-006', '2025-07-08 19:00:00', 'Chờ xác nhận', 'Khám hô hấp', '2025-05-02 10:00:00'),
+('APP-017', 'PAT-017', 'DOC-007', '2025-07-08 09:00:00', 'Chờ xác nhận', 'Khám thần kinh', '2025-05-02 10:00:00'),
+('APP-018', 'PAT-018', 'DOC-008', '2025-07-08 15:00:00', 'Chờ xác nhận', 'Khám tiêu hóa', '2025-05-02 10:00:00'),
+('APP-019', 'PAT-019', 'DOC-009', '2025-07-08 19:00:00', 'Chờ xác nhận', 'Khám da liễu', '2025-05-02 10:00:00'),
+('APP-020', 'PAT-020', 'DOC-010', '2025-07-08 09:00:00', 'Chờ xác nhận', 'Khám xương khớp', '2025-05-02 10:00:00');
 
 -- Thêm dữ liệu vào bảng Services (Dịch vụ y tế)
 INSERT INTO Services (ServiceID, ServiceName, Cost, CreatedAt) VALUES
@@ -564,27 +604,27 @@ INSERT INTO MedicalRecords (RecordID, PatientID, DoctorID, Diagnosis, TreatmentP
 
 -- Thêm dữ liệu vào bảng VitalSigns (Chỉ số sức khỏe)
 -- Mỗi bệnh nhân có 1 bản ghi chỉ số sức khỏe
-INSERT INTO VitalSigns (VitalSignID, PatientID, Temperature, BloodPressure, HeartRate, OxygenSaturation, RecordedAt) VALUES
-('VS-001', 'PAT-001', 37.5, '120/80', 75, 98.5, '2025-05-02 10:00:00'),
-('VS-002', 'PAT-002', 36.8, '130/85', 80, 97.0, '2025-05-02 10:00:00'),
-('VS-003', 'PAT-003', 38.2, '110/70', 90, 96.5, '2025-05-02 10:00:00'),
-('VS-004', 'PAT-004', 36.5, '115/75', 70, 99.0, '2025-05-02 10:00:00'),
-('VS-005', 'PAT-005', 37.0, '140/90', 85, 98.0, '2025-05-02 10:00:00'),
-('VS-006', 'PAT-006', 38.0, '125/80', 88, 95.5, '2025-05-02 10:00:00'),
-('VS-007', 'PAT-007', 36.9, '120/78', 72, 97.5, '2025-05-02 10:00:00'),
-('VS-008', 'PAT-008', 37.2, '118/76', 78, 98.0, '2025-05-02 10:00:00'),
-('VS-009', 'PAT-009', 37.8, '122/82', 80, 96.0, '2025-05-02 10:00:00'),
-('VS-010', 'PAT-010', 36.7, '124/80', 74, 98.5, '2025-05-02 10:00:00'),
-('VS-011', 'PAT-011', 37.4, '119/79', 76, 97.5, '2025-05-02 10:00:00'),
-('VS-012', 'PAT-012', 38.1, '121/81', 82, 96.5, '2025-05-02 10:00:00'),
-('VS-013', 'PAT-013', 38.5, '115/75', 90, 95.0, '2025-05-02 10:00:00'),
-('VS-014', 'PAT-014', 36.6, '117/77', 68, 99.0, '2025-05-02 10:00:00'),
-('VS-015', 'PAT-015', 37.1, '138/88', 84, 97.0, '2025-05-02 10:00:00'),
-('VS-016', 'PAT-016', 37.9, '123/80', 86, 94.5, '2025-05-02 10:00:00'),
-('VS-017', 'PAT-017', 36.8, '120/78', 70, 98.0, '2025-05-02 10:00:00'),
-('VS-018', 'PAT-018', 37.3, '116/76', 77, 97.5, '2025-05-02 10:00:00'),
-('VS-019', 'PAT-019', 37.7, '124/82', 79, 96.0, '2025-05-02 10:00:00'),
-('VS-020', 'PAT-020', 36.9, '122/80', 73, 98.5, '2025-05-02 10:00:00');
+INSERT INTO VitalSigns (VitalSignID, PatientID, Temperature, SystolicPressure, DiastolicPressure, HeartRate, OxygenSaturation, RecordedAt) VALUES
+('VS-001', 'PAT-001', 37.5, 120, 80, 75, 98.5, '2025-05-02 10:00:00'),
+('VS-002', 'PAT-002', 36.8, 130, 85, 80, 97.0, '2025-05-02 10:00:00'),
+('VS-003', 'PAT-003', 38.2, 110, 70, 90, 96.5, '2025-05-02 10:00:00'),
+('VS-004', 'PAT-004', 36.5, 115, 75, 70, 99.0, '2025-05-02 10:00:00'),
+('VS-005', 'PAT-005', 37.0, 140, 90, 85, 98.0, '2025-05-02 10:00:00'),
+('VS-006', 'PAT-006', 38.0, 125, 80, 88, 95.5, '2025-05-02 10:00:00'),
+('VS-007', 'PAT-007', 36.9, 120, 78, 72, 97.5, '2025-05-02 10:00:00'),
+('VS-008', 'PAT-008', 37.2, 118, 76, 78, 98.0, '2025-05-02 10:00:00'),
+('VS-009', 'PAT-009', 37.8, 122, 82, 80, 96.0, '2025-05-02 10:00:00'),
+('VS-010', 'PAT-010', 36.7, 124, 80, 74, 98.5, '2025-05-02 10:00:00'),
+('VS-011', 'PAT-011', 37.4, 119, 79, 76, 97.5, '2025-05-02 10:00:00'),
+('VS-012', 'PAT-012', 38.1, 121, 81, 82, 96.5, '2025-05-02 10:00:00'),
+('VS-013', 'PAT-013', 38.5, 115, 75, 90, 95.0, '2025-05-02 10:00:00'),
+('VS-014', 'PAT-014', 36.6, 117, 77, 68, 99.0, '2025-05-02 10:00:00'),
+('VS-015', 'PAT-015', 37.1, 138, 88, 84, 97.0, '2025-05-02 10:00:00'),
+('VS-016', 'PAT-016', 37.9, 123, 80, 86, 94.5, '2025-05-02 10:00:00'),
+('VS-017', 'PAT-017', 36.8, 120, 78, 70, 98.0, '2025-05-02 10:00:00'),
+('VS-018', 'PAT-018', 37.3, 116, 76, 77, 97.5, '2025-05-02 10:00:00'),
+('VS-019', 'PAT-019', 37.7, 124, 82, 79, 96.0, '2025-05-02 10:00:00'),
+('VS-020', 'PAT-020', 36.9, 122, 80, 73, 98.5, '2025-05-02 10:00:00');
 
 -- Thêm dữ liệu vào bảng Medications (Danh sách thuốc)
 INSERT INTO Medications (MedicationID, MedicineName, Description, Manufacturer, DosageForm, SideEffects, CreatedAt) VALUES

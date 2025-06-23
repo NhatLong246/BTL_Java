@@ -664,7 +664,7 @@ public class PatientRepository {
     public Map<String, Object> getVitalSigns(String patientID) {
         Map<String, Object> vitalSigns = new HashMap<>();
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String query = "SELECT VitalSignID, Temperature, BloodPressure, HeartRate, OxygenSaturation, RecordedAt " +
+            String query = "SELECT VitalSignID, Temperature, SystolicPressure, DiastolicPressure, HeartRate, OxygenSaturation, RecordedAt " +
                           "FROM VitalSigns WHERE PatientID = ? ORDER BY RecordedAt DESC LIMIT 1";
             try (PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setString(1, patientID);
@@ -672,7 +672,8 @@ public class PatientRepository {
                 if (rs.next()) {
                     vitalSigns.put("vitalSignId", rs.getString("VitalSignID"));
                     vitalSigns.put("temperature", rs.getString("Temperature"));
-                    vitalSigns.put("bloodPressure", rs.getString("BloodPressure"));
+                    vitalSigns.put("systolicPressure", rs.getString("SystolicPressure"));
+                    vitalSigns.put("diastolicPressure", rs.getString("DiastolicPressure"));
                     vitalSigns.put("heartRate", rs.getString("HeartRate"));
                     vitalSigns.put("oxygenSaturation", rs.getString("OxygenSaturation"));
                     vitalSigns.put("recordedAt", rs.getTimestamp("RecordedAt"));
