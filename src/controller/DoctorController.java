@@ -527,29 +527,17 @@ public class DoctorController {
         }
     }
 
-    // public List<Object[]> getNextAppointments() {
-    //     try {
-    //         return repository.getNextAppointments(doctorId, 5);
-    //     } catch (SQLException e) {
-    //         System.err.println("Lỗi khi lấy cuộc hẹn sắp tới: " + e.getMessage());
-    //         e.printStackTrace();
-    //         return new ArrayList<>();
-    //     }
-    // }
-
     public List<Object[]> getNextAppointments() {
         List<Object[]> result = new ArrayList<>();
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            
-            // Sửa câu truy vấn để lấy tất cả cuộc hẹn chưa hoàn thành và có ngày >= hiện tại
-            String sql = "SELECT a.AppointmentID, a.AppointmentDate, p.PatientID, p.FullName " +
-                        "FROM Appointments a " +
-                        "JOIN Patients p ON a.PatientID = p.PatientID " +
-                        "WHERE a.DoctorID = ? " +
-                        "AND a.AppointmentDate >= CURRENT_TIMESTAMP " + // Lấy tất cả cuộc hẹn từ hiện tại trở đi
-                        "AND a.Status NOT IN ('Hoàn thành', 'Đã hủy') " + // Lọc ra các cuộc hẹn đã hoàn thành hoặc bị hủy
-                        "ORDER BY a.AppointmentDate ASC";
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            // Thay đổi truy vấn để lấy thêm AppointmentID
+            String sql = "SELECT a.AppointmentID, a.AppointmentDate, p.FullName " +
+                         "FROM Appointments a " +
+                         "JOIN Patients p ON a.PatientID = p.PatientID " +
+                         "WHERE a.DoctorID = ? " +
+                         "AND a.AppointmentDate >= CURRENT_TIMESTAMP " +
+                         "AND a.Status = 'Chờ xác nhận' " + 
+                         "ORDER BY a.AppointmentDate ASC";
             
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, doctorId);
@@ -557,23 +545,38 @@ public class DoctorController {
             ResultSet rs = stmt.executeQuery();
             
             while (rs.next()) {
-                String appointmentId = rs.getString("AppointmentID");
+                String appointmentId = rs.getString("AppointmentID");  // Thêm mã cuộc hẹn
                 String appointmentTime = rs.getTimestamp("AppointmentDate").toString();
-                String patientId = rs.getString("PatientID");
                 String patientName = rs.getString("FullName");
                 
-                Object[] appointmentRow = {appointmentTime, appointmentId, patientName, "Hủy"};
+                // Định dạng lại thời gian để hiển thị đẹp hơn
+                String formattedTime = formatAppointmentTime(appointmentTime);
+                
+                // Thêm mã cuộc hẹn vào kết quả
+                Object[] appointmentRow = {formattedTime, appointmentId, patientName};
                 result.add(appointmentRow);
             }
-            
-            rs.close();
-            stmt.close();
-            conn.close();
         } catch (SQLException e) {
-            System.out.println("Lỗi khi lấy danh sách cuộc hẹn: " + e.getMessage());
+            System.err.println("Lỗi khi lấy danh sách cuộc hẹn: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return result;
+    }
+    
+    // Phương thức hỗ trợ định dạng thời gian
+    private String formatAppointmentTime(String dateTimeStr) {
+        try {
+            // Chuyển đổi từ định dạng SQL timestamp sang LocalDateTime
+            LocalDateTime dateTime = LocalDateTime.parse(
+                dateTimeStr.replace(" ", "T").substring(0, 19)
+            );
+            // Định dạng lại thành "yyyy-MM-dd HH:mm"
+            return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        } catch (Exception e) {
+            // Nếu có lỗi, trả về chuỗi gốc
+            return dateTimeStr;
+        }
     }
 
     public boolean updateCurrentShiftStatus(String dayOfWeek, String shift, String status) {

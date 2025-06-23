@@ -1525,34 +1525,40 @@ public class PatientView extends JFrame {
 
     public void showPaymentHistory(Object[][] paymentHistory) {
         contentPanel.removeAll();
-
+    
         JPanel historyPanel = new JPanel(new BorderLayout());
         historyPanel.setBackground(new Color(245, 245, 245));
-
+    
         JLabel titleLabel = new JLabel("Lịch sử thanh toán", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
-
+    
+        // Thêm cột "Ngày thanh toán" vào danh sách cột
         String[] columnNames = {"ID Hóa đơn", "Ngày", "Dịch vụ", "Số tiền", "Phương thức thanh toán", "Ngày thanh toán"};
-
+    
         DefaultTableModel model = new DefaultTableModel();
         model.setColumnIdentifiers(columnNames);
-
+    
         if (paymentHistory != null) {
             for (Object[] payment : paymentHistory) {
                 model.addRow(payment);
             }
         }
-
+    
         JTable table = new JTable(model);
         table.setRowHeight(40);
         table.setFont(new Font("Arial", Font.PLAIN, 14));
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
         table.setSelectionBackground(new Color(173, 216, 230));
-
+        
+        // Thiết lập độ rộng cho cột ngày thanh toán
+        if (table.getColumnModel().getColumnCount() >= 6) {
+            table.getColumnModel().getColumn(5).setPreferredWidth(120);
+        }
+    
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
+    
         JPanel tablePanel = new JPanel(new BorderLayout());
         tablePanel.setBackground(Color.WHITE);
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
@@ -1560,15 +1566,15 @@ public class PatientView extends JFrame {
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
         tablePanel.add(scrollPane, BorderLayout.CENTER);
-
+    
         JPanel wrapperPanel = new JPanel(new BorderLayout());
         wrapperPanel.setOpaque(false);
         wrapperPanel.add(tablePanel, BorderLayout.CENTER);
         wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 50, 50, 50));
-
+    
         historyPanel.add(titleLabel, BorderLayout.NORTH);
         historyPanel.add(wrapperPanel, BorderLayout.CENTER);
-
+    
         contentPanel.add(historyPanel);
         contentPanel.revalidate();
         contentPanel.repaint();

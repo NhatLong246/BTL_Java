@@ -331,14 +331,6 @@ public class DoctorView extends JFrame {
         JPanel personalPanel = new JPanel(new BorderLayout(20, 0));
         personalPanel.setOpaque(false);
         
-        // JPanel avatarPanel = new JPanel();
-        // avatarPanel.setPreferredSize(new Dimension(150, 150));
-        // avatarPanel.setBackground(new Color(41, 128, 185));
-        // JLabel avatarLabel = new JLabel("BS", SwingConstants.CENTER);
-        // avatarLabel.setFont(new Font("Arial", Font.BOLD, 48));
-        // avatarLabel.setForeground(Color.WHITE);
-        // avatarPanel.add(avatarLabel);
-        // Tạo avatar BS với kích thước cố định
         JPanel avatarPanel = new JPanel(new BorderLayout());
         avatarPanel.setPreferredSize(new Dimension(140, 140));
         avatarPanel.setBackground(new Color(41, 128, 185));

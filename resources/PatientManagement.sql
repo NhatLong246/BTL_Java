@@ -106,6 +106,9 @@ CREATE TABLE Billing (
     INDEX idx_billing_status (Status)
 );
 
+ALTER TABLE Billing
+ADD COLUMN PaymentDate DATETIME DEFAULT NULL;
+
 -- Bảng Chi Tiết Hóa Đơn
 CREATE TABLE BillingDetails (
     BillDetailID VARCHAR(50) PRIMARY KEY,

@@ -233,23 +233,29 @@ public class PatientRepository {
         List<Object[]> paymentList = new ArrayList<>();
         
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String query = "SELECT BillID, CreatedAt, TotalAmount, PaymentMethod, Status FROM Billing WHERE PatientID = ? AND Status = 'Đã thanh toán'";
+            // Thêm trường PaymentDate vào truy vấn
+            String query = "SELECT BillID, CreatedAt, " +
+                          "(SELECT GROUP_CONCAT(s.ServiceName SEPARATOR ', ') FROM BillingDetails bd " +
+                          "JOIN Services s ON bd.ServiceID = s.ServiceID WHERE bd.BillID = b.BillID) AS ServiceName, " +
+                          "TotalAmount, PaymentMethod, PaymentDate FROM Billing b " +
+                          "WHERE PatientID = ? AND Status = 'Đã thanh toán'";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, patientID);
             ResultSet rs = stmt.executeQuery();
             
             while (rs.next()) {
-                Object[] row = new Object[5];
+                Object[] row = new Object[6]; // Thay đổi kích thước mảng từ 5 thành 6
                 row[0] = rs.getString("BillID");
                 row[1] = rs.getTimestamp("CreatedAt");
-                row[2] = rs.getDouble("TotalAmount");
-                row[3] = rs.getString("PaymentMethod");
-                row[4] = rs.getString("Status");
+                row[2] = rs.getString("ServiceName");
+                row[3] = String.format("%,.0f VND", rs.getDouble("TotalAmount")); // Format số tiền
+                row[4] = rs.getString("PaymentMethod");
+                row[5] = rs.getTimestamp("PaymentDate"); // Thêm ngày thanh toán
                 paymentList.add(row);
             }
             
             // Chuyển từ ArrayList sang mảng 2 chiều
-            Object[][] data = new Object[paymentList.size()][5];
+            Object[][] data = new Object[paymentList.size()][6]; // Thay đổi kích thước cột từ 5 thành 6
             for (int i = 0; i < paymentList.size(); i++) {
                 data[i] = paymentList.get(i);
             }

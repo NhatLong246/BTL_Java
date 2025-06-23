@@ -1014,12 +1014,12 @@ public class DoctorRepository {
         try {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
-
+    
             // 1. Lưu thông tin đơn thuốc vào bảng Prescriptions
             String prescriptionId = (String) prescriptionData.get("prescriptionId");
             String patientId = (String) prescriptionData.get("patientId");
             LocalDate prescriptionDate = LocalDate.now(); // Ngày hiện tại
-
+    
             String insertPrescriptionSql = "INSERT INTO Prescriptions (prescriptionID, patientID, doctorID, prescriptionDate) " +
                                           "VALUES (?, ?, ?, ?)";
             PreparedStatement stmtPrescription = conn.prepareStatement(insertPrescriptionSql);
@@ -1028,37 +1028,76 @@ public class DoctorRepository {
             stmtPrescription.setString(3, doctorId);
             stmtPrescription.setDate(4, Date.valueOf(prescriptionDate));
             stmtPrescription.executeUpdate();
-
+    
             // 2. Lưu chi tiết đơn thuốc vào bảng PrescriptionDetails
             String insertDetailSql = "INSERT INTO PrescriptionDetails (prescriptionID, medicationID, dosage, instructions) " +
-                                     "VALUES (?, ?, ?, ?)";
+                                    "VALUES (?, ?, ?, ?)";
             PreparedStatement stmtDetail = conn.prepareStatement(insertDetailSql);
+            
+            if (medicineList == null || medicineList.isEmpty()) {
+                throw new IllegalArgumentException("Danh sách thuốc trống");
+            }
+            
             for (Map<String, Object> medicine : medicineList) {
+                // In thông tin thuốc để debug
+                System.out.println("Medicine object content:");
+                for (Map.Entry<String, Object> entry : medicine.entrySet()) {
+                    System.out.println(entry.getKey() + ": " + (entry.getValue() == null ? "null" : "'" + entry.getValue() + "'"));
+                }
+                
                 String medicationId = (String) medicine.get("medicationId");
+                
+                // Kiểm tra medicationId
+                if (medicationId == null || medicationId.isEmpty()) {
+                    // Nếu không có medicationId, mới cần kiểm tra và tạo từ medicineName
+                    String medicineName = null;
+                    if (medicine.containsKey("medicineName")) {
+                        medicineName = (String) medicine.get("medicineName");
+                    } else if (medicine.containsKey("name")) {
+                        medicineName = (String) medicine.get("name");
+                    } else if (medicine.containsKey("ten")) {
+                        medicineName = (String) medicine.get("ten");
+                    }
+                    
+                    // Chỉ khi không có medicationId, mới cần medicineName
+                    if (medicationId == null && (medicineName == null || medicineName.trim().isEmpty())) {
+                        throw new IllegalArgumentException("Cần medicationId hoặc medicineName để lưu đơn thuốc");
+                    }
+                    
+                    // Tạo medicationId từ medicineName nếu chưa có
+                    if (medicationId == null && medicineName != null) {
+                        try {
+                            medicationId = findOrCreateMedication(medicineName, conn);
+                        } catch (Exception e) {
+                            System.err.println("Lỗi khi tạo medicationId cho thuốc: " + medicineName);
+                            e.printStackTrace();
+                            throw e;
+                        }
+                    }
+                }
+    
                 String dosage = (String) medicine.get("dosage");
                 String instructions = (String) medicine.get("instructions");
-
-                // Kiểm tra nếu medicationId không tồn tại, tạo mới
-                if (medicationId == null || medicationId.isEmpty()) {
-                    String medicineName = (String) medicine.get("medicineName");
-                    medicationId = findOrCreateMedication(conn, medicineName);
-                }
-
+                
+                // Sử dụng giá trị mặc định nếu không có
+                if (dosage == null) dosage = "Theo chỉ dẫn"; 
+                if (instructions == null) instructions = "Theo chỉ dẫn";
+    
                 stmtDetail.setString(1, prescriptionId);
                 stmtDetail.setString(2, medicationId);
                 stmtDetail.setString(3, dosage);
                 stmtDetail.setString(4, instructions);
                 stmtDetail.executeUpdate();
             }
-
+    
             conn.commit();
             return true;
-        } catch (SQLException e) {
+        } catch (Exception e) {
             if (conn != null) {
                 conn.rollback();
             }
             e.printStackTrace();
-            return false;
+            throw e;
         } finally {
             if (conn != null) {
                 conn.setAutoCommit(true);
@@ -1169,30 +1208,37 @@ public class DoctorRepository {
      * @param medicineName Tên thuốc
      * @return ID thuốc
      */
-    private String findOrCreateMedication(Connection conn, String medicineName) throws SQLException {
-        String sql = "SELECT medicationID FROM Medications WHERE medicineName = ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, medicineName);
-
-            try (ResultSet rs = stmt.executeQuery()) {
+        private String findOrCreateMedication(String medicineName, Connection conn) throws SQLException {
+        if (medicineName == null || medicineName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Tên thuốc không được để trống");
+        }
+    
+        String medicineId = null;
+        
+        // Sửa tên cột từ MedicineID thành medicationID và MedicineName thành medicineName
+        String checkSql = "SELECT medicationID FROM Medications WHERE medicineName = ?";
+        try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+            checkStmt.setString(1, medicineName);
+            try (ResultSet rs = checkStmt.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getString("medicationID");
+                    medicineId = rs.getString("medicationID");
                 }
             }
         }
-
-        // Nếu không tìm thấy, tạo mới
-        String medicationId = generateMedicationId(conn);
-
-        sql = "INSERT INTO Medications (medicationID, medicineName) VALUES (?, ?)";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, medicationId);
-            stmt.setString(2, medicineName);
-            stmt.executeUpdate();
+        
+        // Nếu chưa tồn tại, thêm mới
+        if (medicineId == null) {
+            medicineId = generateMedicationId(conn);
+            // Sửa tên cột trong câu lệnh INSERT
+            String insertSql = "INSERT INTO Medications (medicationID, medicineName) VALUES (?, ?)";
+            try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                insertStmt.setString(1, medicineId);
+                insertStmt.setString(2, medicineName);
+                insertStmt.executeUpdate();
+            }
         }
-
-        return medicationId;
+        
+        return medicineId;
     }
 
     /**

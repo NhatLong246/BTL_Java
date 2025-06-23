@@ -24,9 +24,33 @@ public class PrescriptionController {
     }
     
     
-    public boolean savePrescription(String doctorId, Map<String, Object> prescriptionData, 
-                                  List<Map<String, Object>> medicineList) throws SQLException {
-        return repository.savePrescription(doctorId, prescriptionData, medicineList);
+    public boolean savePrescription(String doctorId, Map<String, Object> prescriptionData, List<Map<String, Object>> medicineList) {
+        try {
+            // Log data for debugging
+            System.out.println("Prescription data:");
+            for (Map.Entry<String, Object> entry : prescriptionData.entrySet()) {
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+            
+            System.out.println("Medicine list (size: " + medicineList.size() + "):");
+            for (int i = 0; i < medicineList.size(); i++) {
+                Map<String, Object> medicine = medicineList.get(i);
+                System.out.println("Medicine #" + (i+1) + ":");
+                for (Map.Entry<String, Object> entry : medicine.entrySet()) {
+                    System.out.println("  " + entry.getKey() + ": " + entry.getValue());
+                }
+            }
+            
+            return repository.savePrescription(doctorId, prescriptionData, medicineList);
+        } catch (SQLException e) {
+            System.err.println("Lỗi SQL khi lưu đơn thuốc: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } catch (Exception e) {
+            System.err.println("Lỗi khi lưu đơn thuốc: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**

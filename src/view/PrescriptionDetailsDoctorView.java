@@ -718,21 +718,6 @@ public class PrescriptionDetailsDoctorView extends JFrame {
         }
     }
 
-    /* private void loadPrescriptionData(String prescriptionId) {
-        // TODO: Load prescription data from database
-        // This is sample data
-        txtPrescriptionId.setText(prescriptionId);
-        txtPatientId.setText("BN001");
-        txtPatientName.setText("Nguyễn Văn A");
-        txtDate.setText(LocalDate.now().toString());
-        txtDiagnosis.setText("Viêm họng cấp");
-        txtNotes.setText("Uống thuốc đều đặn, nghỉ ngơi nhiều");
-
-        // Sample medicine data
-        medicineTableModel.addRow(new Object[]{1, "Paracetamol", "Viên", "20", "2 viên/lần", "Ngày uống 3 lần sau ăn"});
-        medicineTableModel.addRow(new Object[]{2, "Vitamin C", "Viên", "10", "1 viên/lần", "Ngày uống 1 lần sau ăn sáng"});
-    } */
-
     private JTextField createStyledTextField() {
         JTextField textField = new JTextField();
         textField.setFont(new Font("Arial", Font.PLAIN, 14));
@@ -779,4 +764,5 @@ public class PrescriptionDetailsDoctorView extends JFrame {
             frame.setVisible(true);
         });
     }
+    
 } 
