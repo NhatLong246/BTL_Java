@@ -170,8 +170,6 @@ CREATE TABLE VitalSigns (
     INDEX idx_recorded_at (RecordedAt)
 );
 
-
-
 -- Bảng Đơn thuốc
 CREATE TABLE Prescriptions (
     PrescriptionID VARCHAR(50) PRIMARY KEY,

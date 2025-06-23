@@ -363,14 +363,45 @@ public class DoctorController {
         return isValid;
     }
 
-    public void bookAppointment(String patientId, String dateStr) {
-        if (patientId.isEmpty() || dateStr.isEmpty()) {
+    // public void bookAppointment(String patientId, String dateStr) {
+    //     if (patientId.isEmpty() || dateStr.isEmpty()) {
+    //         JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bệnh nhân và ngày hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+    //         return;
+    //     }
+    
+    //     try {
+    //         LocalDateTime appointmentDateTime = LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            
+    //         if (appointmentDateTime.isBefore(LocalDateTime.now())) {
+    //             JOptionPane.showMessageDialog(view, "Thời gian hẹn phải sau thời gian hiện tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+    //             return;
+    //         }
+            
+    //         Patient patient = patientRepository.getPatientByID(patientId);
+    //         if (patient == null) {
+    //             JOptionPane.showMessageDialog(view, "Không tìm thấy bệnh nhân với ID: " + patientId, "Lỗi", JOptionPane.ERROR_MESSAGE);
+    //             return;
+    //         }
+
+    //         if (repository.bookAppointment(patientId, appointmentDateTime.toLocalDate(), doctorId)) {
+    //             JOptionPane.showMessageDialog(view, "Đặt lịch hẹn thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+    //             showHome();
+    //         } else {
+    //             JOptionPane.showMessageDialog(view, "Không thể đặt lịch hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+    //         }
+    //     } catch (DateTimeParseException e) {
+    //         JOptionPane.showMessageDialog(view, "Định dạng ngày không hợp lệ (YYYY-MM-DD HH:mm:ss)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+    //     }
+    // }
+
+    public void bookAppointment(String patientId, String dateTimeStr) {
+        if (patientId.isEmpty() || dateTimeStr.isEmpty()) {
             JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bệnh nhân và ngày hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
     
         try {
-            LocalDateTime appointmentDateTime = LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            LocalDateTime appointmentDateTime = LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             
             if (appointmentDateTime.isBefore(LocalDateTime.now())) {
                 JOptionPane.showMessageDialog(view, "Thời gian hẹn phải sau thời gian hiện tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -382,8 +413,9 @@ public class DoctorController {
                 JOptionPane.showMessageDialog(view, "Không tìm thấy bệnh nhân với ID: " + patientId, "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
-            if (repository.bookAppointment(patientId, appointmentDateTime.toLocalDate(), doctorId)) {
+    
+            // Sửa để gửi toàn bộ LocalDateTime thay vì chỉ LocalDate
+            if (repository.bookAppointment(patientId, appointmentDateTime, doctorId)) {
                 JOptionPane.showMessageDialog(view, "Đặt lịch hẹn thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
                 showHome();
             } else {
@@ -495,14 +527,53 @@ public class DoctorController {
         }
     }
 
+    // public List<Object[]> getNextAppointments() {
+    //     try {
+    //         return repository.getNextAppointments(doctorId, 5);
+    //     } catch (SQLException e) {
+    //         System.err.println("Lỗi khi lấy cuộc hẹn sắp tới: " + e.getMessage());
+    //         e.printStackTrace();
+    //         return new ArrayList<>();
+    //     }
+    // }
+
     public List<Object[]> getNextAppointments() {
+        List<Object[]> result = new ArrayList<>();
         try {
-            return repository.getNextAppointments(doctorId, 5);
+            Connection conn = DatabaseConnection.getConnection();
+            
+            // Sửa câu truy vấn để lấy tất cả cuộc hẹn chưa hoàn thành và có ngày >= hiện tại
+            String sql = "SELECT a.AppointmentID, a.AppointmentDate, p.PatientID, p.FullName " +
+                        "FROM Appointments a " +
+                        "JOIN Patients p ON a.PatientID = p.PatientID " +
+                        "WHERE a.DoctorID = ? " +
+                        "AND a.AppointmentDate >= CURRENT_TIMESTAMP " + // Lấy tất cả cuộc hẹn từ hiện tại trở đi
+                        "AND a.Status NOT IN ('Hoàn thành', 'Đã hủy') " + // Lọc ra các cuộc hẹn đã hoàn thành hoặc bị hủy
+                        "ORDER BY a.AppointmentDate ASC";
+            
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, doctorId);
+            
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                String appointmentId = rs.getString("AppointmentID");
+                String appointmentTime = rs.getTimestamp("AppointmentDate").toString();
+                String patientId = rs.getString("PatientID");
+                String patientName = rs.getString("FullName");
+                
+                Object[] appointmentRow = {appointmentTime, appointmentId, patientName, "Hủy"};
+                result.add(appointmentRow);
+            }
+            
+            rs.close();
+            stmt.close();
+            conn.close();
         } catch (SQLException e) {
-            System.err.println("Lỗi khi lấy cuộc hẹn sắp tới: " + e.getMessage());
-            e.printStackTrace();
-            return new ArrayList<>();
+            System.out.println("Lỗi khi lấy danh sách cuộc hẹn: " + e.getMessage());
         }
+        
+        return result;
     }
 
     public boolean updateCurrentShiftStatus(String dayOfWeek, String shift, String status) {

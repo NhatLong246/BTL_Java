@@ -239,24 +239,24 @@ public class DoctorRepository {
      * @param doctorId ID bác sĩ
      * @return true nếu đặt thành công
      */
-    public boolean bookAppointment(String patientId, LocalDate appointmentDate, String doctorId) {
+    public boolean bookAppointment(String patientId, LocalDateTime appointmentDateTime, String doctorId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
             // Kiểm tra ngày hẹn có hợp lệ không (phải sau ngày hiện tại)
-            if (appointmentDate.isBefore(LocalDate.now())) {
+            if (appointmentDateTime.isBefore(LocalDateTime.now())) {
                 System.err.println("Lỗi: Ngày hẹn phải sau ngày hiện tại!");
                 return false;
             }
-
+    
             // Tạo đối tượng Appointment để tự động sinh appointmentID
-            Appointment appointment = new Appointment(conn, patientId, doctorId, appointmentDate.atStartOfDay());
-
+            Appointment appointment = new Appointment(conn, patientId, doctorId, appointmentDateTime);
+    
             String query = "INSERT INTO Appointments (appointmentID, patientID, doctorID, appointmentDate, status, notes) " +
                     "VALUES (?, ?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, appointment.getAppointmentId());
             stmt.setString(2, patientId);
             stmt.setString(3, doctorId);
-            stmt.setTimestamp(4, Timestamp.valueOf(appointmentDate.atStartOfDay()));
+            stmt.setTimestamp(4, Timestamp.valueOf(appointmentDateTime));
             stmt.setString(5, AppointmentStatus.PENDING.toString()); // Trạng thái mặc định
             stmt.setString(6, "Cuộc hẹn mới");
             stmt.executeUpdate();
@@ -944,7 +944,7 @@ public class DoctorRepository {
             }
         }
     }
-
+    
     /**
      * Lưu chỉ số sức khỏe vào cơ sở dữ liệu
      * @param patientId ID của bệnh nhân
