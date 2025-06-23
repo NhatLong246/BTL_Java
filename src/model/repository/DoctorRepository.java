@@ -711,51 +711,63 @@ public class DoctorRepository {
     public List<Object[]> getPatientsForExamination(String doctorId) {
         List<Object[]> patientRecords = new ArrayList<>();
         Connection conn = null;
-    
+        
         try {
             conn = DatabaseConnection.getConnection();
-    
-            // Sửa câu lệnh SQL để chỉ lấy các cuộc hẹn có ngày hẹn <= ngày hiện tại và trạng thái "Chờ xác nhận"
+            
+            // Sửa câu truy vấn để hiển thị cả cuộc hẹn cũ quá hạn
+//            String sql = "SELECT p.*, u.Email, mr.RecordID, mr.Diagnosis, mr.TreatmentPlan, " +
+//                         "a.AppointmentDate, " +
+//                         "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
+//                         "ELSE CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) END as AppointmentStatus " +
+//                         "FROM Patients p " +
+//                         "JOIN Appointments a ON p.PatientID = a.PatientID " +
+//                         "JOIN UserAccounts u ON p.UserID = u.UserID " +
+//                         "LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID " +
+//                         "AND mr.RecordDate = (SELECT MAX(RecordDate) FROM MedicalRecords " +
+//                         "                     WHERE PatientID = p.PatientID) " +
+//                         "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
+//                         "ORDER BY a.AppointmentDate";
+            
             String sql = "SELECT p.*, u.Email, mr.RecordID, mr.Diagnosis, mr.TreatmentPlan, " +
-                    "a.AppointmentDate, " +
-                    "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
-                    "WHEN DATE(a.AppointmentDate) < CURDATE() THEN CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) " +
-                    "ELSE DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y') END as AppointmentStatus " +
-                    "FROM Patients p " +
-                    "JOIN Appointments a ON p.PatientID = a.PatientID " +
-                    "JOIN UserAccounts u ON p.UserID = u.UserID " +
-                    "LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID " +
-                    "AND mr.RecordDate = (SELECT MAX(RecordDate) FROM MedicalRecords " +
-                    "                     WHERE PatientID = p.PatientID) " +
-                    "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
-                    "AND DATE(a.AppointmentDate) <= CURDATE() " +
-                    "ORDER BY a.AppointmentDate";
-    
+                    	 "a.AppointmentDate, " +
+                    	 "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
+                         "WHEN DATE(a.AppointmentDate) < CURDATE() THEN CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) " +
+                         "ELSE DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y') END as AppointmentStatus " +
+                         "FROM Patients p " +
+                         "JOIN Appointments a ON p.PatientID = a.PatientID " +
+                         "JOIN UserAccounts u ON p.UserID = u.UserID " +
+                         "LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID " +
+                         "AND mr.RecordDate = (SELECT MAX(RecordDate) FROM MedicalRecords " +
+                         "                     WHERE PatientID = p.PatientID) " +
+                         "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
+                         "ORDER BY a.AppointmentDate";
+                         
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, doctorId);
-    
+                
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         // Tạo đối tượng Patient từ kết quả truy vấn
                         Patient patient = new Patient();
                         patient.setPatientID(rs.getString("PatientID"));
                         patient.setFullName(rs.getString("FullName"));
-    
+                        
                         // Kiểm tra null cho ngày sinh
                         Date birthDate = rs.getDate("DateOfBirth");
                         if (birthDate != null) {
                             patient.setDateOfBirth(birthDate.toLocalDate());
                         }
-    
+                        
                         patient.setAddress(rs.getString("Address"));
                         patient.setPhoneNumber(rs.getString("PhoneNumber"));
-    
+                        
                         // Sửa lỗi chuyển đổi Gender
                         String genderStr = rs.getString("Gender");
                         if (genderStr != null) {
                             patient.setGender(Gender.fromDatabase(genderStr));
                         }
-    
+                        
                         // Tạo đối tượng MedicalRecord từ kết quả truy vấn
                         MedicalRecord medicalRecord = null;
                         String recordId = rs.getString("RecordID");
@@ -773,11 +785,11 @@ public class DoctorRepository {
                                 medicalRecord.setTreatmentPlan("");
                             }
                         }
-    
+                        
                         // Email và trạng thái lịch hẹn
                         String email = rs.getString("Email");
                         String appointmentStatus = rs.getString("AppointmentStatus");
-    
+                        
                         // Tạo mảng chứa thông tin bệnh nhân, hồ sơ y tế và trạng thái lịch hẹn
                         Object[] record = {patient, medicalRecord, email, appointmentStatus};
                         patientRecords.add(record);
@@ -795,7 +807,7 @@ public class DoctorRepository {
                 }
             }
         }
-    
+        
         return patientRecords;
     }
 

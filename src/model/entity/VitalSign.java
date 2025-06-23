@@ -94,7 +94,7 @@ public class VitalSign {
 
     public void setOxygenSaturation(double oxygenSaturation) {
         if (oxygenSaturation < 50 || oxygenSaturation > 100) {
-            throw new IllegalArgumentException("SpO2 phải trong khoảng 50 - 100%.");
+            throw new IllegalArgumentException("Độ bão hòa oxi phải trong khoảng 50 - 100%.");
         }
         this.oxygenSaturation = oxygenSaturation;
     }

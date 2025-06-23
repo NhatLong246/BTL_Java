@@ -194,7 +194,7 @@ public class DoctorView extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
 
-        JLabel menuTitle = new JLabel("", SwingConstants.CENTER);
+        JLabel menuTitle = new JLabel("Giao diện bác sĩ", SwingConstants.CENTER);
         menuTitle.setFont(new Font("Arial", Font.BOLD, 20));
         menuTitle.setForeground(Color.WHITE);
         gbc.gridy = 0;
@@ -636,11 +636,11 @@ public class DoctorView extends JFrame {
                 BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
                 BorderFactory.createEmptyBorder(20, 20, 20, 20)
         ));
-        
+
         JLabel upcomingLabel = new JLabel("Cuộc hẹn sắp tới", SwingConstants.LEFT);
         upcomingLabel.setFont(new Font("Arial", Font.BOLD, 18));
         upcomingLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-        
+
         String[] appointmentColumns = {"Thời gian", "Mã cuộc hẹn", "Bệnh nhân", "Thao tác"};
         DefaultTableModel appointmentModel = new DefaultTableModel(appointmentColumns, 0) {
             @Override
@@ -648,32 +648,38 @@ public class DoctorView extends JFrame {
                 return column == 3;
             }
         };
-        
+
         JTable appointmentTable = new JTable(appointmentModel);
         appointmentTable.setRowHeight(35);
         appointmentTable.setFont(new Font("Arial", Font.PLAIN, 14));
         appointmentTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
-        
+
+        // Điều chỉnh độ rộng của các cột
+        appointmentTable.getColumnModel().getColumn(0).setPreferredWidth(145); // "Thời gian"
+        appointmentTable.getColumnModel().getColumn(1).setPreferredWidth(115); // "Mã cuộc hẹn"
+        appointmentTable.getColumnModel().getColumn(2).setPreferredWidth(210); // "Bệnh nhân"
+        appointmentTable.getColumnModel().getColumn(3).setPreferredWidth(80);  // "Thao tác"
+
         List<Object[]> upcomingAppointments = controller.getNextAppointments();
-        
+
         ButtonRenderer buttonRenderer = new ButtonRenderer();
         buttonRenderer.setText("Hủy");
         buttonRenderer.setBackground(new Color(220, 53, 69));
-        
+
         ButtonEditor buttonEditor = new ButtonEditor(new JCheckBox());
-        
+
         appointmentTable.getColumnModel().getColumn(3).setCellRenderer(buttonRenderer);
         appointmentTable.getColumnModel().getColumn(3).setCellEditor(buttonEditor);
-        
+
         appointmentTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int row = appointmentTable.getSelectedRow();
                 int col = appointmentTable.getSelectedColumn();
-                
+
                 if (col == 3 && row >= 0) {
                     String appointmentId = (String) appointmentTable.getValueAt(row, 1);
-                    
+
                     int option = JOptionPane.showConfirmDialog(
                         DoctorView.this,
                         "Bạn có chắc chắn muốn hủy cuộc hẹn này không?",
@@ -681,7 +687,7 @@ public class DoctorView extends JFrame {
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.WARNING_MESSAGE
                     );
-                    
+
                     if (option == JOptionPane.YES_OPTION) {
                         boolean success = controller.cancelAppointment(appointmentId);
                         if (success) {
@@ -708,10 +714,10 @@ public class DoctorView extends JFrame {
         for (Object[] appointment : upcomingAppointments) {
             appointmentModel.addRow(appointment);
         }
-        
+
         JScrollPane appointmentScroll = new JScrollPane(appointmentTable);
         appointmentScroll.setBorder(BorderFactory.createEmptyBorder());
-        
+
         upcomingPanel.add(upcomingLabel, BorderLayout.NORTH);
         upcomingPanel.add(appointmentScroll, BorderLayout.CENTER);
         
@@ -2081,7 +2087,7 @@ public class DoctorView extends JFrame {
                     table, tableColumn.getHeaderValue(), false, false, 0, column);
             maxWidth = Math.max(maxWidth, headerComp.getPreferredSize().width);
             // Đặt chiều rộng tối thiểu và tối đa (thêm padding 10 pixel)
-            tableColumn.setPreferredWidth(maxWidth + 2);
+            tableColumn.setPreferredWidth(maxWidth + 0);
             // Đặt giới hạn tối đa để tránh cột quá rộng
             if (tableColumn.getPreferredWidth() > 300) {
                 tableColumn.setPreferredWidth(300);
