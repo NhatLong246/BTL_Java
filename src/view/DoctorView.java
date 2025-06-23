@@ -2020,11 +2020,31 @@ public class DoctorView extends JFrame {
             }
 
             String patientId = patientTable.getValueAt(selectedRow, 0).toString();
-            controller.completeExamination(patientId);
-
-            // Cập nhật trạng thái trong bảng
-            tableModel.setValueAt("Đã hoàn thành", selectedRow, 5);
-            JOptionPane.showMessageDialog(this, "Đã hoàn thành khám", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            
+            // Hiển thị hộp thoại xác nhận
+            int confirm = JOptionPane.showConfirmDialog(this, 
+                "Xác nhận hoàn thành khám bệnh cho bệnh nhân này?", 
+                "Xác nhận", 
+                JOptionPane.YES_NO_OPTION);
+                
+            if (confirm == JOptionPane.YES_OPTION) {
+                boolean success = controller.completeAppointment(patientId, controller.getDoctorId());
+                
+                if (success) {
+                    // Xóa hàng khỏi bảng hoặc cập nhật trạng thái
+                    tableModel.removeRow(selectedRow);
+                    
+                    JOptionPane.showMessageDialog(this, 
+                        "Đã hoàn thành khám bệnh!", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Không thể cập nhật trạng thái lịch hẹn!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
         });
 
         JPanel rightPanel = new JPanel(new BorderLayout());

@@ -85,4 +85,32 @@ public class PrescriptionController {
     public List<Map<String, Object>> searchMedications(String keyword) {
         return repository.searchMedications(keyword);
     }
+
+    /**
+     * Lưu đơn thuốc và cập nhật trạng thái cuộc hẹn thành hoàn thành
+     * @param doctorId ID bác sĩ
+     * @param prescriptionData Dữ liệu đơn thuốc
+     * @param medicineList Danh sách thuốc
+     * @param patientId ID bệnh nhân
+     * @return true nếu lưu thành công
+     * @throws SQLException nếu có lỗi SQL
+     */
+    public boolean savePrescriptionAndCompleteAppointment(String doctorId, Map<String, Object> prescriptionData, 
+                                  List<Map<String, Object>> medicineList, String patientId) throws SQLException {
+        if (doctorId == null || doctorId.trim().isEmpty()) {
+            throw new IllegalArgumentException("doctorId không được để trống");
+        }
+        if (prescriptionData == null || prescriptionData.get("prescriptionId") == null || 
+            prescriptionData.get("patientId") == null) {
+            throw new IllegalArgumentException("prescriptionData không hợp lệ");
+        }
+        if (medicineList == null || medicineList.isEmpty()) {
+            throw new IllegalArgumentException("Danh sách thuốc không được để trống");
+        }
+        
+        // Gọi hai hàm trong một transaction
+        boolean result = repository.savePrescriptionAndCompleteAppointment(doctorId, prescriptionData, medicineList, patientId);
+        
+        return result;
+    }
 }

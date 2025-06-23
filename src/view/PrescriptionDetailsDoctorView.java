@@ -31,6 +31,9 @@ public class PrescriptionDetailsDoctorView extends JFrame {
     private boolean isNewPrescription;
     private PrescriptionController controller;
 
+    private boolean isSaving = false;
+    private boolean isPrescriptionSaved = false;
+
     public PrescriptionDetailsDoctorView(String doctorId, String patientId, String patientName,
                                          String prescriptionId, boolean isNew) {
         this.doctorId = doctorId;
@@ -101,7 +104,6 @@ public class PrescriptionDetailsDoctorView extends JFrame {
 
         btnBack.addActionListener(e -> handleBack());
         btnCancel.addActionListener(e -> handleCancel());
-        btnSave.addActionListener(e -> savePrescription());
     }
 
     private void handleBack() {
@@ -531,7 +533,13 @@ public class PrescriptionDetailsDoctorView extends JFrame {
     }
 
     private void savePrescription() {
+        if (isSaving || isPrescriptionSaved) {
+            return;
+        }
+
         try {
+            isSaving = true;
+
             String diagnosis = txtDiagnosis.getText().trim();
             String treatmentPlan = txtTreatmentPlan.getText().trim();
             String notes = txtNotes.getText().trim();
@@ -571,6 +579,22 @@ public class PrescriptionDetailsDoctorView extends JFrame {
                 return;
             }
 
+            // Hiển thị hộp thoại xác nhận
+            int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Xác nhận lưu đơn thuốc?",
+                "Xác nhận",
+                JOptionPane.YES_NO_OPTION
+            );
+            
+            if (confirm != JOptionPane.YES_OPTION) {
+                isSaving = false;
+                return;
+            }   
+
+            // Đặt con trỏ chuột thành hình đồng hồ chờ
+            setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
             List<Map<String, Object>> medicineList = new ArrayList<>();
             for (int i = 0; i < medicineTableModel.getRowCount(); i++) {
                 String name = (String) medicineTableModel.getValueAt(i, 1);
@@ -581,14 +605,20 @@ public class PrescriptionDetailsDoctorView extends JFrame {
 
                 if (name == null || name.trim().isEmpty()) {
                     JOptionPane.showMessageDialog(this, "Tên thuốc tại dòng " + (i + 1) + " không được để trống", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    setCursor(Cursor.getDefaultCursor());
+                    isSaving = false;
                     return;
                 }
                 if (dosage == null || dosage.trim().isEmpty()) {
                     JOptionPane.showMessageDialog(this, "Liều dùng tại dòng " + (i + 1) + " không được để trống", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    setCursor(Cursor.getDefaultCursor());
+                    isSaving = false;
                     return;
                 }
                 if (instruction == null || instruction.trim().isEmpty()) {
                     JOptionPane.showMessageDialog(this, "Cách dùng tại dòng " + (i + 1) + " không được để trống", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    setCursor(Cursor.getDefaultCursor());
+                    isSaving = false;
                     return;
                 }
 
@@ -612,6 +642,8 @@ public class PrescriptionDetailsDoctorView extends JFrame {
             boolean success = controller.savePrescription(doctorId, prescriptionData, medicineList);
 
             if (success) {
+                isPrescriptionSaved = true;
+
                 // Cập nhật prescriptionId nếu có thay đổi từ repository
                 String updatedPrescriptionId = (String) prescriptionData.get("prescriptionId");
                 if (!updatedPrescriptionId.equals(prescriptionId)) {
@@ -629,6 +661,11 @@ public class PrescriptionDetailsDoctorView extends JFrame {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Lỗi: " + e.getMessage(), "Lỗi hệ thống", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
+        }
+        finally {
+            // Đặt lại con trỏ chuột và trạng thái lưu
+            setCursor(Cursor.getDefaultCursor());
+            isSaving = false;
         }
     }
 

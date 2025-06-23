@@ -711,24 +711,11 @@ public class DoctorRepository {
     public List<Object[]> getPatientsForExamination(String doctorId) {
         List<Object[]> patientRecords = new ArrayList<>();
         Connection conn = null;
-
+    
         try {
             conn = DatabaseConnection.getConnection();
-
-            // Sửa câu truy vấn để hiển thị cả cuộc hẹn cũ quá hạn
-//            String sql = "SELECT p.*, u.Email, mr.RecordID, mr.Diagnosis, mr.TreatmentPlan, " +
-//                         "a.AppointmentDate, " +
-//                         "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
-//                         "ELSE CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) END as AppointmentStatus " +
-//                         "FROM Patients p " +
-//                         "JOIN Appointments a ON p.PatientID = a.PatientID " +
-//                         "JOIN UserAccounts u ON p.UserID = u.UserID " +
-//                         "LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID " +
-//                         "AND mr.RecordDate = (SELECT MAX(RecordDate) FROM MedicalRecords " +
-//                         "                     WHERE PatientID = p.PatientID) " +
-//                         "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
-//                         "ORDER BY a.AppointmentDate";
-
+    
+            // Sửa câu lệnh SQL để chỉ lấy các cuộc hẹn có ngày hẹn <= ngày hiện tại và trạng thái "Chờ xác nhận"
             String sql = "SELECT p.*, u.Email, mr.RecordID, mr.Diagnosis, mr.TreatmentPlan, " +
                     "a.AppointmentDate, " +
                     "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
@@ -741,33 +728,34 @@ public class DoctorRepository {
                     "AND mr.RecordDate = (SELECT MAX(RecordDate) FROM MedicalRecords " +
                     "                     WHERE PatientID = p.PatientID) " +
                     "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
+                    "AND DATE(a.AppointmentDate) <= CURDATE() " +
                     "ORDER BY a.AppointmentDate";
-
+    
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, doctorId);
-
+    
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         // Tạo đối tượng Patient từ kết quả truy vấn
                         Patient patient = new Patient();
                         patient.setPatientID(rs.getString("PatientID"));
                         patient.setFullName(rs.getString("FullName"));
-
+    
                         // Kiểm tra null cho ngày sinh
                         Date birthDate = rs.getDate("DateOfBirth");
                         if (birthDate != null) {
                             patient.setDateOfBirth(birthDate.toLocalDate());
                         }
-
+    
                         patient.setAddress(rs.getString("Address"));
                         patient.setPhoneNumber(rs.getString("PhoneNumber"));
-
+    
                         // Sửa lỗi chuyển đổi Gender
                         String genderStr = rs.getString("Gender");
                         if (genderStr != null) {
                             patient.setGender(Gender.fromDatabase(genderStr));
                         }
-
+    
                         // Tạo đối tượng MedicalRecord từ kết quả truy vấn
                         MedicalRecord medicalRecord = null;
                         String recordId = rs.getString("RecordID");
@@ -785,11 +773,11 @@ public class DoctorRepository {
                                 medicalRecord.setTreatmentPlan("");
                             }
                         }
-
+    
                         // Email và trạng thái lịch hẹn
                         String email = rs.getString("Email");
                         String appointmentStatus = rs.getString("AppointmentStatus");
-
+    
                         // Tạo mảng chứa thông tin bệnh nhân, hồ sơ y tế và trạng thái lịch hẹn
                         Object[] record = {patient, medicalRecord, email, appointmentStatus};
                         patientRecords.add(record);
@@ -807,7 +795,7 @@ public class DoctorRepository {
                 }
             }
         }
-
+    
         return patientRecords;
     }
 
@@ -1128,6 +1116,29 @@ public class DoctorRepository {
                 }
             }
             return "PRE-001"; // Giá trị mặc định nếu không có bản ghi nào
+        }
+    }
+
+    /**
+     * Cập nhật trạng thái lịch hẹn thành Hoàn thành
+     * @param patientId ID của bệnh nhân
+     * @param doctorId ID của bác sĩ
+     * @return true nếu cập nhật thành công
+     * @throws SQLException nếu có lỗi SQL
+     */
+    public boolean completeAppointment(String patientId, String doctorId) throws SQLException {
+        String sql = "UPDATE Appointments SET Status = 'Hoàn thành' " +
+                     "WHERE PatientID = ? AND DoctorID = ? AND Status = 'Chờ xác nhận'";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, patientId);
+            stmt.setString(2, doctorId);
+            int affectedRows = stmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw e;
         }
     }
 
@@ -1624,6 +1635,130 @@ public class DoctorRepository {
                 stmt.setString(2, appointmentId);
                 int rowsAffected = stmt.executeUpdate();
                 return rowsAffected > 0;
+            }
+        }
+    }
+
+    /**
+     * Lưu đơn thuốc và cập nhật trạng thái cuộc hẹn thành hoàn thành trong một transaction
+     * @param doctorId ID bác sĩ
+     * @param prescriptionData Dữ liệu đơn thuốc
+     * @param medicineList Danh sách thuốc
+     * @param patientId ID bệnh nhân
+     * @return true nếu lưu thành công
+     * @throws SQLException nếu có lỗi SQL
+     */
+    public boolean savePrescriptionAndCompleteAppointment(String doctorId, Map<String, Object> prescriptionData, 
+                                   List<Map<String, Object>> medicineList, String patientId) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);  // Bắt đầu transaction
+    
+            // 1. Lưu đơn thuốc
+            String prescriptionId = (String) prescriptionData.get("prescriptionId");
+            String patId = (String) prescriptionData.get("patientId");
+            LocalDate prescriptionDate = LocalDate.now();
+    
+            if (prescriptionId == null || prescriptionId.trim().isEmpty()) {
+                throw new IllegalArgumentException("prescriptionId không được để trống");
+            }
+            if (patId == null || patId.trim().isEmpty()) {
+                throw new IllegalArgumentException("patientId không được để trống");
+            }
+            if (doctorId == null || doctorId.trim().isEmpty()) {
+                throw new IllegalArgumentException("doctorId không được để trống");
+            }
+    
+            // Kiểm tra trùng lặp prescriptionId và tạo ID mới nếu cần
+            String checkSql = "SELECT COUNT(*) FROM Prescriptions WHERE prescriptionID = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setString(1, prescriptionId);
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        // Tạo ID mới nếu đã tồn tại
+                        prescriptionId = generateNewPrescriptionId(conn);
+                        prescriptionData.put("prescriptionId", prescriptionId);
+                    }
+                }
+            }
+    
+            // 2. Lưu thông tin đơn thuốc vào bảng Prescriptions
+            String insertPrescriptionSql = "INSERT INTO Prescriptions (prescriptionID, patientID, doctorID, prescriptionDate) " +
+                                          "VALUES (?, ?, ?, ?)";
+            try (PreparedStatement stmtPrescription = conn.prepareStatement(insertPrescriptionSql)) {
+                stmtPrescription.setString(1, prescriptionId);
+                stmtPrescription.setString(2, patId);
+                stmtPrescription.setString(3, doctorId);
+                stmtPrescription.setDate(4, java.sql.Date.valueOf(prescriptionDate));
+                stmtPrescription.executeUpdate();
+            }
+    
+            // 3. Lưu chi tiết đơn thuốc vào bảng PrescriptionDetails
+            if (medicineList == null || medicineList.isEmpty()) {
+                throw new IllegalArgumentException("Danh sách thuốc không được để trống");
+            }
+    
+            String insertDetailSql = "INSERT INTO PrescriptionDetails (prescriptionID, medicationID, dosage, instructions) " +
+                                    "VALUES (?, ?, ?, ?)";
+            try (PreparedStatement stmtDetail = conn.prepareStatement(insertDetailSql)) {
+                for (Map<String, Object> medicine : medicineList) {
+                    String medicationId = (String) medicine.get("medicationId");
+                    String dosage = (String) medicine.get("dosage");
+                    String instructions = (String) medicine.get("instruction");
+                    String medicineName = (String) medicine.get("name");
+    
+                    if (dosage == null || dosage.trim().isEmpty()) {
+                        throw new IllegalArgumentException("Liều lượng không được để trống cho thuốc: " + medicineName);
+                    }
+                    if (instructions == null || instructions.trim().isEmpty()) {
+                        throw new IllegalArgumentException("Hướng dẫn không được để trống cho thuốc: " + medicineName);
+                    }
+    
+                    if (medicationId == null || medicationId.trim().isEmpty()) {
+                        if (medicineName == null || medicineName.trim().isEmpty()) {
+                            throw new IllegalArgumentException("Tên thuốc không được để trống khi medicationId không tồn tại");
+                        }
+                        medicationId = findOrCreateMedication(conn, medicineName);
+                    }
+    
+                    stmtDetail.setString(1, prescriptionId);
+                    stmtDetail.setString(2, medicationId);
+                    stmtDetail.setString(3, dosage);
+                    stmtDetail.setString(4, instructions);
+                    stmtDetail.addBatch();
+                }
+                stmtDetail.executeBatch();
+            }
+    
+            // 4. Cập nhật trạng thái cuộc hẹn thành Hoàn thành
+            String updateAppointmentSql = "UPDATE Appointments SET status = 'Hoàn thành' " +
+                                         "WHERE patientID = ? AND doctorID = ? AND status = 'Chờ xác nhận'";
+            try (PreparedStatement stmtAppointment = conn.prepareStatement(updateAppointmentSql)) {
+                stmtAppointment.setString(1, patientId);
+                stmtAppointment.setString(2, doctorId);
+                stmtAppointment.executeUpdate();
+            }
+    
+            // Hoàn thành transaction
+            conn.commit();
+            System.out.println("Lưu đơn thuốc thành công cho prescriptionID: " + prescriptionId);
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            e.printStackTrace();
+            throw e;
+        } catch (IllegalArgumentException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            throw new SQLException("Lỗi dữ liệu đầu vào: " + e.getMessage(), e);
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
             }
         }
     }

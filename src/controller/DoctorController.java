@@ -394,14 +394,14 @@ public class DoctorController {
     //     }
     // }
 
-    public void bookAppointment(String patientId, String dateTimeStr) {
-        if (patientId.isEmpty() || dateTimeStr.isEmpty()) {
+    public void bookAppointment(String patientId, String dateStr) {
+        if (patientId.isEmpty() || dateStr.isEmpty()) {
             JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bệnh nhân và ngày hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return;
         }
     
         try {
-            LocalDateTime appointmentDateTime = LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            LocalDateTime appointmentDateTime = LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             
             if (appointmentDateTime.isBefore(LocalDateTime.now())) {
                 JOptionPane.showMessageDialog(view, "Thời gian hẹn phải sau thời gian hiện tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -413,9 +413,8 @@ public class DoctorController {
                 JOptionPane.showMessageDialog(view, "Không tìm thấy bệnh nhân với ID: " + patientId, "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-    
-            // Sửa để gửi toàn bộ LocalDateTime thay vì chỉ LocalDate
-            if (repository.bookAppointment(patientId, appointmentDateTime, doctorId)) {
+
+            if (repository.bookAppointment(patientId, appointmentDateTime.toLocalDate(), doctorId)) {
                 JOptionPane.showMessageDialog(view, "Đặt lịch hẹn thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
                 showHome();
             } else {
@@ -897,6 +896,21 @@ public class DoctorController {
             return repository.completePatientExamination(patientId, doctorId);
         } catch (SQLException e) {
             System.err.println("Lỗi khi hoàn thành khám bệnh: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Cập nhật trạng thái lịch hẹn thành Hoàn thành
+     * @param patientId ID bệnh nhân
+     * @param doctorId ID bác sĩ
+     * @return true nếu cập nhật thành công
+     */
+    public boolean completeAppointment(String patientId, String doctorId) {
+        try {
+            return repository.completeAppointment(patientId, doctorId);
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
