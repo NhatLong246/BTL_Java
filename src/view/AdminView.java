@@ -1082,7 +1082,7 @@ public class AdminView extends JFrame {
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 7; j++) {
                     cellPanels[i][j].setBackground(Color.WHITE); // Dùng màu trắng thay vì màu nền
-                    iconLabels[i][j].setText("<html><center>Không có bác sĩ</center></html>");
+                    iconLabels[i][j].setText("<html><center>Không có ca làm việc</center></html>");
                 }
             }
             
@@ -2207,30 +2207,30 @@ public class AdminView extends JFrame {
             }
         }
     }
-//    public static void main(String[] args) {
-//        try {
-//            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//        if (!DatabaseConnection.testConnection()) {
-//            JOptionPane.showMessageDialog(null, "Không thể kết nối đến cơ sở dữ liệu!", 
-//                "Lỗi", JOptionPane.ERROR_MESSAGE);
-//            return;
-//        }
-//
-//        SwingUtilities.invokeLater(() -> {
-//            try {
-//                String testAdminId = "ADM-001";
-//                AdminView adminView = new AdminView(testAdminId);
-//                adminView.setVisible(true);
-//                System.out.println("Đã khởi tạo giao diện quản trị với ID: " + testAdminId);
-//            } catch (Exception e) {
-//                JOptionPane.showMessageDialog(null, "Lỗi khởi động giao diện: " + e.getMessage(), 
-//                    "Lỗi", JOptionPane.ERROR_MESSAGE);
-//                e.printStackTrace();
-//            }
-//        });
-//    }
+    public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        if (!DatabaseConnection.testConnection()) {
+            JOptionPane.showMessageDialog(null, "Không thể kết nối đến cơ sở dữ liệu!", 
+                "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                String testAdminId = "ADM-001";
+                AdminView adminView = new AdminView(testAdminId);
+                adminView.setVisible(true);
+                System.out.println("Đã khởi tạo giao diện quản trị với ID: " + testAdminId);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(null, "Lỗi khởi động giao diện: " + e.getMessage(), 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
+            }
+        });
+    }
 }

@@ -35,19 +35,19 @@ public class DoctorRepository {
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, doctorId);
             ResultSet rs = stmt.executeQuery();
-            
+
             if (rs.next()) {
                 return new Doctor(
-                    rs.getString("userID"),
-                    rs.getString("doctorID"),
-                    rs.getString("fullName"),
-                    rs.getDate("dateOfBirth") != null ? rs.getDate("dateOfBirth").toLocalDate() : LocalDate.now(),
-                    rs.getString("address"),
-                    Gender.fromDatabase(rs.getString("gender")),
-                    rs.getString("phoneNumber"),
-                    rs.getString("specialtyID") != null ? Specialization.fromId(rs.getString("specialtyID")) : Specialization.GENERAL,
-                    rs.getString("email"),
-                    rs.getDate("createdAt") != null ? rs.getDate("createdAt").toLocalDate() : LocalDate.now()
+                        rs.getString("userID"),
+                        rs.getString("doctorID"),
+                        rs.getString("fullName"),
+                        rs.getDate("dateOfBirth") != null ? rs.getDate("dateOfBirth").toLocalDate() : LocalDate.now(),
+                        rs.getString("address"),
+                        Gender.fromDatabase(rs.getString("gender")),
+                        rs.getString("phoneNumber"),
+                        rs.getString("specialtyID") != null ? Specialization.fromId(rs.getString("specialtyID")) : Specialization.GENERAL,
+                        rs.getString("email"),
+                        rs.getDate("createdAt") != null ? rs.getDate("createdAt").toLocalDate() : LocalDate.now()
                 );
             }
             return null;
@@ -64,7 +64,7 @@ public class DoctorRepository {
             String query = "SELECT COUNT(*) AS total FROM Patients";
             PreparedStatement stmt = conn.prepareStatement(query);
             ResultSet rs = stmt.executeQuery();
-            
+
             if (rs.next()) {
                 return rs.getInt("total");
             }
@@ -85,7 +85,7 @@ public class DoctorRepository {
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, doctorId);
             ResultSet rs = stmt.executeQuery();
-            
+
             if (rs.next()) {
                 return rs.getInt("total");
             }
@@ -107,7 +107,7 @@ public class DoctorRepository {
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, doctorId);
             ResultSet rs = stmt.executeQuery();
-            
+
             if (rs.next()) {
                 return rs.getInt("total");
             }
@@ -129,7 +129,7 @@ public class DoctorRepository {
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, doctorId);
             ResultSet rs = stmt.executeQuery();
-            
+
             if (rs.next()) {
                 return rs.getInt("total");
             }
@@ -154,13 +154,13 @@ public class DoctorRepository {
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, doctorId);
             ResultSet rs = stmt.executeQuery();
-            
+
             while (rs.next()) {
                 Object[] appointment = {
-                    rs.getTimestamp("appointmentDate").toString(),
-                    rs.getString("patientID"),
-                    rs.getString("fullName"),
-                    rs.getString("notes")
+                        rs.getTimestamp("appointmentDate").toString(),
+                        rs.getString("patientID"),
+                        rs.getString("fullName"),
+                        rs.getString("notes")
                 };
                 appointments.add(appointment);
             }
@@ -183,13 +183,13 @@ public class DoctorRepository {
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setInt(1, limit);
             ResultSet rs = stmt.executeQuery();
-            
+
             while (rs.next()) {
                 Object[] patient = {
-                    rs.getString("patientID"),
-                    rs.getString("fullName"),
-                    rs.getDate("createdAt").toString(),
-                    rs.getString("phoneNumber")
+                        rs.getString("patientID"),
+                        rs.getString("fullName"),
+                        rs.getDate("createdAt").toString(),
+                        rs.getString("phoneNumber")
                 };
                 patients.add(patient);
             }
@@ -239,24 +239,24 @@ public class DoctorRepository {
      * @param doctorId ID bác sĩ
      * @return true nếu đặt thành công
      */
-    public boolean bookAppointment(String patientId, LocalDateTime appointmentDateTime, String doctorId) {
+    public boolean bookAppointment(String patientId, LocalDate appointmentDate, String doctorId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
             // Kiểm tra ngày hẹn có hợp lệ không (phải sau ngày hiện tại)
-            if (appointmentDateTime.isBefore(LocalDateTime.now())) {
+            if (appointmentDate.isBefore(LocalDate.now())) {
                 System.err.println("Lỗi: Ngày hẹn phải sau ngày hiện tại!");
                 return false;
             }
-    
+
             // Tạo đối tượng Appointment để tự động sinh appointmentID
-            Appointment appointment = new Appointment(conn, patientId, doctorId, appointmentDateTime);
-    
+            Appointment appointment = new Appointment(conn, patientId, doctorId, appointmentDate.atStartOfDay());
+
             String query = "INSERT INTO Appointments (appointmentID, patientID, doctorID, appointmentDate, status, notes) " +
                     "VALUES (?, ?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, appointment.getAppointmentId());
             stmt.setString(2, patientId);
             stmt.setString(3, doctorId);
-            stmt.setTimestamp(4, Timestamp.valueOf(appointmentDateTime));
+            stmt.setTimestamp(4, Timestamp.valueOf(appointmentDate.atStartOfDay()));
             stmt.setString(5, AppointmentStatus.PENDING.toString()); // Trạng thái mặc định
             stmt.setString(6, "Cuộc hẹn mới");
             stmt.executeUpdate();
@@ -396,10 +396,10 @@ public class DoctorRepository {
 
             while (rs.next()) {
                 Object[] schedule = {
-                    rs.getString("time"),
-                    rs.getString("activity"),
-                    rs.getString("status"),
-                    rs.getString("notes")
+                        rs.getString("time"),
+                        rs.getString("activity"),
+                        rs.getString("status"),
+                        rs.getString("notes")
                 };
                 schedules.add(schedule);
             }
@@ -441,10 +441,10 @@ public class DoctorRepository {
                     String formattedDate = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(timestamp);
 
                     Object[] appointment = {
-                        formattedDate,
-                        rs.getString("appointmentID"),
-                        rs.getString("fullName"),
-                        "Hủy"  // Thêm text cho nút thao tác
+                            formattedDate,
+                            rs.getString("appointmentID"),
+                            rs.getString("fullName"),
+                            "Hủy"  // Thêm text cho nút thao tác
                     };
                     appointments.add(appointment);
                 }
@@ -483,9 +483,9 @@ public class DoctorRepository {
                 ResultSet rs = stmt.executeQuery();
                 while (rs.next()) {
                     Object[] schedule = {
-                        rs.getString("shiftType"),
-                        rs.getString("dayOfWeek"),
-                        rs.getString("status")
+                            rs.getString("shiftType"),
+                            rs.getString("dayOfWeek"),
+                            rs.getString("status")
                     };
                     scheduleList.add(schedule);
                 }
@@ -509,14 +509,14 @@ public class DoctorRepository {
      */
     private void createDoctorScheduleTable(Connection conn) throws SQLException {
         String createTableSQL =
-            "CREATE TABLE IF NOT EXISTS DoctorSchedule (" +
-            "doctorID VARCHAR(50) NOT NULL, " +
-            "dayOfWeek VARCHAR(20) NOT NULL, " +
-            "shiftType VARCHAR(20) NOT NULL, " +
-            "status VARCHAR(50) DEFAULT 'Không làm việc', " +
-            "PRIMARY KEY (doctorID, dayOfWeek, shiftType), " +
-            "FOREIGN KEY (doctorID) REFERENCES Doctors(doctorID) " +
-            "ON DELETE CASCADE ON UPDATE CASCADE)";
+                "CREATE TABLE IF NOT EXISTS DoctorSchedule (" +
+                        "doctorID VARCHAR(50) NOT NULL, " +
+                        "dayOfWeek VARCHAR(20) NOT NULL, " +
+                        "shiftType VARCHAR(20) NOT NULL, " +
+                        "status VARCHAR(50) DEFAULT 'Không làm việc', " +
+                        "PRIMARY KEY (doctorID, dayOfWeek, shiftType), " +
+                        "FOREIGN KEY (doctorID) REFERENCES Doctors(doctorID) " +
+                        "ON DELETE CASCADE ON UPDATE CASCADE)";
 
         conn.createStatement().executeUpdate(createTableSQL);
         System.out.println("Đã tạo bảng DoctorSchedule");
@@ -629,7 +629,7 @@ public class DoctorRepository {
     public String getShiftStatus(String doctorId, String dayOfWeek, String shift) throws SQLException {
         // Debug để xem có vấn đề gì với SQL query
         System.out.println("DEBUG SQL: SELECT status FROM DoctorSchedule WHERE doctorID = '" +
-        doctorId + "' AND dayOfWeek = '" + dayOfWeek + "' AND shiftType = '" + shift + "'");
+                doctorId + "' AND dayOfWeek = '" + dayOfWeek + "' AND shiftType = '" + shift + "'");
 
         String sql = "SELECT status FROM DoctorSchedule WHERE doctorID = ? AND dayOfWeek = ? AND shiftType = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -711,10 +711,10 @@ public class DoctorRepository {
     public List<Object[]> getPatientsForExamination(String doctorId) {
         List<Object[]> patientRecords = new ArrayList<>();
         Connection conn = null;
-        
+
         try {
             conn = DatabaseConnection.getConnection();
-            
+
             // Sửa câu truy vấn để hiển thị cả cuộc hẹn cũ quá hạn
 //            String sql = "SELECT p.*, u.Email, mr.RecordID, mr.Diagnosis, mr.TreatmentPlan, " +
 //                         "a.AppointmentDate, " +
@@ -728,46 +728,46 @@ public class DoctorRepository {
 //                         "                     WHERE PatientID = p.PatientID) " +
 //                         "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
 //                         "ORDER BY a.AppointmentDate";
-            
+
             String sql = "SELECT p.*, u.Email, mr.RecordID, mr.Diagnosis, mr.TreatmentPlan, " +
-                    	 "a.AppointmentDate, " +
-                    	 "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
-                         "WHEN DATE(a.AppointmentDate) < CURDATE() THEN CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) " +
-                         "ELSE DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y') END as AppointmentStatus " +
-                         "FROM Patients p " +
-                         "JOIN Appointments a ON p.PatientID = a.PatientID " +
-                         "JOIN UserAccounts u ON p.UserID = u.UserID " +
-                         "LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID " +
-                         "AND mr.RecordDate = (SELECT MAX(RecordDate) FROM MedicalRecords " +
-                         "                     WHERE PatientID = p.PatientID) " +
-                         "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
-                         "ORDER BY a.AppointmentDate";
-                         
+                    "a.AppointmentDate, " +
+                    "CASE WHEN DATE(a.AppointmentDate) = CURDATE() THEN 'Hôm nay' " +
+                    "WHEN DATE(a.AppointmentDate) < CURDATE() THEN CONCAT('Quá hạn: ', DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y')) " +
+                    "ELSE DATE_FORMAT(a.AppointmentDate, '%d/%m/%Y') END as AppointmentStatus " +
+                    "FROM Patients p " +
+                    "JOIN Appointments a ON p.PatientID = a.PatientID " +
+                    "JOIN UserAccounts u ON p.UserID = u.UserID " +
+                    "LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID " +
+                    "AND mr.RecordDate = (SELECT MAX(RecordDate) FROM MedicalRecords " +
+                    "                     WHERE PatientID = p.PatientID) " +
+                    "WHERE a.DoctorID = ? AND a.Status = 'Chờ xác nhận' " +
+                    "ORDER BY a.AppointmentDate";
+
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, doctorId);
-                
+
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         // Tạo đối tượng Patient từ kết quả truy vấn
                         Patient patient = new Patient();
                         patient.setPatientID(rs.getString("PatientID"));
                         patient.setFullName(rs.getString("FullName"));
-                        
+
                         // Kiểm tra null cho ngày sinh
                         Date birthDate = rs.getDate("DateOfBirth");
                         if (birthDate != null) {
                             patient.setDateOfBirth(birthDate.toLocalDate());
                         }
-                        
+
                         patient.setAddress(rs.getString("Address"));
                         patient.setPhoneNumber(rs.getString("PhoneNumber"));
-                        
+
                         // Sửa lỗi chuyển đổi Gender
                         String genderStr = rs.getString("Gender");
                         if (genderStr != null) {
                             patient.setGender(Gender.fromDatabase(genderStr));
                         }
-                        
+
                         // Tạo đối tượng MedicalRecord từ kết quả truy vấn
                         MedicalRecord medicalRecord = null;
                         String recordId = rs.getString("RecordID");
@@ -785,11 +785,11 @@ public class DoctorRepository {
                                 medicalRecord.setTreatmentPlan("");
                             }
                         }
-                        
+
                         // Email và trạng thái lịch hẹn
                         String email = rs.getString("Email");
                         String appointmentStatus = rs.getString("AppointmentStatus");
-                        
+
                         // Tạo mảng chứa thông tin bệnh nhân, hồ sơ y tế và trạng thái lịch hẹn
                         Object[] record = {patient, medicalRecord, email, appointmentStatus};
                         patientRecords.add(record);
@@ -807,7 +807,7 @@ public class DoctorRepository {
                 }
             }
         }
-        
+
         return patientRecords;
     }
 
@@ -821,16 +821,16 @@ public class DoctorRepository {
             System.out.println("Tìm kiếm với từ khóa: " + keyword);
 
             String sql = "SELECT p.*, u.email, mr.recordID, mr.diagnosis, mr.treatmentPlan, " +
-                         "a.appointmentID, a.appointmentDate, a.status " +
-                         "FROM Patients p " +
-                         "JOIN Appointments a ON p.patientID = a.patientID " +
-                         "JOIN UserAccounts u ON p.userID = u.userID " +
-                         "LEFT JOIN MedicalRecords mr ON p.patientID = mr.patientID " +
-                         "AND mr.recordDate = (SELECT MAX(recordDate) FROM MedicalRecords " +
-                         "                     WHERE patientID = p.patientID) " +
-                         "WHERE a.doctorID = ? AND a.status = 'PENDING' " +
-                         "AND (p.patientID LIKE ? OR p.fullName LIKE ? OR p.phoneNumber LIKE ?) " +
-                         "ORDER BY a.appointmentDate";
+                    "a.appointmentID, a.appointmentDate, a.status " +
+                    "FROM Patients p " +
+                    "JOIN Appointments a ON p.patientID = a.patientID " +
+                    "JOIN UserAccounts u ON p.userID = u.userID " +
+                    "LEFT JOIN MedicalRecords mr ON p.patientID = mr.patientID " +
+                    "AND mr.recordDate = (SELECT MAX(recordDate) FROM MedicalRecords " +
+                    "                     WHERE patientID = p.patientID) " +
+                    "WHERE a.doctorID = ? AND a.status = 'PENDING' " +
+                    "AND (p.patientID LIKE ? OR p.fullName LIKE ? OR p.phoneNumber LIKE ?) " +
+                    "ORDER BY a.appointmentDate";
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, doctorId);
@@ -881,10 +881,10 @@ public class DoctorRepository {
 
                         // Tạo đối tượng Appointment
                         Appointment appointment = new Appointment(
-                            conn,
-                            rs.getString("patientID"),
-                            rs.getString("doctorID"),
-                            rs.getTimestamp("appointmentDate").toLocalDateTime()
+                                conn,
+                                rs.getString("patientID"),
+                                rs.getString("doctorID"),
+                                rs.getTimestamp("appointmentDate").toLocalDateTime()
                         );
                         appointment.setAppointmentId(rs.getString("appointmentID"));
                         appointment.setStatus(AppointmentStatus.valueOf(rs.getString("status")));
@@ -944,7 +944,7 @@ public class DoctorRepository {
             }
         }
     }
-    
+
     /**
      * Lưu chỉ số sức khỏe vào cơ sở dữ liệu
      * @param patientId ID của bệnh nhân
@@ -957,7 +957,7 @@ public class DoctorRepository {
         try {
             conn = DatabaseConnection.getConnection();
             String sql = "INSERT INTO VitalSigns (VitalSignID, PatientID, Temperature, SystolicPressure, DiastolicPressure, HeartRate, OxygenSaturation, RecordedAt) " +
-                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, vitalSign.getVitalSignID() != null ? vitalSign.getVitalSignID() : generateVitalSignId(conn));
             stmt.setString(2, patientId);
@@ -1014,95 +1014,120 @@ public class DoctorRepository {
         try {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
-    
-            // 1. Lưu thông tin đơn thuốc vào bảng Prescriptions
+
+            // 1. Lấy và kiểm tra thông tin đơn thuốc
             String prescriptionId = (String) prescriptionData.get("prescriptionId");
             String patientId = (String) prescriptionData.get("patientId");
-            LocalDate prescriptionDate = LocalDate.now(); // Ngày hiện tại
-    
+            LocalDate prescriptionDate = LocalDate.now();
+
+            if (prescriptionId == null || prescriptionId.trim().isEmpty()) {
+                throw new IllegalArgumentException("prescriptionId không được để trống");
+            }
+            if (patientId == null || patientId.trim().isEmpty()) {
+                throw new IllegalArgumentException("patientId không được để trống");
+            }
+            if (doctorId == null || doctorId.trim().isEmpty()) {
+                throw new IllegalArgumentException("doctorId không được để trống");
+            }
+
+            // Kiểm tra trùng lặp prescriptionId và tạo ID mới nếu cần
+            String checkSql = "SELECT COUNT(*) FROM Prescriptions WHERE prescriptionID = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setString(1, prescriptionId);
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        // Tạo ID mới nếu đã tồn tại
+                        prescriptionId = generateNewPrescriptionId(conn);
+                        prescriptionData.put("prescriptionId", prescriptionId);
+                    }
+                }
+            }
+
+            // 2. Lưu thông tin đơn thuốc vào bảng Prescriptions
             String insertPrescriptionSql = "INSERT INTO Prescriptions (prescriptionID, patientID, doctorID, prescriptionDate) " +
-                                          "VALUES (?, ?, ?, ?)";
-            PreparedStatement stmtPrescription = conn.prepareStatement(insertPrescriptionSql);
-            stmtPrescription.setString(1, prescriptionId);
-            stmtPrescription.setString(2, patientId);
-            stmtPrescription.setString(3, doctorId);
-            stmtPrescription.setDate(4, Date.valueOf(prescriptionDate));
-            stmtPrescription.executeUpdate();
-    
-            // 2. Lưu chi tiết đơn thuốc vào bảng PrescriptionDetails
-            String insertDetailSql = "INSERT INTO PrescriptionDetails (prescriptionID, medicationID, dosage, instructions) " +
-                                    "VALUES (?, ?, ?, ?)";
-            PreparedStatement stmtDetail = conn.prepareStatement(insertDetailSql);
-            
+                    "VALUES (?, ?, ?, ?)";
+            try (PreparedStatement stmtPrescription = conn.prepareStatement(insertPrescriptionSql)) {
+                stmtPrescription.setString(1, prescriptionId);
+                stmtPrescription.setString(2, patientId);
+                stmtPrescription.setString(3, doctorId);
+                stmtPrescription.setDate(4, java.sql.Date.valueOf(prescriptionDate));
+                stmtPrescription.executeUpdate();
+            }
+
+            // 3. Lưu chi tiết đơn thuốc vào bảng PrescriptionDetails
             if (medicineList == null || medicineList.isEmpty()) {
-                throw new IllegalArgumentException("Danh sách thuốc trống");
+                throw new IllegalArgumentException("Danh sách thuốc không được để trống");
             }
-            
-            for (Map<String, Object> medicine : medicineList) {
-                // In thông tin thuốc để debug
-                System.out.println("Medicine object content:");
-                for (Map.Entry<String, Object> entry : medicine.entrySet()) {
-                    System.out.println(entry.getKey() + ": " + (entry.getValue() == null ? "null" : "'" + entry.getValue() + "'"));
-                }
-                
-                String medicationId = (String) medicine.get("medicationId");
-                
-                // Kiểm tra medicationId
-                if (medicationId == null || medicationId.isEmpty()) {
-                    // Nếu không có medicationId, mới cần kiểm tra và tạo từ medicineName
-                    String medicineName = null;
-                    if (medicine.containsKey("medicineName")) {
-                        medicineName = (String) medicine.get("medicineName");
-                    } else if (medicine.containsKey("name")) {
-                        medicineName = (String) medicine.get("name");
-                    } else if (medicine.containsKey("ten")) {
-                        medicineName = (String) medicine.get("ten");
+
+            String insertDetailSql = "INSERT INTO PrescriptionDetails (prescriptionID, medicationID, dosage, instructions) " +
+                    "VALUES (?, ?, ?, ?)";
+            try (PreparedStatement stmtDetail = conn.prepareStatement(insertDetailSql)) {
+                for (Map<String, Object> medicine : medicineList) {
+                    String medicationId = (String) medicine.get("medicationId");
+                    String dosage = (String) medicine.get("dosage");
+                    String instructions = (String) medicine.get("instruction");
+                    String medicineName = (String) medicine.get("name");
+
+                    if (dosage == null || dosage.trim().isEmpty()) {
+                        throw new IllegalArgumentException("Liều lượng không được để trống cho thuốc: " + medicineName);
                     }
-                    
-                    // Chỉ khi không có medicationId, mới cần medicineName
-                    if (medicationId == null && (medicineName == null || medicineName.trim().isEmpty())) {
-                        throw new IllegalArgumentException("Cần medicationId hoặc medicineName để lưu đơn thuốc");
+                    if (instructions == null || instructions.trim().isEmpty()) {
+                        throw new IllegalArgumentException("Hướng dẫn không được để trống cho thuốc: " + medicineName);
                     }
-                    
-                    // Tạo medicationId từ medicineName nếu chưa có
-                    if (medicationId == null && medicineName != null) {
-                        try {
-                            medicationId = findOrCreateMedication(medicineName, conn);
-                        } catch (Exception e) {
-                            System.err.println("Lỗi khi tạo medicationId cho thuốc: " + medicineName);
-                            e.printStackTrace();
-                            throw e;
+
+                    if (medicationId == null || medicationId.trim().isEmpty()) {
+                        if (medicineName == null || medicineName.trim().isEmpty()) {
+                            throw new IllegalArgumentException("Tên thuốc không được để trống khi medicationId không tồn tại");
                         }
+                        medicationId = findOrCreateMedication(conn, medicineName);
                     }
+
+                    stmtDetail.setString(1, prescriptionId);
+                    stmtDetail.setString(2, medicationId);
+                    stmtDetail.setString(3, dosage);
+                    stmtDetail.setString(4, instructions);
+                    stmtDetail.addBatch();
                 }
-    
-                String dosage = (String) medicine.get("dosage");
-                String instructions = (String) medicine.get("instructions");
-                
-                // Sử dụng giá trị mặc định nếu không có
-                if (dosage == null) dosage = "Theo chỉ dẫn"; 
-                if (instructions == null) instructions = "Theo chỉ dẫn";
-    
-                stmtDetail.setString(1, prescriptionId);
-                stmtDetail.setString(2, medicationId);
-                stmtDetail.setString(3, dosage);
-                stmtDetail.setString(4, instructions);
-                stmtDetail.executeUpdate();
+                stmtDetail.executeBatch();
             }
-    
+
             conn.commit();
+            System.out.println("Lưu đơn thuốc thành công cho prescriptionID: " + prescriptionId);
             return true;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             if (conn != null) {
                 conn.rollback();
             }
             e.printStackTrace();
             throw e;
+        } catch (IllegalArgumentException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            throw new SQLException("Lỗi dữ liệu đầu vào: " + e.getMessage(), e);
         } finally {
             if (conn != null) {
                 conn.setAutoCommit(true);
                 conn.close();
             }
+        }
+    }
+
+    /**
+     * Sinh mã đơn thuốc duy nhất dựa trên connection hiện tại
+     */
+    private String generateNewPrescriptionId(Connection conn) throws SQLException {
+        String sql = "SELECT MAX(prescriptionID) FROM Prescriptions";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                String maxId = rs.getString(1);
+                if (maxId != null) {
+                    int num = Integer.parseInt(maxId.replace("PRE-", "")) + 1;
+                    return String.format("PRE-%03d", num);
+                }
+            }
+            return "PRE-001"; // Giá trị mặc định nếu không có bản ghi nào
         }
     }
 
@@ -1122,7 +1147,7 @@ public class DoctorRepository {
 
             // Cập nhật trạng thái cuộc hẹn
             String updateAppointmentSql = "UPDATE Appointments SET status = ? " +
-                                         "WHERE patientID = ? AND doctorID = ? AND DATE(appointmentDate) = CURDATE()";
+                    "WHERE patientID = ? AND doctorID = ? AND DATE(appointmentDate) = CURDATE()";
 
             try (PreparedStatement stmt = conn.prepareStatement(updateAppointmentSql)) {
                 stmt.setString(1, AppointmentStatus.COMPLETED.toString());
@@ -1208,37 +1233,34 @@ public class DoctorRepository {
      * @param medicineName Tên thuốc
      * @return ID thuốc
      */
-        private String findOrCreateMedication(String medicineName, Connection conn) throws SQLException {
+    private String findOrCreateMedication(Connection conn, String medicineName) throws SQLException {
         if (medicineName == null || medicineName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Tên thuốc không được để trống");
+            throw new IllegalArgumentException("Tên thuốc không được để trống hoặc null");
         }
-    
-        String medicineId = null;
-        
-        // Sửa tên cột từ MedicineID thành medicationID và MedicineName thành medicineName
-        String checkSql = "SELECT medicationID FROM Medications WHERE medicineName = ?";
-        try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-            checkStmt.setString(1, medicineName);
-            try (ResultSet rs = checkStmt.executeQuery()) {
+
+        String sql = "SELECT medicationID FROM Medications WHERE medicineName = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, medicineName);
+
+            try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    medicineId = rs.getString("medicationID");
+                    return rs.getString("medicationID");
                 }
             }
         }
-        
-        // Nếu chưa tồn tại, thêm mới
-        if (medicineId == null) {
-            medicineId = generateMedicationId(conn);
-            // Sửa tên cột trong câu lệnh INSERT
-            String insertSql = "INSERT INTO Medications (medicationID, medicineName) VALUES (?, ?)";
-            try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-                insertStmt.setString(1, medicineId);
-                insertStmt.setString(2, medicineName);
-                insertStmt.executeUpdate();
-            }
+
+        String medicationId = generateMedicationId(conn);
+
+        sql = "INSERT INTO Medications (medicationID, medicineName) VALUES (?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, medicationId);
+            stmt.setString(2, medicineName);
+            stmt.executeUpdate();
+            System.out.println("Đã tạo mới thuốc với ID: " + medicationId + ", tên: " + medicineName);
         }
-        
-        return medicineId;
+
+        return medicationId;
     }
 
     /**
@@ -1278,8 +1300,8 @@ public class DoctorRepository {
 
         // Lấy chẩn đoán gần nhất
         String selectSql = "SELECT diagnosis FROM MedicalRecords " +
-                           "WHERE patientID = ? AND isHistory = FALSE " +
-                           "ORDER BY recordDate DESC LIMIT 1";
+                "WHERE patientID = ? AND isHistory = FALSE " +
+                "ORDER BY recordDate DESC LIMIT 1";
 
         try (PreparedStatement stmt = conn.prepareStatement(selectSql)) {
             stmt.setString(1, patientId);
@@ -1295,7 +1317,7 @@ public class DoctorRepository {
         if (latestDiagnosis != null && !latestDiagnosis.equals(newDiagnosis)) {
             // Cập nhật tất cả hồ sơ cũ thành tiền sử
             String updateSql = "UPDATE MedicalRecords SET isHistory = TRUE " +
-                               "WHERE patientID = ? AND isHistory = FALSE";
+                    "WHERE patientID = ? AND isHistory = FALSE";
 
             try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
                 stmt.setString(1, patientId);
@@ -1439,8 +1461,8 @@ public class DoctorRepository {
         try {
             conn = DatabaseConnection.getConnection();
             String sql = "SELECT diagnosis FROM MedicalRecords " +
-                         "WHERE patientID = ? AND isHistory = FALSE " +
-                         "ORDER BY recordDate DESC LIMIT 1";
+                    "WHERE patientID = ? AND isHistory = FALSE " +
+                    "ORDER BY recordDate DESC LIMIT 1";
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, patientId);

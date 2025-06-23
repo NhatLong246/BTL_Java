@@ -54,6 +54,9 @@ CREATE TABLE DoctorSchedule (
     CHECK (Status IN ('Đang làm việc', 'Hết ca làm việc'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE DoctorSchedule
+MODIFY COLUMN Status VARCHAR(50) NOT NULL DEFAULT 'Đang làm việc';
+
 -- Bảng Bệnh Nhân
 CREATE TABLE Patients (
     PatientID VARCHAR(50) PRIMARY KEY,
@@ -198,6 +201,8 @@ CREATE TABLE Medications (
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_medicine_name (MedicineName)
 );
+ALTER TABLE Medications
+MODIFY COLUMN MedicineName VARCHAR(100) NOT NULL DEFAULT 'Chưa xác định';
 
 -- Bảng Chi tiết Đơn thuốc
 CREATE TABLE PrescriptionDetails (

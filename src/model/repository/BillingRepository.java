@@ -151,7 +151,7 @@ public class BillingRepository {
      */
     public void logPayment(String billId, String patientId, String paymentMethod) {
         String query = "INSERT INTO PaymentLogs (BillID, PatientID, PaymentMethod, PaymentDate, Amount) " +
-                      "SELECT ?, ?, ?, ?, Amount FROM Bills WHERE BillID = ?";
+                      "SELECT ?, ?, ?, ?, Amount FROM Billing WHERE BillID = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
