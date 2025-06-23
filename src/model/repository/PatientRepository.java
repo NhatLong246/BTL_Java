@@ -83,6 +83,31 @@ public class PatientRepository {
         return null;
     }
 
+    /**
+     * Lấy danh sách tất cả bệnh nhân
+     * @return Danh sách các đối tượng Patient
+     * @throws SQLException nếu có lỗi truy vấn cơ sở dữ liệu
+     */
+    public List<Patient> getAllPatients() throws SQLException {
+        List<Patient> patients = new ArrayList<>();
+        
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            // Thêm ORDER BY vào truy vấn SQL để sắp xếp theo ID
+            String query = "SELECT * FROM Patients ORDER BY PatientID";
+            // Hoặc sắp xếp theo tên
+            // String query = "SELECT * FROM Patients ORDER BY FullName";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                ResultSet rs = stmt.executeQuery();
+                while (rs.next()) {
+                    patients.add(extractPatientFromResultSet(rs));
+                }
+            }
+        }
+        
+        return patients;
+    }
+
     public List<String[]> getMedicalHistory(String patientID) {
         List<String[]> medicalHistory = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection()) {

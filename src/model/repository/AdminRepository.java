@@ -411,80 +411,6 @@ public class AdminRepository {
         }
     }
 
-    // public boolean unlockDoctor(String doctorId) throws SQLException {
-    //     String defaultPassword = "Doctor@123";
-    //     String passwordHash = hashPassword(defaultPassword);
-    //     Connection conn = null;
-    //     try {
-    //         conn = DatabaseConnection.getConnection();
-    //         if (conn == null) {
-    //             throw new SQLException("Không thể kết nối đến cơ sở dữ liệu!");
-    //         }
-
-    //         String checkDoctorSql = "SELECT UserID FROM Doctors WHERE DoctorID = ?";
-    //         String userId = null;
-    //         try (PreparedStatement pstmt = conn.prepareStatement(checkDoctorSql)) {
-    //             pstmt.setString(1, doctorId);
-    //             try (ResultSet rs = pstmt.executeQuery()) {
-    //                 if (rs.next()) {
-    //                     userId = rs.getString("UserID");
-    //                     System.out.println("Tìm thấy bác sĩ với DoctorID: " + doctorId + ", UserID: " + userId);
-    //                 } else {
-    //                     System.out.println("Không tìm thấy bác sĩ với DoctorID: " + doctorId);
-    //                     throw new SQLException("Không tìm thấy bác sĩ với DoctorID: " + doctorId);
-    //                 }
-    //             }
-    //         }
-
-    //         String checkUserSql = "SELECT IsLocked FROM UserAccounts WHERE UserID = ? AND Role = 'Bác sĩ'";
-    //         boolean isLocked = false;
-    //         try (PreparedStatement pstmt = conn.prepareStatement(checkUserSql)) {
-    //             pstmt.setString(1, userId);
-    //             try (ResultSet rs = pstmt.executeQuery()) {
-    //                 if (rs.next()) {
-    //                     isLocked = rs.getBoolean("IsLocked");
-    //                     if (!isLocked) {
-    //                         System.out.println("Tài khoản với UserID: " + userId + " không bị khóa");
-    //                         return false;
-    //                     }
-    //                     System.out.println("Tìm thấy tài khoản người dùng với UserID: " + userId);
-    //                 } else {
-    //                     System.out.println("Không tìm thấy tài khoản người dùng với UserID: " + userId + " hoặc vai trò không phải 'Bác sĩ'");
-    //                     throw new SQLException("Không tìm thấy tài khoản người dùng với UserID: " + userId + " hoặc vai trò không phải 'Bác sĩ'");
-    //                 }
-    //             }
-    //         }
-
-    //         String sql = "UPDATE UserAccounts SET IsLocked = ?, PasswordHash = ? WHERE UserID = ?";
-    //         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-    //             pstmt.setBoolean(1, false);
-    //             pstmt.setString(2, passwordHash);
-    //             pstmt.setString(3, userId);
-    //             int rowsAffected = pstmt.executeUpdate();
-    //             if (rowsAffected > 0) {
-    //                 System.out.println("Đã mở khóa tài khoản bác sĩ với DoctorID: " + doctorId + " với mật khẩu mặc định: " + defaultPassword);
-    //                 return true;
-    //             } else {
-    //                 System.out.println("Không thể mở khóa bác sĩ với DoctorID: " + doctorId + " - Không có hàng nào được cập nhật");
-    //                 throw new SQLException("Không thể mở khóa bác sĩ với DoctorID: " + doctorId + " - Không có hàng nào được cập nhật");
-    //             }
-    //         }
-    //     } catch (SQLException e) {
-    //         System.err.println("Lỗi SQL khi mở khóa bác sĩ: " + e.getMessage());
-    //         throw e;
-    //     } finally {
-    //         if (conn != null) {
-    //             try {
-    //                 conn.close();
-    //                 System.out.println("Đã đóng kết nối cơ sở dữ liệu");
-    //             } catch (SQLException e) {
-    //                 System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
-    //                 e.printStackTrace();
-    //             }
-    //         }
-    //     }
-    // }
-
     public boolean unlockDoctor(String doctorId) throws SQLException {
         String defaultPassword = "Doctor@123";
         Connection conn = null;
@@ -1143,6 +1069,73 @@ public class AdminRepository {
                 
                 List<Doctor> doctors = getDoctorsForShift(day, shiftName);
                 schedule.get(day).put(shiftName, doctors);
+            }
+            
+            return schedule;
+        } catch (SQLException e) {
+            System.err.println("Lỗi SQL khi lấy lịch làm việc: " + e.getMessage());
+            e.printStackTrace();
+            return schedule;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * Lấy lịch làm việc của một bác sĩ cụ thể
+     * @param doctorId ID của bác sĩ
+     * @return Map với cấu trúc: ngày -> ca -> danh sách bác sĩ (chỉ chứa bác sĩ được tìm)
+     */
+    public Map<String, Map<String, List<Doctor>>> getScheduleForDoctor(String doctorId) {
+        Map<String, Map<String, List<Doctor>>> schedule = new HashMap<>();
+        String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
+        String[] shifts = {"Sáng", "Chiều", "Tối"};
+        
+        // Khởi tạo cấu trúc Map
+        for (String day : days) {
+            schedule.put(day, new HashMap<>());
+            for (String shift : shifts) {
+                schedule.get(day).put(shift, new ArrayList<>());
+            }
+        }
+        
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                throw new SQLException("Không thể kết nối đến cơ sở dữ liệu!");
+            }
+            
+            // Lấy thông tin bác sĩ
+            Doctor doctor = getDoctorInfo(doctorId);
+            if (doctor == null) {
+                return schedule;
+            }
+            
+            // Lấy tất cả ca làm việc của bác sĩ cụ thể
+            String sql = "SELECT DayOfWeek, ShiftType FROM DoctorSchedule " +
+                       "WHERE DoctorID = ? AND Status = 'Đang làm việc'";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, doctorId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String day = rs.getString("DayOfWeek");
+                        String shiftName = rs.getString("ShiftType");
+                        
+                        // Chỉ thêm bác sĩ hiện tại vào danh sách, không thêm bác sĩ khác
+                        List<Doctor> doctorList = new ArrayList<>();
+                        doctorList.add(doctor);
+                        
+                        schedule.get(day).put(shiftName, doctorList);
+                    }
+                }
             }
             
             return schedule;

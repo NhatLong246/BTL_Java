@@ -949,4 +949,14 @@ public class DoctorController {
             return new ArrayList<>();
         }
     }
+
+    public List<Patient> getAllPatients() {
+        try {
+            return patientRepository.getAllPatients();
+        } catch (Exception e) {
+            System.err.println("Lỗi khi lấy danh sách bệnh nhân: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
 }

@@ -573,44 +573,29 @@ public class AdminController {
      * @param doctorId ID của bác sĩ
      * @return Map với cấu trúc: ngày -> ca -> danh sách bác sĩ
      */
-    /* public Map<String, Map<String, List<Doctor>>> getDoctorShiftSchedule(String doctorId) {
-        try {
-            String sql = "SELECT ds.DayOfWeek, ds.ShiftType, " +
-                        "d.DoctorID, d.FullName, s.SpecialtyID, s.SpecialtyName " +
-                        "FROM DoctorSchedule ds " +
-                        "JOIN Doctors d ON ds.DoctorID = d.DoctorID " +
-                        "LEFT JOIN Specialties s ON d.SpecialtyID = s.SpecialtyID " +
-                        "WHERE ds.DoctorID = ? OR EXISTS (" +
-                        "SELECT 1 FROM DoctorSchedule WHERE DoctorID = ? AND DayOfWeek = ds.DayOfWeek AND ShiftType = ds.ShiftType)";
-            
-            PreparedStatement stmt = connection.prepareStatement(sql);
-            stmt.setString(1, doctorId);
-            stmt.setString(2, doctorId);
-            
-            ResultSet rs = stmt.executeQuery();
-            System.out.println("Đang truy vấn lịch làm việc cho bác sĩ " + doctorId);
-            return adminRepository.getDoctorShiftSchedule(doctorId);
-        } catch (Exception e) {
-            System.err.println("Lỗi khi lấy lịch làm việc: " + e.getMessage());
-            e.printStackTrace();
-            return new HashMap<>();
-        }
-    } */
-
-    /**
-     * Lấy lịch làm việc của một bác sĩ cụ thể
-     * @param doctorId ID của bác sĩ
-     * @return Map với cấu trúc: ngày -> ca -> danh sách bác sĩ
-     */
     public Map<String, Map<String, List<Doctor>>> getDoctorShiftSchedule(String doctorId) {
-        try {
-            // Sử dụng phương thức từ repository thay vì truy cập trực tiếp database
-            return adminRepository.getDoctorShiftSchedule(doctorId);
-        } catch (Exception e) {
-            System.err.println("Lỗi khi lấy lịch làm việc: " + e.getMessage());
-            e.printStackTrace();
-            return new HashMap<>();
+        Map<String, Map<String, List<Doctor>>> result = adminRepository.getScheduleForDoctor(doctorId);
+        
+        // Lọc lại kết quả để chỉ giữ lại bác sĩ được tìm kiếm
+        for (String day : result.keySet()) {
+            Map<String, List<Doctor>> daySchedule = result.get(day);
+            for (String shift : daySchedule.keySet()) {
+                List<Doctor> doctors = daySchedule.get(shift);
+                List<Doctor> filteredDoctors = new ArrayList<>();
+                
+                for (Doctor doctor : doctors) {
+                    if (doctor.getDoctorId().equals(doctorId)) {
+                        filteredDoctors.add(doctor);
+                        break; // Chỉ thêm đúng bác sĩ cần tìm
+                    }
+                }
+                
+                // Cập nhật lại danh sách bác sĩ đã lọc
+                daySchedule.put(shift, filteredDoctors);
+            }
         }
+        
+        return result;
     }
     
     /**

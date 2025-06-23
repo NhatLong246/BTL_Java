@@ -904,27 +904,6 @@ public class AdminView extends JFrame {
         gbc.insets = new Insets(15, 10, 15, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-    
-        /* JTextField txtDoctorId = new JTextField(40);
-        txtDoctorId.setFont(new Font("Arial", Font.PLAIN, 16));
-        
-        // Tạo nút tìm kiếm RIÊNG chỉ dùng trong formPanel
-        JButton btnSearch = new JButton("Tìm kiếm");
-        btnSearch.setFont(new Font("Arial", Font.PLAIN, 14));
-        btnSearch.setBackground(new Color(0, 123, 255));
-        btnSearch.setForeground(Color.WHITE);
-        btnSearch.setFocusPainted(false);
-        btnSearch.setCursor(new Cursor(Cursor.HAND_CURSOR));
-    
-        // Tạo JPanel riêng cho nút tìm kiếm và trường nhập liệu
-        JPanel searchPanel = new JPanel(new BorderLayout(10, 0));
-        searchPanel.setOpaque(false);
-        searchPanel.add(txtDoctorId, BorderLayout.CENTER);
-        searchPanel.add(btnSearch, BorderLayout.EAST);
-        
-        addFormField(inputPanel, gbc, "ID Bác sĩ:", searchPanel, 0); */
-        
-        // Thay bằng dạng ComboBox
         
         // Tạo model cho ComboBox chứa thông tin bác sĩ
         DefaultComboBoxModel<String> doctorModel = new DefaultComboBoxModel<>();
@@ -1337,7 +1316,7 @@ public class AdminView extends JFrame {
             }
             
             // Lấy dữ liệu lịch làm việc của bác sĩ để hiển thị
-            String[] shiftNames = {"Sáng", "Chiều", "Tối"};
+            /* String[] shiftNames = {"Sáng", "Chiều", "Tối"};
             String[] days = {"Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật"};
             
             // Reset all cells first
@@ -1397,7 +1376,8 @@ public class AdminView extends JFrame {
                         }
                     }
                 }
-            }
+            } */
+            updateScheduleWithDoctorId(doctorId, cellPanels, iconLabels, shifts);
         });
     
         btnSave.addActionListener(e -> {
@@ -1547,6 +1527,7 @@ public class AdminView extends JFrame {
     }
 
     // Phương thức để cập nhật lịch dựa trên ID bác sĩ
+        // Phương thức để cập nhật lịch dựa trên ID bác sĩ
     private void updateScheduleWithDoctorId(String doctorId, JPanel[][] cellPanels, JLabel[][] iconLabels, String[] shifts) {
         if (doctorId.isEmpty()) {
             return;
@@ -1561,6 +1542,7 @@ public class AdminView extends JFrame {
             for (int j = 0; j < days.length; j++) {
                 cellPanels[i][j].setBackground(Color.WHITE);
                 iconLabels[i][j].setText("<html><center>Không có bác sĩ</center></html>");
+                iconLabels[i][j].setToolTipText(null); // Xóa tooltip
             }
         }
         
@@ -1578,39 +1560,43 @@ public class AdminView extends JFrame {
                     List<Doctor> availableDoctors = doctorSchedule.get(day).get(shiftName);
                     
                     if (availableDoctors != null && !availableDoctors.isEmpty()) {
-                        // Format text hiển thị
-                        StringBuilder displayText = new StringBuilder("<html>");
-                                                    
-                        // Giới hạn số lượng bác sĩ hiển thị
-                        int displayLimit = 3; // Chỉ hiển thị tối đa 3 bác sĩ
-                        int totalDoctors = availableDoctors.size();
-                                                    
-                        for (int k = 0; k < Math.min(displayLimit, totalDoctors); k++) {
-                            Doctor doctor = availableDoctors.get(k);
-                            
-                            // Highlight bác sĩ đang tìm kiếm bằng chữ đậm
+                        // THAY ĐỔI Ở ĐÂY: Chỉ hiển thị bác sĩ được tìm kiếm
+                        Doctor foundDoctor = null;
+                        for (Doctor doctor : availableDoctors) {
                             if (doctor.getDoctorId().equals(doctorId)) {
-                                displayText.append("• <b>").append(doctor.getDoctorId()).append(": ")
-                                         .append(doctor.getFullName());
-                                
-                                if (doctor.getSpecialization() != null) {
-                                    displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
-                                }
-                                displayText.append("</b>");
-                            } else {
-                                displayText.append("• ").append(doctor.getDoctorId()).append(": ")
-                                         .append(doctor.getFullName());
-                                
-                                if (doctor.getSpecialization() != null) {
-                                    displayText.append(" (").append(doctor.getSpecialization().getName()).append(")");
-                                }
+                                foundDoctor = doctor;
+                                break;
                             }
-                            displayText.append("<br>");
-                        }                    
-                        displayText.append("</html>");
+                        }
                         
-                        // Cập nhật cell
-                        iconLabels[i][j].setText(displayText.toString());
+                        if (foundDoctor != null) {
+                            // Nếu tìm thấy bác sĩ trong ca này, chỉ hiển thị bác sĩ đó
+                            StringBuilder displayText = new StringBuilder("<html>");
+                            displayText.append("• <b>").append(foundDoctor.getDoctorId()).append(": ")
+                                     .append(foundDoctor.getFullName());
+                            
+                            if (foundDoctor.getSpecialization() != null) {
+                                displayText.append(" (").append(foundDoctor.getSpecialization().getName()).append(")");
+                            }
+                            displayText.append("</b>");
+                            displayText.append("</html>");
+                            
+                            // Cập nhật cell với màu nền highlight
+                            iconLabels[i][j].setText(displayText.toString());
+                            cellPanels[i][j].setBackground(new Color(40, 167, 69, 120)); // Màu xanh đậm hơn
+                            
+                            // Chỉ hiển thị tooltip cho bác sĩ được tìm
+                            StringBuilder tooltipText = new StringBuilder("<html>");
+                            tooltipText.append(foundDoctor.getDoctorId()).append(": ")
+                                      .append(foundDoctor.getFullName());
+                            
+                            if (foundDoctor.getSpecialization() != null) {
+                                tooltipText.append(" (").append(foundDoctor.getSpecialization().getName()).append(")");
+                            }
+                            tooltipText.append("</html>");
+                            
+                            iconLabels[i][j].setToolTipText(tooltipText.toString());
+                        }
                     }
                 }
             }

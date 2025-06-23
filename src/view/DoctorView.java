@@ -1053,7 +1053,7 @@ public class DoctorView extends JFrame {
         return button;
     }
 
-    public void showBookAppointment() {
+    /* public void showBookAppointment() {
         contentPanel.removeAll();
         contentPanel.setLayout(new BorderLayout());
     
@@ -1204,6 +1204,207 @@ public class DoctorView extends JFrame {
                 String dateTimeStr = appointmentDate.toString() + " " + hour + ":" + minute + ":00";
                 
                 controller.bookAppointment(txtPatientId.getText(), dateTimeStr);
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng chọn ngày hẹn!", 
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setOpaque(false);
+        wrapperPanel.add(formPanel, BorderLayout.CENTER);
+        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 100, 50, 100));
+    
+        contentPanel.add(titleLabel, BorderLayout.NORTH);
+        contentPanel.add(wrapperPanel, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+        
+        setSelectedButton(btnBook);
+    } */
+
+    public void showBookAppointment() {
+        contentPanel.removeAll();
+        contentPanel.setLayout(new BorderLayout());
+    
+        JLabel titleLabel = new JLabel("Đặt lịch hẹn", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
+    
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+                BorderFactory.createEmptyBorder(30, 50, 30, 50)
+        ));
+    
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 10, 15, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+    
+        // Thay thế JTextField bằng JComboBox
+        JComboBox<Patient> patientComboBox = new JComboBox<>();
+        patientComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Patient) {
+                    Patient patient = (Patient) value;
+                    setText(patient.getPatientID() + " - " + patient.getFullName());
+                }
+                return this;
+            }
+        });
+        patientComboBox.setFont(new Font("Arial", Font.PLAIN, 16));
+        
+        // Nạp danh sách bệnh nhân vào ComboBox
+        List<Patient> patients = controller.getAllPatients();
+        DefaultComboBoxModel<Patient> patientModel = new DefaultComboBoxModel<>();
+        for (Patient patient : patients) {
+            patientModel.addElement(patient);
+        }
+        patientComboBox.setModel(patientModel);
+
+        // Thêm ComboBox chọn bệnh nhân vào form (không thêm dòng tìm kiếm)
+        addFormField(formPanel, gbc, "Chọn bệnh nhân:", patientComboBox, 0);
+        
+        // Các phần tử khác như cũ
+        UtilDateModel appointmentModel = new UtilDateModel();
+        appointmentModel.setValue(Calendar.getInstance().getTime());
+        
+        Properties properties = new Properties();
+        properties.put("text.today", "Hôm nay");
+        properties.put("text.month", "Tháng");
+        properties.put("text.year", "Năm");
+        
+        JDatePanelImpl appointmentDatePanel = new JDatePanelImpl(appointmentModel, properties);
+        JDatePickerImpl appointmentDatePicker = new JDatePickerImpl(appointmentDatePanel, new DateLabelFormatter());
+        appointmentDatePicker.setBackground(Color.WHITE);
+        appointmentDatePicker.setOpaque(false);
+        appointmentDatePicker.getJFormattedTextField().setFont(new Font("Arial", Font.PLAIN, 16));
+        
+        JPanel timePanel = new JPanel(new GridLayout(1, 2, 10, 0));
+        timePanel.setOpaque(false);
+        
+        String[] hours = new String[24];
+        for (int i = 0; i < 24; i++) {
+            hours[i] = String.format("%02d", i);
+        }
+        JComboBox<String> hourComboBox = new JComboBox<>(hours);
+        hourComboBox.setFont(new Font("Arial", Font.PLAIN, 16));
+        
+        String[] minutes = new String[60];
+        for (int i = 0; i < 60; i++) {
+            minutes[i] = String.format("%02d", i);
+        }
+        JComboBox<String> minuteComboBox = new JComboBox<>(minutes);
+        minuteComboBox.setFont(new Font("Arial", Font.PLAIN, 16));
+        
+        hourComboBox.setSelectedItem("08");
+        minuteComboBox.setSelectedItem("00");
+        
+        JLabel hourLabel = new JLabel("Giờ:");
+        hourLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        
+        JLabel minuteLabel = new JLabel("Phút:");
+        minuteLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        
+        JPanel hourPanel = new JPanel(new BorderLayout(5, 0));
+        hourPanel.setOpaque(false);
+        hourPanel.add(hourLabel, BorderLayout.WEST);
+        hourPanel.add(hourComboBox, BorderLayout.CENTER);
+        
+        JPanel minutePanel = new JPanel(new BorderLayout(5, 0));
+        minutePanel.setOpaque(false);
+        minutePanel.add(minuteLabel, BorderLayout.WEST);
+        minutePanel.add(minuteComboBox, BorderLayout.CENTER);
+        
+        timePanel.add(hourPanel);
+        timePanel.add(minutePanel);
+        
+        addFormField(formPanel, gbc, "Ngày hẹn:", appointmentDatePicker, 2);
+        addFormField(formPanel, gbc, "Thời gian:", timePanel, 3);
+        
+        JPanel quickTimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        quickTimePanel.setOpaque(false);
+        
+        JButton morning1 = new JButton("8:00");
+        JButton morning2 = new JButton("9:30");
+        JButton afternoon1 = new JButton("14:00");
+        JButton afternoon2 = new JButton("15:30");
+        
+        styleQuickTimeButton(morning1);
+        styleQuickTimeButton(morning2);
+        styleQuickTimeButton(afternoon1);
+        styleQuickTimeButton(afternoon2);
+        
+        morning1.addActionListener(e -> {
+            hourComboBox.setSelectedItem("08");
+            minuteComboBox.setSelectedItem("00");
+        });
+        
+        morning2.addActionListener(e -> {
+            hourComboBox.setSelectedItem("09");
+            minuteComboBox.setSelectedItem("30");
+        });
+        
+        afternoon1.addActionListener(e -> {
+            hourComboBox.setSelectedItem("14");
+            minuteComboBox.setSelectedItem("00");
+        });
+        
+        afternoon2.addActionListener(e -> {
+            hourComboBox.setSelectedItem("15");
+            minuteComboBox.setSelectedItem("30");
+        });
+        
+        quickTimePanel.add(new JLabel("Giờ phổ biến: "));
+        quickTimePanel.add(morning1);
+        quickTimePanel.add(morning2);
+        quickTimePanel.add(afternoon1);
+        quickTimePanel.add(afternoon2);
+        
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.gridwidth = 3;
+        gbc.insets = new Insets(5, 10, 15, 10);
+        formPanel.add(quickTimePanel, gbc);
+        
+        JButton btnBook = new JButton("Đặt lịch");
+        btnBook.setFont(new Font("Arial", Font.BOLD, 16));
+        btnBook.setBackground(new Color(0, 123, 255));
+        btnBook.setForeground(Color.WHITE);
+        btnBook.setFocusPainted(false);
+        btnBook.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnBook.setPreferredSize(new Dimension(200, 45));
+    
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 3;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(30, 10, 10, 10);
+        formPanel.add(btnBook, gbc);
+    
+        btnBook.addActionListener(e -> {
+            Date selectedDate = (Date) appointmentDatePicker.getModel().getValue();
+            if (selectedDate != null) {
+                LocalDate appointmentDate = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                
+                String hour = (String) hourComboBox.getSelectedItem();
+                String minute = (String) minuteComboBox.getSelectedItem();
+                
+                String dateTimeStr = appointmentDate.toString() + " " + hour + ":" + minute + ":00";
+                
+                if (patientComboBox.getSelectedItem() != null) {
+                    Patient selectedPatient = (Patient) patientComboBox.getSelectedItem();
+                    controller.bookAppointment(selectedPatient.getPatientID(), dateTimeStr);
+                } else {
+                    JOptionPane.showMessageDialog(this, 
+                        "Vui lòng chọn bệnh nhân!", 
+                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
             } else {
                 JOptionPane.showMessageDialog(this, 
                     "Vui lòng chọn ngày hẹn!", 
