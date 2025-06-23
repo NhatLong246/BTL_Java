@@ -956,9 +956,8 @@ public class DoctorRepository {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
-            String sql = "INSERT INTO VitalSigns (vitalSignID, patientID, temperature, " +
-                         "BloodPressure, heartRate, oxygenSaturation, recordedAt) " +
-                         "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO VitalSigns (VitalSignID, PatientID, Temperature, SystolicPressure, DiastolicPressure, HeartRate, OxygenSaturation, RecordedAt) " +
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, vitalSign.getVitalSignID() != null ? vitalSign.getVitalSignID() : generateVitalSignId(conn));
             stmt.setString(2, patientId);
@@ -984,7 +983,7 @@ public class DoctorRepository {
      * @throws SQLException nếu có lỗi
      */
     private String generateVitalSignId(Connection conn) throws SQLException {
-        String query = "SELECT MAX(SUBSTRING(vitalSignID, 4)) AS maxID FROM VitalSigns WHERE vitalSignID LIKE 'VS-%'";
+        String query = "SELECT MAX(SUBSTRING(VitalSignID, 4)) AS maxID FROM VitalSigns WHERE VitalSignID LIKE 'VS-%'";
         try (PreparedStatement stmt = conn.prepareStatement(query)) {
             ResultSet rs = stmt.executeQuery();
             int maxID = 0;
