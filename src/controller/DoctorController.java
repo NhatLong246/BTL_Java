@@ -363,37 +363,6 @@ public class DoctorController {
         return isValid;
     }
 
-    // public void bookAppointment(String patientId, String dateStr) {
-    //     if (patientId.isEmpty() || dateStr.isEmpty()) {
-    //         JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bệnh nhân và ngày hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //         return;
-    //     }
-    
-    //     try {
-    //         LocalDateTime appointmentDateTime = LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            
-    //         if (appointmentDateTime.isBefore(LocalDateTime.now())) {
-    //             JOptionPane.showMessageDialog(view, "Thời gian hẹn phải sau thời gian hiện tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //             return;
-    //         }
-            
-    //         Patient patient = patientRepository.getPatientByID(patientId);
-    //         if (patient == null) {
-    //             JOptionPane.showMessageDialog(view, "Không tìm thấy bệnh nhân với ID: " + patientId, "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //             return;
-    //         }
-
-    //         if (repository.bookAppointment(patientId, appointmentDateTime.toLocalDate(), doctorId)) {
-    //             JOptionPane.showMessageDialog(view, "Đặt lịch hẹn thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
-    //             showHome();
-    //         } else {
-    //             JOptionPane.showMessageDialog(view, "Không thể đặt lịch hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //         }
-    //     } catch (DateTimeParseException e) {
-    //         JOptionPane.showMessageDialog(view, "Định dạng ngày không hợp lệ (YYYY-MM-DD HH:mm:ss)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-    //     }
-    // }
-
     public void bookAppointment(String patientId, String dateStr) {
         if (patientId.isEmpty() || dateStr.isEmpty()) {
             JOptionPane.showMessageDialog(view, "Vui lòng nhập ID bệnh nhân và ngày hẹn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -1045,6 +1014,75 @@ public class DoctorController {
             System.err.println("Lỗi khi lấy danh sách bệnh nhân: " + e.getMessage());
             e.printStackTrace();
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Lấy danh sách tất cả dịch vụ y tế
+     * @return Danh sách dịch vụ dạng Object[] (id, tên, giá)
+     */
+    public List<Object[]> getAllServices() {
+        try {
+            return repository.getAllServices();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * Tạo mã hóa đơn mới
+     * @return Mã hóa đơn mới
+     */
+    public String generateNewBillId() {
+        try {
+            return repository.generateNewBillId();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "BILL-ERR";
+        }
+    }
+    
+    /**
+     * Lưu hóa đơn vào database
+     * @param billData Thông tin hóa đơn
+     * @param services Danh sách dịch vụ đã chọn
+     * @return true nếu lưu thành công
+     */
+    public boolean saveBill(Map<String, Object> billData, List<Map<String, Object>> services) {
+        try {
+            return repository.saveBill(billData, services);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Lấy tên bệnh nhân từ ID bệnh nhân
+     * @param patientId ID bệnh nhân
+     * @return Tên bệnh nhân
+     */
+    public String getPatientName(String patientId) {
+        Patient patient = getPatientById(patientId);
+        if (patient != null) {
+            return patient.getFullName();
+        }
+        return "Không xác định";
+    }
+
+    /**
+     * Tạo hóa đơn chờ thanh toán
+     * @param billData Thông tin hóa đơn
+     * @param services Danh sách dịch vụ đã chọn
+     * @return true nếu tạo thành công
+     */
+    public boolean createPendingBill(Map<String, Object> billData, List<Map<String, Object>> services) {
+        try {
+            return repository.createPendingBill(billData, services);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 }

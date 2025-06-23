@@ -88,13 +88,14 @@ public class PatientController {
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                // Loại bỏ GROUP BY hoặc thêm tất cả cột vào mệnh đề GROUP BY
+                // Sử dụng GROUP_CONCAT để gộp các chẩn đoán thành một chuỗi
                 "SELECT p.PrescriptionID, p.PrescriptionDate, d.FullName as DoctorName, " +
-                "mr.Diagnosis " +
+                "GROUP_CONCAT(DISTINCT mr.Diagnosis SEPARATOR ', ') as Diagnosis " +
                 "FROM Prescriptions p " +
                 "JOIN Doctors d ON p.DoctorID = d.DoctorID " +
                 "LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID AND p.DoctorID = mr.DoctorID " +
                 "WHERE p.PatientID = ? " +
+                "GROUP BY p.PrescriptionID, p.PrescriptionDate, d.FullName " + 
                 "ORDER BY p.PrescriptionDate DESC")) {
             
             stmt.setString(1, patientId);

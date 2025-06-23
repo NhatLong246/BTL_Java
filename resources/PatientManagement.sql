@@ -111,16 +111,14 @@ CREATE TABLE Billing (
 
 -- Bảng Chi Tiết Hóa Đơn
 CREATE TABLE BillingDetails (
-    BillDetailID VARCHAR(50) PRIMARY KEY,
     BillID VARCHAR(50) NOT NULL,
     ServiceID VARCHAR(50) NOT NULL,
     Amount DECIMAL(10,2) NOT NULL CHECK (Amount >= 0),
-    UNIQUE KEY unique_bill_service (BillID, ServiceID),
-    FOREIGN KEY (BillID) REFERENCES Billing(BillID) 
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (ServiceID) REFERENCES Services(ServiceID) 
-        ON DELETE CASCADE ON UPDATE CASCADE
+    PRIMARY KEY (BillID, ServiceID),
+    FOREIGN KEY (BillID) REFERENCES Billing(BillID) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ServiceID) REFERENCES Services(ServiceID) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
 
 -- thêm bảng mới 
 CREATE TABLE PaymentLogs (

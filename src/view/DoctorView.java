@@ -20,20 +20,26 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Date;
+import java.util.HashMap;
 import java.time.ZoneId;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
+
+import javax.swing.JDialog;
 
 public class DoctorView extends JFrame {
     private JPanel contentPanel;
@@ -1819,9 +1825,11 @@ public class DoctorView extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         buttonPanel.setOpaque(false);
 
+        JButton serviceButton = createQuickButton("Chọn dịch vụ", new Color(23, 162, 184));
         JButton prescriptionButton = createQuickButton("Kê đơn thuốc", new Color(40, 167, 69));
         JButton completeButton = createQuickButton("Hoàn thành khám", new Color(0, 123, 255));
 
+        buttonPanel.add(serviceButton);
         buttonPanel.add(prescriptionButton);
         buttonPanel.add(completeButton);
 
@@ -2012,6 +2020,23 @@ public class DoctorView extends JFrame {
             }
         });
 
+        // Xử lý sự kiện khi nhấn nút chọn dịch vụ
+        serviceButton.addActionListener(e -> {
+            int selectedRow = patientTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng chọn bệnh nhân để thêm dịch vụ", 
+                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            String patientId = patientTable.getValueAt(selectedRow, 0).toString();
+            String patientName = patientTable.getValueAt(selectedRow, 1).toString();
+            
+            // Mở dialog chọn dịch vụ
+            showServiceSelectionDialog(patientId, patientName);
+        });
+
         // Xử lý sự kiện khi nhấn nút kê đơn thuốc
         prescriptionButton.addActionListener(e -> prescribeForSelectedPatient(patientTable));
 
@@ -2092,6 +2117,237 @@ public class DoctorView extends JFrame {
             if (tableColumn.getPreferredWidth() > 300) {
                 tableColumn.setPreferredWidth(300);
             }
+        }
+    }
+
+    /**
+     * Hiển thị dialog chọn dịch vụ y tế
+     * @param patientId ID của bệnh nhân
+     * @param patientName Tên của bệnh nhân
+     */
+    private void showServiceSelectionDialog(String patientId, String patientName) {
+        JDialog dialog = new JDialog(this, "Chọn dịch vụ y tế", true);
+        dialog.setSize(700, 500);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        // Panel thông tin bệnh nhân
+        JPanel patientPanel = new JPanel(new GridLayout(1, 2, 10, 0));
+        patientPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder("Thông tin bệnh nhân"),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        
+        JLabel patientIdLabel = new JLabel("Mã bệnh nhân: " + patientId);
+        JLabel patientNameLabel = new JLabel("Họ tên: " + patientName);
+        
+        patientIdLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        patientNameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        
+        patientPanel.add(patientIdLabel);
+        patientPanel.add(patientNameLabel);
+        
+        // Danh sách các dịch vụ
+        String[] columns = {"ID", "Tên dịch vụ", "Giá", "Chọn"};
+        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 3) {
+                    return Boolean.class;
+                }
+                return super.getColumnClass(columnIndex);
+            }
+            
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 3;
+            }
+        };
+        
+        JTable serviceTable = new JTable(model);
+        serviceTable.setRowHeight(30);
+        serviceTable.getColumnModel().getColumn(0).setPreferredWidth(70);
+        serviceTable.getColumnModel().getColumn(1).setPreferredWidth(250);
+        serviceTable.getColumnModel().getColumn(2).setPreferredWidth(100);
+        serviceTable.getColumnModel().getColumn(3).setPreferredWidth(50);
+        
+        // Lấy danh sách dịch vụ từ database
+        List<Object[]> services = controller.getAllServices();
+        
+        // Khi thêm dịch vụ vào model
+        if (services != null && !services.isEmpty()) {
+            for (Object[] service : services) {
+                double cost = (Double) service[2];
+                model.addRow(new Object[] {
+                    service[0],                // ServiceID
+                    service[1],                // ServiceName
+                    formatCurrency(cost),      // Cost (đã định dạng)
+                    false,                     // Selected 
+                    cost                       // Cost (giá trị số - cột ẩn)
+                });
+            }
+        }
+        
+        // Và khi tính tổng, sử dụng giá trị số trực tiếp
+        // if (e.getColumn() == 3) {
+        //     double total = 0;
+        //     for (int i = 0; i < serviceTable.getRowCount(); i++) {
+        //         Boolean selected = (Boolean) serviceTable.getValueAt(i, 3);
+        //         if (selected) {
+        //             double cost = Double.parseDouble(serviceTable.getValueAt(i, 4).toString());
+        //             total += cost;
+        //         }
+        //     }
+        //     totalLabel.setText("Tổng tiền: " + formatCurrency(total));
+        // }
+        
+        JScrollPane scrollPane = new JScrollPane(serviceTable);
+        
+        // Panel tính tiền
+        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JLabel totalLabel = new JLabel("Tổng tiền: 0 VNĐ");
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        totalPanel.add(totalLabel);
+        
+        // Cập nhật tổng tiền khi chọn dịch vụ
+        serviceTable.getModel().addTableModelListener(e -> {
+            if (e.getColumn() == 3) {
+                double total = 0;
+                for (int i = 0; i < serviceTable.getRowCount(); i++) {
+                    Boolean selected = (Boolean) serviceTable.getValueAt(i, 3);
+                    if (selected) {
+                        String costStr = (String) serviceTable.getValueAt(i, 2);
+                        // In ra giá trị để kiểm tra
+                        System.out.println("Giá dịch vụ: " + costStr);
+                        double cost = parseCurrency(costStr);
+                        System.out.println("Sau khi parse: " + cost);
+                        total += cost;
+                    }
+                }
+                System.out.println("Tổng tiền: " + total);
+                totalLabel.setText("Tổng tiền: " + formatCurrency(total));
+            }
+        });
+        
+        // Panel nút thao tác
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        
+        JButton cancelButton = new JButton("Hủy");
+        cancelButton.setFont(new Font("Arial", Font.BOLD, 14));
+        cancelButton.setPreferredSize(new Dimension(100, 35));
+        
+        JButton saveButton = new JButton("Lưu hóa đơn");
+        saveButton.setFont(new Font("Arial", Font.BOLD, 14));
+        saveButton.setBackground(new Color(40, 167, 69));
+        saveButton.setForeground(Color.WHITE);
+        saveButton.setPreferredSize(new Dimension(150, 35));
+        
+        buttonPanel.add(cancelButton);
+        buttonPanel.add(saveButton);
+        
+        // Xử lý sự kiện nút Hủy
+        cancelButton.addActionListener(e -> dialog.dispose());
+        
+        // Xử lý sự kiện nút Lưu hóa đơn
+        saveButton.addActionListener(e -> {
+            // Lấy các dịch vụ đã chọn
+            List<Map<String, Object>> selectedServices = new ArrayList<>();
+            double totalAmount = 0;
+            
+            for (int i = 0; i < serviceTable.getRowCount(); i++) {
+                Boolean selected = (Boolean) serviceTable.getValueAt(i, 3);
+                if (selected) {
+                    String serviceId = (String) serviceTable.getValueAt(i, 0);
+                    String serviceName = (String) serviceTable.getValueAt(i, 1);
+                    String costStr = (String) serviceTable.getValueAt(i, 2);
+                    double cost = parseCurrency(costStr);
+                    
+                    Map<String, Object> service = new HashMap<>();
+                    service.put("serviceId", serviceId);
+                    service.put("serviceName", serviceName);
+                    service.put("cost", cost);
+                    
+                    selectedServices.add(service);
+                    totalAmount += cost;
+                }
+            }
+            
+            // Kiểm tra nếu chưa chọn dịch vụ nào
+            if (selectedServices.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Vui lòng chọn ít nhất một dịch vụ!", 
+                    "Cảnh báo", 
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Tạo billData map và gán các giá trị cơ bản
+            String billId = controller.generateNewBillId();
+            Map<String, Object> billData = new HashMap<>();
+            billData.put("billId", billId);
+            billData.put("patientId", patientId);
+            billData.put("totalAmount", totalAmount);
+            billData.put("status", "Chưa thanh toán");  // Mặc định là chưa thanh toán
+            
+            // Lưu hóa đơn mà không cần chọn phương thức thanh toán
+            try {
+                boolean success = controller.createPendingBill(billData, selectedServices);
+                
+                if (success) {
+                    JOptionPane.showMessageDialog(dialog, 
+                        "Đã tạo hóa đơn thành công!\n" +
+                        "Mã hóa đơn: " + billId + "\n" +
+                        "Số tiền: " + formatCurrency(totalAmount) + "\n" +
+                        "Bệnh nhân sẽ thanh toán tại quầy thu ngân hoặc qua app.", 
+                        "Thành công", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(dialog, 
+                        "Không thể tạo hóa đơn. Vui lòng thử lại!", 
+                        "Lỗi", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Lỗi: " + ex.getMessage(), 
+                    "Lỗi", 
+                    JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        });
+        
+        // Thêm các panel vào dialog
+        dialog.add(patientPanel, BorderLayout.NORTH);
+        dialog.add(scrollPane, BorderLayout.CENTER);
+        
+        JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        southPanel.add(totalPanel, BorderLayout.NORTH);
+        southPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.add(southPanel, BorderLayout.SOUTH);
+        
+        // Hiển thị dialog
+        dialog.setVisible(true);
+    }
+
+    // Hàm định dạng số tiền
+    private String formatCurrency(double amount) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(amount) + " VNĐ";
+    }
+    
+    //hàm parseCurrency để xử lý đúng số tiền từ chuỗi
+    private double parseCurrency(String costStr) {
+        try {
+            // Loại bỏ "VNĐ" và tất cả dấu phẩy, dấu cách
+            costStr = costStr.replace(" VNĐ", "").replace("VNĐ", "")
+                             .replace(",", "").replace(".", "").trim();
+            return Double.parseDouble(costStr);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
         }
     }
 
@@ -2206,5 +2462,158 @@ public class DoctorView extends JFrame {
             }
         }
         return schedule;
+    }
+
+    /**
+     * Hiển thị dialog để chọn phương thức thanh toán và trạng thái thanh toán
+     * @param parentDialog Dialog cha
+     * @param billData Dữ liệu hóa đơn
+     * @param selectedServices Danh sách dịch vụ đã chọn
+     */
+    private void showPaymentMethodDialog(JDialog parentDialog, Map<String, Object> billData, 
+                                       List<Map<String, Object>> selectedServices) {
+        JDialog paymentDialog = new JDialog(parentDialog, "Thanh toán", true);
+        paymentDialog.setSize(400, 300);
+        paymentDialog.setLocationRelativeTo(parentDialog);
+        paymentDialog.setLayout(new BorderLayout(10, 10));
+        
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        // Thông tin hóa đơn
+        JPanel infoPanel = new JPanel(new GridLayout(3, 1, 10, 10));
+        double totalAmount = (Double) billData.get("totalAmount");
+        String patientId = (String) billData.get("patientId");
+        String patientName = controller.getPatientName(patientId);  // Giả định có phương thức này trong controller
+        
+        JLabel patientLabel = new JLabel("Bệnh nhân: " + patientName + " (ID: " + patientId + ")");
+        JLabel totalLabel = new JLabel("Tổng tiền: " + formatCurrency(totalAmount));
+        JLabel messageLabel = new JLabel("Vui lòng chọn phương thức thanh toán:");
+        
+        patientLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        totalLabel.setForeground(new Color(0, 100, 0));
+        messageLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        infoPanel.add(patientLabel);
+        infoPanel.add(totalLabel);
+        infoPanel.add(messageLabel);
+        
+        // Panel phương thức thanh toán với RadioButton
+        JPanel methodPanel = new JPanel(new GridLayout(4, 1, 5, 5));
+        methodPanel.setBorder(BorderFactory.createTitledBorder("Phương thức thanh toán"));
+        
+        ButtonGroup paymentGroup = new ButtonGroup();
+        JRadioButton cashOption = new JRadioButton("Tiền mặt");
+        JRadioButton transferOption = new JRadioButton("Chuyển khoản");
+        JRadioButton cardOption = new JRadioButton("Thẻ tín dụng/ghi nợ");
+        JRadioButton insuranceOption = new JRadioButton("Bảo hiểm y tế");
+        
+        cashOption.setFont(new Font("Arial", Font.PLAIN, 14));
+        transferOption.setFont(new Font("Arial", Font.PLAIN, 14));
+        cardOption.setFont(new Font("Arial", Font.PLAIN, 14));
+        insuranceOption.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        paymentGroup.add(cashOption);
+        paymentGroup.add(transferOption);
+        paymentGroup.add(cardOption);
+        paymentGroup.add(insuranceOption);
+        
+        cashOption.setSelected(true);  // Mặc định là tiền mặt
+        
+        methodPanel.add(cashOption);
+        methodPanel.add(transferOption);
+        methodPanel.add(cardOption);
+        methodPanel.add(insuranceOption);
+        
+        // Panel trạng thái thanh toán
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        statusPanel.setBorder(BorderFactory.createTitledBorder("Trạng thái thanh toán"));
+        
+        ButtonGroup statusGroup = new ButtonGroup();
+        JRadioButton paidOption = new JRadioButton("Đã thanh toán");
+        JRadioButton unpaidOption = new JRadioButton("Chưa thanh toán");
+        
+        paidOption.setFont(new Font("Arial", Font.PLAIN, 14));
+        unpaidOption.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        statusGroup.add(paidOption);
+        statusGroup.add(unpaidOption);
+        
+        paidOption.setSelected(true);  // Mặc định là đã thanh toán
+        
+        statusPanel.add(paidOption);
+        statusPanel.add(unpaidOption);
+        
+        // Panel nút điều khiển
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton cancelButton = new JButton("Hủy");
+        JButton confirmButton = new JButton("Xác nhận");
+        
+        cancelButton.setPreferredSize(new Dimension(100, 35));
+        confirmButton.setPreferredSize(new Dimension(120, 35));
+        confirmButton.setBackground(new Color(40, 167, 69));
+        confirmButton.setForeground(Color.WHITE);
+        confirmButton.setFont(new Font("Arial", Font.BOLD, 14));
+        
+        buttonPanel.add(cancelButton);
+        buttonPanel.add(confirmButton);
+        
+        // Sự kiện cho các nút
+        cancelButton.addActionListener(e -> paymentDialog.dispose());
+        
+        confirmButton.addActionListener(e -> {
+            // Lấy phương thức thanh toán đã chọn
+            String paymentMethod;
+            if (cashOption.isSelected()) paymentMethod = "Tiền mặt";
+            else if (transferOption.isSelected()) paymentMethod = "Chuyển khoản";
+            else if (cardOption.isSelected()) paymentMethod = "Thẻ tín dụng";
+            else paymentMethod = "Bảo hiểm y tế";
+            
+            // Lấy trạng thái thanh toán đã chọn
+            String paymentStatus = paidOption.isSelected() ? "Đã thanh toán" : "Chưa thanh toán";
+            
+            // Cập nhật dữ liệu hóa đơn
+            billData.put("paymentMethod", paymentMethod);
+            billData.put("status", paymentStatus);
+            
+            // Lưu hóa đơn và hiển thị thông báo thành công
+            try {
+                boolean success = controller.saveBill(billData, selectedServices);
+                if (success) {
+                    paymentDialog.dispose();
+                    parentDialog.dispose();
+                    
+                    JOptionPane.showMessageDialog(this,
+                        "Hóa đơn đã được lưu thành công!\n" +
+                        "Mã hóa đơn: " + billData.get("billId") + "\n" +
+                        "Phương thức: " + paymentMethod + "\n" +
+                        "Trạng thái: " + paymentStatus,
+                        "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                        "Không thể lưu hóa đơn. Vui lòng thử lại sau!",
+                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi: " + ex.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        });
+        
+        // Thêm các panel vào dialog
+        mainPanel.add(infoPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        mainPanel.add(methodPanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(statusPanel);
+        
+        paymentDialog.add(mainPanel, BorderLayout.CENTER);
+        paymentDialog.add(buttonPanel, BorderLayout.SOUTH);
+        
+        paymentDialog.setVisible(true);
     }
 }

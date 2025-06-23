@@ -1774,4 +1774,224 @@ public class DoctorRepository {
             }
         }
     }
+
+    /**
+     * Lấy danh sách tất cả dịch vụ y tế
+     * @return Danh sách dịch vụ
+     * @throws SQLException nếu có lỗi SQL
+     */
+    public List<Object[]> getAllServices() throws SQLException {
+        List<Object[]> services = new ArrayList<>();
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT ServiceID, ServiceName, Cost FROM Services ORDER BY ServiceName")) {
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Object[] service = new Object[3];
+                    service[0] = rs.getString("ServiceID");
+                    service[1] = rs.getString("ServiceName");
+                    service[2] = rs.getDouble("Cost");
+                    services.add(service);
+                }
+            }
+        }
+        
+        return services;
+    }
+    
+    /**
+     * Tạo mã hóa đơn mới
+     * @return Mã hóa đơn mới
+     * @throws SQLException nếu có lỗi SQL
+     */
+    public String generateNewBillId() throws SQLException {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT MAX(BillID) AS lastID FROM Billing")) {
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    String lastId = rs.getString("lastID");
+                    
+                    if (lastId != null) {
+                        // Format: BILL-XXX
+                        try {
+                            int lastNumber = Integer.parseInt(lastId.substring(5));
+                            int newNumber = lastNumber + 1;
+                            return String.format("BILL-%03d", newNumber);
+                        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+                            System.out.println("Không thể parse được ID hóa đơn cuối: " + lastId);
+                            return "BILL-001";
+                        }
+                    }
+                }
+                
+                // Nếu không tìm thấy ID nào hoặc có lỗi xảy ra
+                return "BILL-001";
+            }
+        }
+    }
+    
+    /**
+     * Lưu hóa đơn và chi tiết hóa đơn vào database
+     * @param billData Thông tin hóa đơn
+     * @param services Danh sách dịch vụ đã chọn
+     * @return true nếu lưu thành công
+     * @throws SQLException nếu có lỗi SQL
+     */
+    public boolean saveBill(Map<String, Object> billData, List<Map<String, Object>> services) throws SQLException {
+        Connection conn = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+            
+            String billId = (String) billData.get("billId");
+            String patientId = (String) billData.get("patientId");
+            double totalAmount = (Double) billData.get("totalAmount");
+            String paymentMethod = (String) billData.get("paymentMethod");
+            String status = (String) billData.get("status");
+            
+            // Kiểm tra dữ liệu đầu vào
+            if (billId == null || billId.trim().isEmpty() || 
+                patientId == null || patientId.trim().isEmpty() || 
+                totalAmount < 0 || 
+                paymentMethod == null || paymentMethod.trim().isEmpty() ||
+                status == null || status.trim().isEmpty()) {
+                throw new IllegalArgumentException("Dữ liệu hóa đơn không hợp lệ");
+            }
+            
+            // 1. Lưu thông tin hóa đơn vào bảng Billing
+            String insertBillSql = "INSERT INTO Billing (BillID, PatientID, TotalAmount, PaymentMethod, Status, CreatedAt) " +
+                                  "VALUES (?, ?, ?, ?, ?, NOW())";
+            
+            try (PreparedStatement stmtBill = conn.prepareStatement(insertBillSql)) {
+                stmtBill.setString(1, billId);
+                stmtBill.setString(2, patientId);
+                stmtBill.setDouble(3, totalAmount);
+                stmtBill.setString(4, paymentMethod);
+                stmtBill.setString(5, status);
+                stmtBill.executeUpdate();
+            }
+            
+            // 2. Lưu chi tiết hóa đơn vào bảng BillingDetails
+            String insertDetailSql = "INSERT INTO BillingDetails (BillDetailID, BillID, ServiceID, Amount) " +
+                                    "VALUES (?, ?, ?, ?)";
+            
+            try (PreparedStatement stmtDetail = conn.prepareStatement(insertDetailSql)) {
+                int detailCount = 0;
+                
+                for (Map<String, Object> service : services) {
+                    String serviceId = (String) service.get("serviceId");
+                    double cost = (Double) service.get("cost");
+                    
+                    String billDetailId = "BD-" + billId.substring(5) + "-" + String.format("%03d", ++detailCount);
+                    
+                    stmtDetail.setString(1, billDetailId);
+                    stmtDetail.setString(2, billId);
+                    stmtDetail.setString(3, serviceId);
+                    stmtDetail.setDouble(4, cost);
+                    stmtDetail.addBatch();
+                }
+                
+                stmtDetail.executeBatch();
+            }
+            
+            // 3. Nếu trạng thái là "Đã thanh toán", thêm log thanh toán
+            if ("Đã thanh toán".equals(status)) {
+                String insertLogSql = "INSERT INTO PaymentLogs (BillID, PatientID, PaymentAmount, PaymentMethod, PaymentDate, Notes) " +
+                                     "VALUES (?, ?, ?, ?, NOW(), ?)";
+                
+                try (PreparedStatement stmtLog = conn.prepareStatement(insertLogSql)) {
+                    stmtLog.setString(1, billId);
+                    stmtLog.setString(2, patientId);
+                    stmtLog.setDouble(3, totalAmount);
+                    stmtLog.setString(4, paymentMethod);
+                    stmtLog.setString(5, "Thanh toán hóa đơn số " + billId);
+                    stmtLog.executeUpdate();
+                }
+            }
+            
+            // Commit transaction
+            conn.commit();
+            return true;
+        } catch (Exception e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            e.printStackTrace();
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
+        }
+    }
+
+    /**
+     * Tạo hóa đơn chờ thanh toán
+     * @param billData Thông tin hóa đơn
+     * @param services Danh sách dịch vụ đã chọn
+     * @return true nếu tạo thành công
+     * @throws SQLException nếu có lỗi SQL
+     */
+    public boolean createPendingBill(Map<String, Object> billData, List<Map<String, Object>> services) throws SQLException {
+        Connection conn = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+            
+            String billId = (String) billData.get("billId");
+            String patientId = (String) billData.get("patientId");
+            double totalAmount = (Double) billData.get("totalAmount");
+            
+            // 1. Lưu thông tin hóa đơn vào bảng Billing với trạng thái "Chưa thanh toán"
+            String insertBillSql = "INSERT INTO Billing (BillID, PatientID, TotalAmount, PaymentMethod, Status, CreatedAt) " +
+                                  "VALUES (?, ?, ?, NULL, 'Chưa thanh toán', NOW())";
+            
+            try (PreparedStatement stmtBill = conn.prepareStatement(insertBillSql)) {
+                stmtBill.setString(1, billId);
+                stmtBill.setString(2, patientId);
+                stmtBill.setDouble(3, totalAmount);
+                stmtBill.executeUpdate();
+            }
+            
+            // 2. Lưu chi tiết hóa đơn vào bảng BillingDetails
+            // Sửa câu lệnh SQL để phù hợp với cấu trúc bảng thực tế
+            // BillingDetails chỉ có BillID, ServiceID và Amount
+            String insertDetailSql = "INSERT INTO BillingDetails (BillID, ServiceID, Amount) " +
+                                    "VALUES (?, ?, ?)";
+            
+            try (PreparedStatement stmtDetail = conn.prepareStatement(insertDetailSql)) {
+                for (Map<String, Object> service : services) {
+                    String serviceId = (String) service.get("serviceId");
+                    double cost = (Double) service.get("cost");
+                    
+                    stmtDetail.setString(1, billId);
+                    stmtDetail.setString(2, serviceId);
+                    stmtDetail.setDouble(3, cost);
+                    stmtDetail.addBatch();
+                }
+                
+                stmtDetail.executeBatch();
+            }
+            
+            // Commit transaction
+            conn.commit();
+            return true;
+        } catch (Exception e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            e.printStackTrace();
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
+        }
+    }
 }
